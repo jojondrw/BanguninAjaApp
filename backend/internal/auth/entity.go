@@ -47,3 +47,12 @@ func (t RefreshToken) IsUsable(now time.Time) bool {
 func Entities() []any {
 	return []any{&User{}, &RefreshToken{}}
 }
+
+func Indexes() []string {
+	return []string{
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_active
+		   ON refresh_tokens (user_id) WHERE revoked_at IS NULL`,
+		`CREATE INDEX IF NOT EXISTS idx_users_name_trgm
+		   ON users USING gin (name gin_trgm_ops)`,
+	}
+}

@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"os"
 
-	"gorm.io/gorm"
-
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
@@ -36,22 +34,41 @@ func run() error {
 		}
 	}()
 
-	return migrate(db)
-}
+	if err := database.EnsureExtensions(db); err != nil {
+		return err
+	}
 
-func migrate(db *gorm.DB) error {
-	return db.AutoMigrate(registeredEntities()...)
+	installed, err := database.InstalledExtensions(db)
+	if err != nil {
+		return err
+	}
+	slog.Info("extensions ready", slog.Any("installed", installed))
+
+	if err := db.AutoMigrate(registeredEntities()...); err != nil {
+		return err
+	}
+
+	return database.ApplyIndexes(db, registeredIndexes())
 }
 
 func registeredEntities() []any {
-	slices := [][]any{
-		auth.Entities(),
-	}
-
 	entities := make([]any, 0)
-	for _, slice := range slices {
+	for _, slice := range [][]any{
+		auth.Entities(),
+	} {
 		entities = append(entities, slice...)
 	}
 
 	return entities
+}
+
+func registeredIndexes() []string {
+	statements := make([]string, 0)
+	for _, slice := range [][]string{
+		auth.Indexes(),
+	} {
+		statements = append(statements, slice...)
+	}
+
+	return statements
 }
