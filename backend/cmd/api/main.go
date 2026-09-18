@@ -1,0 +1,100 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/cookie"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
+)
+
+const (
+	readHeaderTimeout = 10 * time.Second
+	shutdownTimeout   = 15 * time.Second
+)
+
+func main() {
+	if err := run(); err != nil {
+		slog.Error("server stopped", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	db, err := database.Open(cfg)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := database.Close(db); closeErr != nil {
+			slog.Error("close database failed", slog.String("error", closeErr.Error()))
+		}
+	}()
+
+	tokens := token.NewManager(cfg.Token)
+	refreshCookie := cookie.NewRefreshWriter(cfg.Cookie)
+
+	server := &http.Server{
+		Addr:              ":" + cfg.App.Port,
+		Handler:           buildRouter(cfg, db, tokens, refreshCookie),
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
+	go func() {
+		slog.Info("server listening", slog.String("port", cfg.App.Port), slog.String("environment", cfg.App.Environment))
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("listen failed", slog.String("error", err.Error()))
+		}
+	}()
+
+	waitForShutdownSignal()
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	return server.Shutdown(ctx)
+}
+
+func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshCookie cookie.RefreshWriter) *gin.Engine {
+	if cfg.App.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	router := gin.New()
+	router.Use(gin.Recovery(), middleware.CORS(cfg.CORS), middleware.ErrorHandler())
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	api := router.Group("/api")
+	auth.NewModule(db, tokens, refreshCookie).RegisterRoutes(api)
+
+	return router
+}
+
+func waitForShutdownSignal() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	slog.Info("shutdown signal received")
+}
