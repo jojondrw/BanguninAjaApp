@@ -1,16 +1,16 @@
 import { useNavigate } from 'react-router-dom'
 
-import { useKeluar, useProfil, useSesi } from '../controllers/useAuth'
-import { Peringatan, Tombol } from './komponen/Formulir'
+import { useLogout, useProfile, useSession } from '../controllers/useAuth'
+import { Button, ErrorNote } from './components/Form'
 
-export function DasborPage() {
-  const { pengguna } = useSesi()
-  const profil = useProfil()
-  const keluar = useKeluar()
+export function DashboardPage() {
+  const { user } = useSession()
+  const profile = useProfile()
+  const logout = useLogout()
   const navigate = useNavigate()
 
-  const akhiriSesi = () => {
-    keluar.mutate(undefined, { onSettled: () => navigate('/masuk', { replace: true }) })
+  const endSession = () => {
+    logout.mutate(undefined, { onSettled: () => navigate('/masuk', { replace: true }) })
   }
 
   return (
@@ -18,16 +18,14 @@ export function DasborPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <span className="text-sm font-semibold tracking-tight">BanguninAja</span>
-          <Tombol varian="halus" sedangProses={keluar.isPending} labelProses="Keluar" onClick={akhiriSesi}>
+          <Button variant="subtle" isPending={logout.isPending} pendingLabel="Keluar" onClick={endSession}>
             Keluar
-          </Tombol>
+          </Button>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Halo, {pengguna?.name ?? 'pengguna'}
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Halo, {user?.name ?? 'pengguna'}</h1>
         <p className="mt-2 text-sm text-slate-600">
           Sesi kamu aktif. Modul proyek, pengadaan, dan peta lokasi menyusul setelah endpointnya siap.
         </p>
@@ -35,26 +33,26 @@ export function DasborPage() {
         <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-sm font-semibold text-slate-900">Data akun</h2>
 
-          {profil.isPending ? (
+          {profile.isPending ? (
             <p className="mt-3 text-sm text-slate-500">Mengambil data akun...</p>
           ) : null}
 
-          {profil.isError ? (
+          {profile.isError ? (
             <div className="mt-3">
-              <Peringatan pesan="Gagal mengambil data akun." />
+              <ErrorNote message="Gagal mengambil data akun." />
               <div className="mt-3">
-                <Tombol varian="halus" onClick={() => profil.refetch()}>
+                <Button variant="subtle" onClick={() => profile.refetch()}>
                   Coba lagi
-                </Tombol>
+                </Button>
               </div>
             </div>
           ) : null}
 
-          {profil.data ? (
+          {profile.data ? (
             <dl className="mt-4 grid gap-4 sm:grid-cols-3">
-              <Butir label="Nama" nilai={profil.data.name} />
-              <Butir label="Email" nilai={profil.data.email} />
-              <Butir label="Bergabung" nilai={tanggalIndonesia(profil.data.createdAt)} />
+              <Item label="Nama" value={profile.data.name} />
+              <Item label="Email" value={profile.data.email} />
+              <Item label="Bergabung" value={formatDate(profile.data.createdAt)} />
             </dl>
           ) : null}
         </section>
@@ -63,16 +61,16 @@ export function DasborPage() {
   )
 }
 
-function Butir({ label, nilai }: { label: string; nilai: string }) {
+function Item({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-slate-900">{nilai}</dd>
+      <dd className="mt-1 text-sm font-medium text-slate-900">{value}</dd>
     </div>
   )
 }
 
-function tanggalIndonesia(iso: string): string {
+function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',

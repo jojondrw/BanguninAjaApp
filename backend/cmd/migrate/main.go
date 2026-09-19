@@ -4,25 +4,25 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/aset"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/keuangan"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/laporan"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/lokasi"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/finance"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/hr"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/location"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/master"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/pengadaan"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/penilaian"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/penjualan"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/persediaan"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/proyek"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/sdm"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/tagihan"
 )
 
 type slice struct {
-	nama        string
+	name        string
 	entities    []any
 	indexes     []string
 	constraints []string
@@ -32,17 +32,17 @@ func registeredSlices() []slice {
 	return []slice{
 		{"master", master.Entities(), master.Indexes(), master.Constraints()},
 		{"auth", auth.Entities(), auth.Indexes(), auth.Constraints()},
-		{"proyek", proyek.Entities(), proyek.Indexes(), proyek.Constraints()},
-		{"persediaan", persediaan.Entities(), persediaan.Indexes(), persediaan.Constraints()},
-		{"pengadaan", pengadaan.Entities(), pengadaan.Indexes(), pengadaan.Constraints()},
-		{"aset", aset.Entities(), aset.Indexes(), aset.Constraints()},
-		{"penjualan", penjualan.Entities(), penjualan.Indexes(), penjualan.Constraints()},
-		{"keuangan", keuangan.Entities(), keuangan.Indexes(), keuangan.Constraints()},
-		{"tagihan", tagihan.Entities(), tagihan.Indexes(), tagihan.Constraints()},
-		{"sdm", sdm.Entities(), sdm.Indexes(), sdm.Constraints()},
-		{"penilaian", penilaian.Entities(), penilaian.Indexes(), penilaian.Constraints()},
-		{"lokasi", lokasi.Entities(), lokasi.Indexes(), lokasi.Constraints()},
-		{"laporan", laporan.Entities(), laporan.Indexes(), laporan.Constraints()},
+		{"project", project.Entities(), project.Indexes(), project.Constraints()},
+		{"inventory", inventory.Entities(), inventory.Indexes(), inventory.Constraints()},
+		{"procurement", procurement.Entities(), procurement.Indexes(), procurement.Constraints()},
+		{"asset", asset.Entities(), asset.Indexes(), asset.Constraints()},
+		{"sales", sales.Entities(), sales.Indexes(), sales.Constraints()},
+		{"finance", finance.Entities(), finance.Indexes(), finance.Constraints()},
+		{"billing", billing.Entities(), billing.Indexes(), billing.Constraints()},
+		{"hr", hr.Entities(), hr.Indexes(), hr.Constraints()},
+		{"scoring", scoring.Entities(), scoring.Indexes(), scoring.Constraints()},
+		{"location", location.Entities(), location.Indexes(), location.Constraints()},
+		{"reporting", reporting.Entities(), reporting.Indexes(), reporting.Constraints()},
 	}
 }
 
@@ -88,7 +88,7 @@ func run() error {
 			return err
 		}
 		slog.Info("tables ready",
-			slog.String("slice", current.nama),
+			slog.String("slice", current.name),
 			slog.Int("entities", len(current.entities)))
 	}
 

@@ -7,56 +7,56 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/entity"
 )
 
-type Wilayah struct {
+type Region struct {
 	entity.Base
-	Kode    string     `gorm:"type:varchar(20);not null;uniqueIndex:uq_wilayah_kode"`
-	Nama    string     `gorm:"type:varchar(120);not null;index:idx_wilayah_nama"`
-	Jenis   string     `gorm:"type:varchar(20);not null;index:idx_wilayah_jenis"`
-	IndukID *uuid.UUID `gorm:"type:uuid;index:idx_wilayah_induk"`
+	Code     string     `gorm:"type:varchar(20);not null;uniqueIndex:uq_region_code"`
+	Name     string     `gorm:"type:varchar(120);not null;index:idx_region_name"`
+	Type     string     `gorm:"type:varchar(20);not null;index:idx_region_type"`
+	ParentID *uuid.UUID `gorm:"type:uuid;index:idx_region_parent"`
 }
 
-func (Wilayah) TableName() string {
-	return "wilayah"
+func (Region) TableName() string {
+	return "region"
 }
 
-type Satuan struct {
+type UnitOfMeasure struct {
 	entity.Base
-	Kode string `gorm:"type:varchar(20);not null;uniqueIndex:uq_satuan_kode"`
-	Nama string `gorm:"type:varchar(60);not null"`
+	Code string `gorm:"type:varchar(20);not null;uniqueIndex:uq_unit_of_measure_code"`
+	Name string `gorm:"type:varchar(60);not null"`
 }
 
-func (Satuan) TableName() string {
-	return "satuan"
+func (UnitOfMeasure) TableName() string {
+	return "unit_of_measure"
 }
 
-type Akun struct {
+type Account struct {
 	entity.Base
-	Kode    string     `gorm:"type:varchar(20);not null;uniqueIndex:uq_akun_kode"`
-	Nama    string     `gorm:"type:varchar(120);not null;index:idx_akun_nama"`
-	Jenis   string     `gorm:"type:varchar(20);not null;index:idx_akun_jenis"`
-	IndukID *uuid.UUID `gorm:"type:uuid;index:idx_akun_induk"`
+	Code     string     `gorm:"type:varchar(20);not null;uniqueIndex:uq_account_code"`
+	Name     string     `gorm:"type:varchar(120);not null;index:idx_account_name"`
+	Type     string     `gorm:"type:varchar(20);not null;index:idx_account_type"`
+	ParentID *uuid.UUID `gorm:"type:uuid;index:idx_account_parent"`
 }
 
-func (Akun) TableName() string {
-	return "akun"
+func (Account) TableName() string {
+	return "account"
 }
 
 func Entities() []any {
-	return []any{&Wilayah{}, &Satuan{}, &Akun{}}
+	return []any{&Region{}, &UnitOfMeasure{}, &Account{}}
 }
 
 func Indexes() []string {
 	return []string{
-		`CREATE INDEX IF NOT EXISTS idx_wilayah_nama_trgm ON wilayah USING gin (nama gin_trgm_ops)`,
-		`CREATE INDEX IF NOT EXISTS idx_akun_nama_trgm ON akun USING gin (nama gin_trgm_ops)`,
+		`CREATE INDEX IF NOT EXISTS idx_region_name_trgm ON region USING gin (name gin_trgm_ops)`,
+		`CREATE INDEX IF NOT EXISTS idx_account_name_trgm ON account USING gin (name gin_trgm_ops)`,
 	}
 }
 
 func Constraints() []string {
 	return []string{
-		database.ForeignKey("wilayah", "induk_id", "wilayah", database.DeleteRestrict),
-		database.ForeignKey("akun", "induk_id", "akun", database.DeleteRestrict),
-		database.Check("wilayah", "jenis", "jenis IN ('provinsi','kota','kabupaten','kecamatan')"),
-		database.Check("akun", "jenis", "jenis IN ('aset','kewajiban','modal','pendapatan','beban')"),
+		database.ForeignKey("region", "parent_id", "region", database.DeleteRestrict),
+		database.ForeignKey("account", "parent_id", "account", database.DeleteRestrict),
+		database.Check("region", "type", "type IN ('province','city','regency','district')"),
+		database.Check("account", "type", "type IN ('asset','liability','equity','revenue','expense')"),
 	}
 }

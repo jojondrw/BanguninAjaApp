@@ -1,31 +1,31 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import { useDaftar } from '../controllers/useAuth'
-import { Kolom, Peringatan, Tombol } from './komponen/Formulir'
-import { PanelMerek } from './komponen/PanelMerek'
-import { pesanKesalahan } from '../shared/pesanKesalahan'
+import { useRegister } from '../controllers/useAuth'
+import { errorMessage } from '../shared/errorMessage'
+import { Button, ErrorNote, Field } from './components/Form'
+import { BrandPanel } from './components/BrandPanel'
 
-const PANJANG_SANDI_MINIMAL = 8
+const MINIMUM_PASSWORD_LENGTH = 8
 
-export function DaftarPage() {
-  const [nama, setNama] = useState('')
+export function RegisterPage() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [sandi, setSandi] = useState('')
-  const daftar = useDaftar()
+  const [password, setPassword] = useState('')
+  const register = useRegister()
   const navigate = useNavigate()
 
-  const sandiTerlaluPendek = sandi.length > 0 && sandi.length < PANJANG_SANDI_MINIMAL
+  const passwordTooShort = password.length > 0 && password.length < MINIMUM_PASSWORD_LENGTH
 
-  const kirim = (peristiwa: FormEvent) => {
-    peristiwa.preventDefault()
-    daftar.mutate(
-      { name: nama, email, password: sandi },
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    register.mutate(
+      { name, email, password },
       {
         onSuccess: () =>
           navigate('/masuk', {
             replace: true,
-            state: { pesan: 'Akun berhasil dibuat. Silakan masuk.' },
+            state: { message: 'Akun berhasil dibuat. Silakan masuk.' },
           }),
       },
     )
@@ -38,20 +38,20 @@ export function DaftarPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Buat akun</h1>
           <p className="mt-2 text-sm text-slate-600">Cukup tiga isian, tidak sampai satu menit.</p>
 
-          <form onSubmit={kirim} className="mt-8 flex flex-col gap-4" noValidate>
-            {daftar.isError ? <Peringatan pesan={pesanKesalahan(daftar.error)} /> : null}
+          <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>
+            {register.isError ? <ErrorNote message={errorMessage(register.error)} /> : null}
 
-            <Kolom
-              id="nama"
+            <Field
+              id="name"
               label="Nama lengkap"
               autoComplete="name"
               placeholder="Jonathan Andrew"
               minLength={2}
               required
-              value={nama}
-              onChange={(peristiwa) => setNama(peristiwa.target.value)}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
             />
-            <Kolom
+            <Field
               id="email"
               label="Email"
               type="email"
@@ -59,28 +59,28 @@ export function DaftarPage() {
               placeholder="nama@kampus.ac.id"
               required
               value={email}
-              onChange={(peristiwa) => setEmail(peristiwa.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
             />
-            <Kolom
-              id="sandi"
+            <Field
+              id="password"
               label="Kata sandi"
               type="password"
               autoComplete="new-password"
               placeholder="Minimal 8 karakter"
-              minLength={PANJANG_SANDI_MINIMAL}
+              minLength={MINIMUM_PASSWORD_LENGTH}
               required
-              bantuan={
-                sandiTerlaluPendek
-                  ? `Kurang ${PANJANG_SANDI_MINIMAL - sandi.length} karakter lagi`
+              hint={
+                passwordTooShort
+                  ? `Kurang ${MINIMUM_PASSWORD_LENGTH - password.length} karakter lagi`
                   : 'Minimal 8 karakter'
               }
-              value={sandi}
-              onChange={(peristiwa) => setSandi(peristiwa.target.value)}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
 
-            <Tombol type="submit" sedangProses={daftar.isPending} labelProses="Membuat akun">
+            <Button type="submit" isPending={register.isPending} pendingLabel="Membuat akun">
               Daftar
-            </Tombol>
+            </Button>
           </form>
 
           <p className="mt-6 text-sm text-slate-600">
@@ -92,7 +92,7 @@ export function DaftarPage() {
         </div>
       </main>
 
-      <PanelMerek />
+      <BrandPanel />
     </div>
   )
 }

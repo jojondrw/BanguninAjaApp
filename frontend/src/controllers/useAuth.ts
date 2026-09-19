@@ -2,67 +2,67 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { authApi } from '../models/authApi'
-import type { PermintaanDaftar, PermintaanMasuk } from '../models/auth'
-import { perbaruiSesi } from '../shared/apiClient'
-import { useSesiStore } from './sesiStore'
+import type { LoginRequest, RegisterRequest } from '../models/auth'
+import { refreshSession } from '../shared/apiClient'
+import { useSessionStore } from './sessionStore'
 
-export function useSesi() {
-  const accessToken = useSesiStore((state) => state.accessToken)
-  const pengguna = useSesiStore((state) => state.pengguna)
-  const sudahDipulihkan = useSesiStore((state) => state.sudahDipulihkan)
+export function useSession() {
+  const accessToken = useSessionStore((state) => state.accessToken)
+  const user = useSessionStore((state) => state.user)
+  const isRestored = useSessionStore((state) => state.isRestored)
 
-  return { accessToken, pengguna, sudahDipulihkan }
+  return { accessToken, user, isRestored }
 }
 
-export function usePemulihanSesi() {
-  const tandaiSudahDipulihkan = useSesiStore((state) => state.tandaiSudahDipulihkan)
-  const sudahDipulihkan = useSesiStore((state) => state.sudahDipulihkan)
+export function useSessionRestore() {
+  const markRestored = useSessionStore((state) => state.markRestored)
+  const isRestored = useSessionStore((state) => state.isRestored)
 
   useEffect(() => {
-    if (sudahDipulihkan) {
+    if (isRestored) {
       return
     }
 
-    perbaruiSesi().finally(tandaiSudahDipulihkan)
-  }, [sudahDipulihkan, tandaiSudahDipulihkan])
+    refreshSession().finally(markRestored)
+  }, [isRestored, markRestored])
 
-  return sudahDipulihkan
+  return isRestored
 }
 
-export function useMasuk() {
-  const simpanSesi = useSesiStore((state) => state.simpanSesi)
+export function useLogin() {
+  const setSession = useSessionStore((state) => state.setSession)
 
   return useMutation({
-    mutationFn: (permintaan: PermintaanMasuk) => authApi.masuk(permintaan),
-    onSuccess: (sesi) => simpanSesi(sesi.accessToken, sesi.user),
+    mutationFn: (payload: LoginRequest) => authApi.login(payload),
+    onSuccess: (session) => setSession(session.accessToken, session.user),
   })
 }
 
-export function useDaftar() {
+export function useRegister() {
   return useMutation({
-    mutationFn: (permintaan: PermintaanDaftar) => authApi.daftar(permintaan),
+    mutationFn: (payload: RegisterRequest) => authApi.register(payload),
   })
 }
 
-export function useKeluar() {
-  const hapusSesi = useSesiStore((state) => state.hapusSesi)
+export function useLogout() {
+  const clearSession = useSessionStore((state) => state.clearSession)
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: () => authApi.keluar(),
+    mutationFn: () => authApi.logout(),
     onSettled: () => {
-      hapusSesi()
+      clearSession()
       queryClient.clear()
     },
   })
 }
 
-export function useProfil() {
-  const accessToken = useSesiStore((state) => state.accessToken)
+export function useProfile() {
+  const accessToken = useSessionStore((state) => state.accessToken)
 
   return useQuery({
-    queryKey: ['profil'],
-    queryFn: () => authApi.profil(),
+    queryKey: ['profile'],
+    queryFn: () => authApi.profile(),
     enabled: accessToken !== null,
     staleTime: 60_000,
   })

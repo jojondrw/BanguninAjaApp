@@ -2,10 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { usePemulihanSesi, useSesi } from './controllers/useAuth'
-import { DaftarPage } from './views/DaftarPage'
-import { DasborPage } from './views/DasborPage'
-import { MasukPage } from './views/MasukPage'
+import { useSession, useSessionRestore } from './controllers/useAuth'
+import { DashboardPage } from './views/DashboardPage'
+import { LoginPage } from './views/LoginPage'
+import { RegisterPage } from './views/RegisterPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,23 +17,23 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <PemulihSesi>
+        <SessionGate>
           <Routes>
-            <Route path="/masuk" element={<HanyaTamu><MasukPage /></HanyaTamu>} />
-            <Route path="/daftar" element={<HanyaTamu><DaftarPage /></HanyaTamu>} />
-            <Route path="/" element={<ButuhSesi><DasborPage /></ButuhSesi>} />
+            <Route path="/masuk" element={<GuestOnly><LoginPage /></GuestOnly>} />
+            <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+            <Route path="/" element={<RequireSession><DashboardPage /></RequireSession>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </PemulihSesi>
+        </SessionGate>
       </BrowserRouter>
     </QueryClientProvider>
   )
 }
 
-function PemulihSesi({ children }: { children: ReactNode }) {
-  const sudahDipulihkan = usePemulihanSesi()
+function SessionGate({ children }: { children: ReactNode }) {
+  const isRestored = useSessionRestore()
 
-  if (!sudahDipulihkan) {
+  if (!isRestored) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-slate-500">Memeriksa sesi...</p>
@@ -44,8 +44,8 @@ function PemulihSesi({ children }: { children: ReactNode }) {
   return children
 }
 
-function ButuhSesi({ children }: { children: ReactNode }) {
-  const { accessToken } = useSesi()
+function RequireSession({ children }: { children: ReactNode }) {
+  const { accessToken } = useSession()
 
   if (accessToken === null) {
     return <Navigate to="/masuk" replace />
@@ -54,8 +54,8 @@ function ButuhSesi({ children }: { children: ReactNode }) {
   return children
 }
 
-function HanyaTamu({ children }: { children: ReactNode }) {
-  const { accessToken } = useSesi()
+function GuestOnly({ children }: { children: ReactNode }) {
+  const { accessToken } = useSession()
 
   if (accessToken !== null) {
     return <Navigate to="/" replace />

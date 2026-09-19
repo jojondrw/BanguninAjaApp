@@ -1,10 +1,10 @@
-const angka = [
-  { nilai: '2,89 jt', label: 'zona harga tanah' },
-  { nilai: '458 rb', label: 'objek lahan' },
-  { nilai: '12', label: 'indeks bahaya' },
+const figures = [
+  { value: '2,89 jt', label: 'zona harga tanah' },
+  { value: '458 rb', label: 'objek lahan' },
+  { value: '12', label: 'indeks bahaya' },
 ]
 
-export function PanelMerek() {
+export function BrandPanel() {
   return (
     <aside className="hidden flex-col justify-end bg-navy-700 px-12 py-12 text-white lg:flex">
       <p className="max-w-md text-xl leading-relaxed font-medium">
@@ -16,10 +16,10 @@ export function PanelMerek() {
       </p>
 
       <dl className="mt-10 flex gap-10 border-t border-white/15 pt-6">
-        {angka.map((butir) => (
-          <div key={butir.label}>
-            <dt className="text-xs text-navy-100">{butir.label}</dt>
-            <dd className="mt-1 text-xl font-semibold tabular-nums">{butir.nilai}</dd>
+        {figures.map((figure) => (
+          <div key={figure.label}>
+            <dt className="text-xs text-navy-100">{figure.label}</dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums">{figure.value}</dd>
           </div>
         ))}
       </dl>

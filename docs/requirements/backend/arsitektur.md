@@ -39,7 +39,7 @@ backend/
 ## Aturan slice
 
 1. Satu folder di `internal` sama dengan satu fitur. Nama folder memakai kata
-   benda tunggal dalam huruf kecil, contoh `auth`, `proyek`, `pengadaan`.
+   benda tunggal dalam huruf kecil, contoh `auth`, `project`, `procurement`.
 2. Setiap slice wajib punya pemisahan lapisan controller, service, repository.
    Boleh ada file tambahan selama masih milik fitur itu.
 3. Slice tidak boleh mengimpor slice lain secara langsung. Kalau dua slice butuh

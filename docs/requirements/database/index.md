@@ -32,9 +32,9 @@ Jadi setiap kolom `*_id` di entity wajib ditulis dengan tag `index`.
 ## Urutan kolom pada index gabungan
 
 Kolom yang dibandingkan dengan sama dengan diletakkan lebih dulu, baru kolom
-rentang. Index `(proyek_id, status)` bisa melayani query yang menyaring
-`proyek_id` saja, tapi index `(status, proyek_id)` tidak bisa melayani query yang
-hanya menyaring `proyek_id`.
+rentang. Index `(project_id, status)` bisa melayani query yang menyaring
+`project_id` saja, tapi index `(status, project_id)` tidak bisa melayani query yang
+hanya menyaring `project_id`.
 
 Kalau sebuah daftar selalu disaring dengan satu kolom lalu diurutkan dengan kolom
 lain, keduanya digabung dalam satu index dengan kolom penyaring di depan.
@@ -62,14 +62,14 @@ terpakai untuk pola yang diawali persen, jadi kolom seperti itu memakai index
 trigram:
 
 ```sql
-CREATE INDEX idx_proyek_nama_trgm
-  ON proyek USING gin (nama gin_trgm_ops);
+CREATE INDEX idx_project_name_trgm
+  ON project USING gin (name gin_trgm_ops);
 ```
 
 Alasan memilih GIN dan bukan GiST ada di `ekstensi.md`.
 
 Kolom kode yang selalu dicari dari awal, misalnya `PRJ-01`, cukup memakai index
-biasa dengan `text_pattern_ops` karena polanya `kode LIKE 'PRJ%'`. Kalau kodenya
+biasa dengan `text_pattern_ops` karena polanya `code LIKE 'PRJ%'`. Kalau kodenya
 juga dicari dari tengah, barulah ikut trigram.
 
 ## Kolom spasial
@@ -77,7 +77,7 @@ juga dicari dari tengah, barulah ikut trigram.
 Kolom `geometry` memakai index GiST:
 
 ```sql
-CREATE INDEX idx_lokasi_titik ON lokasi USING gist (titik);
+CREATE INDEX idx_saved_location_point ON saved_location USING gist (point);
 ```
 
 Tanpa index ini, penyaringan berdasarkan kotak peta membaca seluruh tabel, dan
@@ -92,16 +92,16 @@ nanti dipakai di entity.
 |---|---|---|
 | `users` | unik pada `email` | Dipakai setiap login |
 | `refresh_tokens` | unik pada `token_hash`, parsial pada `user_id` saat aktif | Dicari di setiap refresh |
-| `proyek` | unik `kode`, biasa `status`, trigram `nama` | Daftar proyek disaring status, dicari lewat nama |
-| `unit` | gabungan `(proyek_id, status)` | Halaman unit selalu menyaring proyek lalu status |
-| `pesanan` | `vendor_id`, gabungan `(status, tanggal)` | Daftar pengadaan disaring status lalu diurut tanggal |
-| `mutasi_stok` | gabungan `(material_id, tanggal)` | Kartu stok dibaca per material urut tanggal |
-| `cicilan` | gabungan `(status, jatuh_tempo)` | Halaman tagihan mencari yang belum lunas dan hampir jatuh tempo |
-| `piutang`, `hutang` | gabungan `(status, jatuh_tempo)` | Sama seperti cicilan |
-| `absensi` | gabungan `(karyawan_id, tanggal)`, unik `(karyawan_id, tanggal)` | Satu orang satu baris per hari |
-| `jurnal` | `tanggal`, `akun_id` | Buku besar dibaca per rentang tanggal dan per akun |
-| `lokasi_incaran` | GiST pada `titik`, `user_id` | Peta menyaring berdasarkan area tampilan |
-| `karyawan` | trigram `nama`, `status` | Daftar karyawan dicari lewat nama |
+| `project` | unik `code`, biasa `status`, trigram `name` | Daftar proyek disaring status, dicari lewat nama |
+| `unit` | gabungan `(project_id, status)` | Halaman unit selalu menyaring proyek lalu status |
+| `purchase_order` | `vendor_id`, gabungan `(status, date)` | Daftar pengadaan disaring status lalu diurut tanggal |
+| `stock_movement` | gabungan `(material_id, date)` | Kartu stok dibaca per material urut tanggal |
+| `installment` | gabungan `(status, due_date)` | Halaman tagihan mencari yang belum lunas dan hampir jatuh tempo |
+| `receivable`, `payable` | gabungan `(status, due_date)` | Sama seperti cicilan |
+| `attendance` | gabungan `(employee_id, date)`, unik `(employee_id, date)` | Satu orang satu baris per hari |
+| `journal_entry` | `date`, `account_id` | Buku besar dibaca per rentang tanggal dan per akun |
+| `saved_location` | GiST pada `point`, `user_id` | Peta menyaring berdasarkan area tampilan |
+| `employee` | trigram `name`, `status` | Daftar karyawan dicari lewat nama |
 
 ## Cara memeriksa apakah index terpakai
 
@@ -128,7 +128,7 @@ Index dengan `idx_scan` nol setelah aplikasi dipakai sebaiknya dihapus.
 ## Aturan menulis query di repository
 
 1. Jangan membungkus kolom dengan fungsi di sisi kiri perbandingan. Tulis
-   `tanggal >= ? AND tanggal < ?`, bukan `DATE(tanggal) = ?`, karena bentuk
+   `date >= ? AND date < ?`, bukan `DATE(date) = ?`, karena bentuk
    kedua membuat index tidak terpakai.
 2. Ambil kolom seperlunya untuk daftar yang panjang, jangan selalu `SELECT *`.
 3. Daftar yang panjang wajib memakai `LIMIT` dan `OFFSET` atau kursor.

@@ -11,16 +11,16 @@ frontend/src/
     auth.ts        bentuk DTO
     authApi.ts     pemanggilan endpoint
   controllers/     penghubung data dan tampilan
-    sesiStore.ts   penyimpan sesi di memori
+    sessionStore.ts  penyimpan sesi di memori
     useAuth.ts     hook TanStack Query
   views/           yang dilihat pengguna
-    MasukPage.tsx
-    DaftarPage.tsx
-    DasborPage.tsx
-    komponen/      potongan yang dipakai berulang
+    LoginPage.tsx
+    RegisterPage.tsx
+    DashboardPage.tsx
+    components/      potongan yang dipakai berulang
   shared/          dipakai lintas bagian
     apiClient.ts
-    pesanKesalahan.ts
+    errorMessage.ts
   App.tsx          rute dan provider
 ```
 
@@ -43,7 +43,7 @@ Tidak ada penerjemahan nama di tengah jalan, supaya kalau ada yang tidak cocok
 langsung kelihatan dari TypeScript.
 
 ```ts
-export interface Pengguna {
+export interface User {
   id: string
   name: string
   email: string
@@ -127,4 +127,4 @@ Tailwind CSS v4, dipasang lewat plugin Vite. Tidak ada berkas
 Warna merek diambil dari logo: navy `#0b2b6b` dan amber `#fbbb16`.
 
 Aturan kelas: tulis langsung di komponen. Kalau satu rangkaian kelas dipakai di
-lebih dari dua tempat, jadikan komponen di `views/komponen`, bukan `@apply`.
+lebih dari dua tempat, jadikan komponen di `views/components`, bukan `@apply`.

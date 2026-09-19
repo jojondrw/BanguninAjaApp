@@ -1,14 +1,14 @@
-import { panggilApi } from '../shared/apiClient'
-import type { PermintaanDaftar, PermintaanMasuk, Pengguna, Sesi } from './auth'
+import { request } from '../shared/apiClient'
+import type { LoginRequest, RegisterRequest, Session, User } from './auth'
 
 export const authApi = {
-  daftar: (permintaan: PermintaanDaftar) =>
-    panggilApi<Pengguna>('/auth/register', { method: 'POST', body: permintaan }),
+  register: (payload: RegisterRequest) =>
+    request<User>('/auth/register', { method: 'POST', body: payload }),
 
-  masuk: (permintaan: PermintaanMasuk) =>
-    panggilApi<Sesi>('/auth/login', { method: 'POST', body: permintaan, tanpaPembaruanToken: true }),
+  login: (payload: LoginRequest) =>
+    request<Session>('/auth/login', { method: 'POST', body: payload, skipTokenRefresh: true }),
 
-  keluar: () => panggilApi<void>('/auth/logout', { method: 'POST', tanpaPembaruanToken: true }),
+  logout: () => request<void>('/auth/logout', { method: 'POST', skipTokenRefresh: true }),
 
-  profil: () => panggilApi<Pengguna>('/auth/me'),
+  profile: () => request<User>('/auth/me'),
 }

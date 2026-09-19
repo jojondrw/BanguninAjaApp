@@ -1,11 +1,11 @@
-import type { KesalahanApi, Sesi } from '../models/auth'
-import { ambilAccessToken, hapusSesiLangsung, simpanSesiLangsung } from '../controllers/sesiStore'
+import type { ApiErrorBody, Session } from '../models/auth'
+import { clearSession, getAccessToken, setSession } from '../controllers/sessionStore'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 
-interface Amplop<T> {
+interface Envelope<T> {
   data?: T
-  error?: KesalahanApi
+  error?: ApiErrorBody
 }
 
 export class ApiError extends Error {
@@ -20,69 +20,69 @@ export class ApiError extends Error {
   }
 }
 
-interface OpsiPermintaan {
+export interface RequestOptions {
   method?: string
   body?: unknown
-  tanpaPembaruanToken?: boolean
+  skipTokenRefresh?: boolean
 }
 
-export async function panggilApi<T>(path: string, opsi: OpsiPermintaan = {}): Promise<T> {
-  const respons = await kirim(path, opsi)
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await send(path, options)
 
-  if (respons.status === 401 && !opsi.tanpaPembaruanToken) {
-    const berhasil = await perbaruiSesi()
-    if (berhasil) {
-      return bacaBody<T>(await kirim(path, opsi))
+  if (response.status === 401 && !options.skipTokenRefresh) {
+    const refreshed = await refreshSession()
+    if (refreshed) {
+      return parseBody<T>(await send(path, options))
     }
-    hapusSesiLangsung()
+    clearSession()
   }
 
-  return bacaBody<T>(respons)
+  return parseBody<T>(response)
 }
 
-async function kirim(path: string, opsi: OpsiPermintaan): Promise<Response> {
-  const accessToken = ambilAccessToken()
+async function send(path: string, options: RequestOptions): Promise<Response> {
+  const accessToken = getAccessToken()
 
   return fetch(`${BASE_URL}${path}`, {
-    method: opsi.method ?? 'GET',
+    method: options.method ?? 'GET',
     credentials: 'include',
     headers: {
-      ...(opsi.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
-    body: opsi.body ? JSON.stringify(opsi.body) : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
   })
 }
 
-async function bacaBody<T>(respons: Response): Promise<T> {
-  if (respons.status === 204) {
+async function parseBody<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
     return undefined as T
   }
 
-  const amplop = (await respons.json().catch(() => ({}))) as Amplop<T>
+  const envelope = (await response.json().catch(() => ({}))) as Envelope<T>
 
-  if (!respons.ok || amplop.error) {
+  if (!response.ok || envelope.error) {
     throw new ApiError(
-      amplop.error?.code ?? 'kesalahan_jaringan',
-      amplop.error?.message ?? 'Tidak bisa menghubungi server',
-      respons.status,
+      envelope.error?.code ?? 'network_error',
+      envelope.error?.message ?? 'Tidak bisa menghubungi server',
+      response.status,
     )
   }
 
-  return amplop.data as T
+  return envelope.data as T
 }
 
-export async function perbaruiSesi(): Promise<boolean> {
-  const respons = await kirim('/auth/refresh', { method: 'POST', tanpaPembaruanToken: true })
-  if (!respons.ok) {
+export async function refreshSession(): Promise<boolean> {
+  const response = await send('/auth/refresh', { method: 'POST', skipTokenRefresh: true })
+  if (!response.ok) {
     return false
   }
 
-  const amplop = (await respons.json()) as Amplop<Sesi>
-  if (!amplop.data) {
+  const envelope = (await response.json()) as Envelope<Session>
+  if (!envelope.data) {
     return false
   }
 
-  simpanSesiLangsung(amplop.data.accessToken, amplop.data.user)
+  setSession(envelope.data.accessToken, envelope.data.user)
   return true
 }

@@ -1,25 +1,22 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
-import { useMasuk } from '../controllers/useAuth'
-import { pesanKesalahan } from '../shared/pesanKesalahan'
-import { Berhasil, Kolom, Peringatan, Tombol } from './komponen/Formulir'
-import { PanelMerek } from './komponen/PanelMerek'
+import { useLogin } from '../controllers/useAuth'
+import { errorMessage } from '../shared/errorMessage'
+import { Button, ErrorNote, Field, SuccessNote } from './components/Form'
+import { BrandPanel } from './components/BrandPanel'
 
-export function MasukPage() {
+export function LoginPage() {
   const [email, setEmail] = useState('')
-  const [sandi, setSandi] = useState('')
-  const masuk = useMasuk()
+  const [password, setPassword] = useState('')
+  const login = useLogin()
   const navigate = useNavigate()
-  const lokasi = useLocation()
-  const pesanSukses = (lokasi.state as { pesan?: string } | null)?.pesan
+  const location = useLocation()
+  const successMessage = (location.state as { message?: string } | null)?.message
 
-  const kirim = (peristiwa: FormEvent) => {
-    peristiwa.preventDefault()
-    masuk.mutate(
-      { email, password: sandi },
-      { onSuccess: () => navigate('/', { replace: true }) },
-    )
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    login.mutate({ email, password }, { onSuccess: () => navigate('/', { replace: true }) })
   }
 
   return (
@@ -31,11 +28,11 @@ export function MasukPage() {
             Simpan lokasi incaran, riwayat analisis, dan rencana pembangunanmu.
           </p>
 
-          <form onSubmit={kirim} className="mt-8 flex flex-col gap-4" noValidate>
-            {pesanSukses ? <Berhasil pesan={pesanSukses} /> : null}
-            {masuk.isError ? <Peringatan pesan={pesanKesalahan(masuk.error)} /> : null}
+          <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>
+            {successMessage ? <SuccessNote message={successMessage} /> : null}
+            {login.isError ? <ErrorNote message={errorMessage(login.error)} /> : null}
 
-            <Kolom
+            <Field
               id="email"
               label="Email"
               type="email"
@@ -43,23 +40,23 @@ export function MasukPage() {
               placeholder="nama@kampus.ac.id"
               required
               value={email}
-              onChange={(peristiwa) => setEmail(peristiwa.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
             />
-            <Kolom
-              id="sandi"
+            <Field
+              id="password"
               label="Kata sandi"
               type="password"
               autoComplete="current-password"
               placeholder="Minimal 8 karakter"
               minLength={8}
               required
-              value={sandi}
-              onChange={(peristiwa) => setSandi(peristiwa.target.value)}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
 
-            <Tombol type="submit" sedangProses={masuk.isPending} labelProses="Sedang masuk">
+            <Button type="submit" isPending={login.isPending} pendingLabel="Sedang masuk">
               Masuk
-            </Tombol>
+            </Button>
           </form>
 
           <p className="mt-6 text-sm text-slate-600">
@@ -71,7 +68,7 @@ export function MasukPage() {
         </div>
       </main>
 
-      <PanelMerek />
+      <BrandPanel />
     </div>
   )
 }

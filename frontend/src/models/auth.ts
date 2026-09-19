@@ -1,28 +1,28 @@
-export interface Pengguna {
+export interface User {
   id: string
   name: string
   email: string
   createdAt: string
 }
 
-export interface Sesi {
+export interface Session {
   accessToken: string
   accessTokenExpiresAt: string
-  user: Pengguna
+  user: User
 }
 
-export interface PermintaanMasuk {
+export interface LoginRequest {
   email: string
   password: string
 }
 
-export interface PermintaanDaftar {
+export interface RegisterRequest {
   name: string
   email: string
   password: string
 }
 
-export interface KesalahanApi {
+export interface ApiErrorBody {
   code: string
   message: string
 }
