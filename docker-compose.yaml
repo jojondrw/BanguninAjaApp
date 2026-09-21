@@ -1,6 +1,6 @@
 services:
   database:
-    image: postgres:18
+    image: postgis/postgis:18-3.6
     ports:
       - "5432:5432"
     environment:
@@ -9,8 +9,31 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: database
+    volumes:
+      - ./backend:/app
+      - go_modules:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      database:
+        condition: service_healthy
 
 volumes:
   postgres_data:
-
-    
+  go_modules:
+  go_build_cache:
