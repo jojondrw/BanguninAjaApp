@@ -51,6 +51,10 @@ func Conflict(code, message string) *Error {
 	return New(http.StatusConflict, code, message)
 }
 
+func Unprocessable(code, message string) *Error {
+	return New(http.StatusUnprocessableEntity, code, message)
+}
+
 func Internal(cause error) *Error {
 	return New(http.StatusInternalServerError, "internal_error", "Terjadi kesalahan pada server").WithCause(cause)
 }

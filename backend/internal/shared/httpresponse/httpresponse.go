@@ -24,6 +24,30 @@ func Created(c *gin.Context, data any) {
 	c.JSON(http.StatusCreated, Envelope{Data: data})
 }
 
+func Respond(c *gin.Context, data any, err error) {
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	OK(c, data)
+}
+
+func RespondCreated(c *gin.Context, data any, err error) {
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	Created(c, data)
+}
+
+func RespondNoContent(c *gin.Context, err error) {
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func Failure(c *gin.Context, status int, code, message string) {
 	c.AbortWithStatusJSON(status, Envelope{Error: &ErrorBody{Code: code, Message: message}})
 }

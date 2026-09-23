@@ -7,6 +7,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/cookie"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 )
@@ -22,8 +23,8 @@ func NewController(service Service, refreshCookie cookie.RefreshWriter) *Control
 
 func (c *Controller) Register(ctx *gin.Context) {
 	var request RegisterRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		_ = ctx.Error(invalidPayload(err))
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -38,8 +39,8 @@ func (c *Controller) Register(ctx *gin.Context) {
 
 func (c *Controller) Login(ctx *gin.Context) {
 	var request LoginRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		_ = ctx.Error(invalidPayload(err))
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -89,8 +90,4 @@ func (c *Controller) Profile(ctx *gin.Context) {
 	}
 
 	httpresponse.OK(ctx, user)
-}
-
-func invalidPayload(err error) error {
-	return apperror.BadRequest("invalid_payload", "Data yang dikirim belum lengkap atau formatnya salah").WithCause(err)
 }

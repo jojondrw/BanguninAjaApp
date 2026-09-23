@@ -28,11 +28,11 @@ func (Employee) TableName() string {
 
 type Attendance struct {
 	entity.Base
-	EmployeeID   uuid.UUID  `gorm:"type:uuid;not null;index:idx_attendance_employee"`
-	Date         time.Time  `gorm:"type:date;not null;index:idx_attendance_date"`
-	CheckInTime  *time.Time `gorm:"type:time"`
-	CheckOutTime *time.Time `gorm:"type:time"`
-	Status       string     `gorm:"type:varchar(20);not null;index:idx_attendance_status"`
+	EmployeeID   uuid.UUID `gorm:"type:uuid;not null;index:idx_attendance_employee"`
+	Date         time.Time `gorm:"type:date;not null;index:idx_attendance_date"`
+	CheckInTime  *string   `gorm:"type:time"`
+	CheckOutTime *string   `gorm:"type:time"`
+	Status       string    `gorm:"type:varchar(20);not null;index:idx_attendance_status"`
 }
 
 func (Attendance) TableName() string {

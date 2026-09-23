@@ -81,6 +81,7 @@ Dilarang membuat folder `utils`, `helpers`, `common`, atau `pkg` di tempat lain.
 | `token` | Pembuatan dan pembacaan access token serta refresh token |
 | `security` | Hashing kata sandi |
 | `cookie` | Penulisan dan penghapusan cookie refresh token |
+| `duedate` | Status jatuh tempo (`not_due`, `due`, `overdue`, `paid`) dan rentang tanggal untuk menyaringnya, dipakai cicilan dan tagihan |
 
 Isi `shared` harus bebas dari aturan bisnis. Kalau sebuah fungsi hanya masuk akal
 untuk satu fitur, fungsi itu milik slice, bukan `shared`.

@@ -75,6 +75,7 @@ Alasan di balik tiap keputusan ada di `docs/requirements`.
 | `backend/arsitektur.md` | Aturan vertical slice, pembagian lapisan, isi folder shared |
 | `backend/konvensi-kode.md` | Gaya penulisan, termasuk aturan tanpa komentar |
 | `backend/auth.md` | Alur access token dan refresh token, aturan cookie, daftar endpoint |
+| `backend/slice-bisnis.md` | Pola service dan controller slice bisnis, endpoint dan aturan bisnis master, project, inventory |
 | `backend/docker.md` | Beda Dockerfile dev dan prod, kenapa polling dipakai di Windows |
 | `database/ekstensi.md` | PostGIS, pg_trgm, btree_gist |
 | `database/index.md` | Kapan sebuah kolom diberi index, dan kapan tidak |
@@ -88,8 +89,15 @@ Sudah jalan:
 
 - Daftar, masuk, keluar, dan sesi yang bertahan setelah halaman dimuat ulang
 - Skema database lengkap untuk semua modul, 47 tabel berikut constraintnya
+- API untuk data master (wilayah, satuan, akun), proyek (tahapan, RAB, izin), dan
+  persediaan (material, gudang, stok, mutasi stok)
+- API untuk pengadaan, aset, penjualan, keuangan, tagihan, SDM, penilaian,
+  lokasi tersimpan, dan daftar laporan. Rinciannya ada di
+  `backend/slice-bisnis.md`
 
 Belum dikerjakan:
 
-- Service dan controller untuk slice bisnis, masih menunggu giliran
+- Pembatasan akses berdasarkan peran
+- Penerimaan barang yang langsung menambah stok gudang
+- Pembuatan berkas laporan PDF, XLSX, dan CSV
 - Layar modul proyek, pengadaan, penjualan, keuangan, SDM, dan peta lokasi

@@ -13,7 +13,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/finance"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/hr"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/location"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/master"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/cookie"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
@@ -87,6 +99,18 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 
 	api := router.Group("/api")
 	auth.NewModule(db, tokens, refreshCookie).RegisterRoutes(api)
+	master.NewModule(db, tokens).RegisterRoutes(api)
+	project.NewModule(db, tokens).RegisterRoutes(api)
+	inventory.NewModule(db, tokens).RegisterRoutes(api)
+	procurement.NewModule(db, tokens).RegisterRoutes(api)
+	asset.NewModule(db, tokens).RegisterRoutes(api)
+	sales.NewModule(db, tokens).RegisterRoutes(api)
+	finance.NewModule(db, tokens).RegisterRoutes(api)
+	billing.NewModule(db, tokens).RegisterRoutes(api)
+	hr.NewModule(db, tokens).RegisterRoutes(api)
+	scoring.NewModule(db, tokens).RegisterRoutes(api)
+	location.NewModule(db, tokens).RegisterRoutes(api)
+	reporting.NewModule(db, tokens).RegisterRoutes(api)
 
 	return router
 }
