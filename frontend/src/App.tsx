@@ -3,8 +3,11 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { useSession, useSessionRestore } from './controllers/useAuth'
-import { DashboardPage } from './views/DashboardPage'
+import { FinancialPage } from './views/FinancialPage'
+import { LocationPage } from './views/LocationPage'
 import { LoginPage } from './views/LoginPage'
+import { OverviewPage } from './views/OverviewPage'
+import { ProjectsPage } from './views/ProjectsPage'
 import { RegisterPage } from './views/RegisterPage'
 
 const queryClient = new QueryClient({
@@ -21,7 +24,10 @@ export default function App() {
           <Routes>
             <Route path="/masuk" element={<GuestOnly><LoginPage /></GuestOnly>} />
             <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
-            <Route path="/" element={<RequireSession><DashboardPage /></RequireSession>} />
+            <Route path="/" element={<RequireSession><OverviewPage /></RequireSession>} />
+            <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
+            <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
+            <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SessionGate>
