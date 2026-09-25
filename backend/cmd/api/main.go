@@ -23,6 +23,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/master"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/regulation"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
@@ -111,6 +112,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	scoring.NewModule(db, tokens).RegisterRoutes(api)
 	location.NewModule(db, tokens).RegisterRoutes(api)
 	reporting.NewModule(db, tokens).RegisterRoutes(api)
+	regulation.NewModule(db, tokens).RegisterRoutes(api)
 
 	return router
 }
