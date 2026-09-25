@@ -21,6 +21,7 @@ type Config struct {
 	Token    Token
 	Cookie   Cookie
 	CORS     CORS
+	Score    Score
 }
 
 type App struct {
@@ -55,6 +56,14 @@ type Cookie struct {
 
 type CORS struct {
 	AllowedOrigins []string
+}
+
+// Score configures the internal Python scoring service (Moses's /score, contract §8).
+// BaseURL empty means the service is not wired yet; the site slice falls back to a
+// deterministic stub so /api/site/evaluate still works end to end for the demo.
+type Score struct {
+	BaseURL string
+	Timeout time.Duration
 }
 
 func (a App) IsProduction() bool {
@@ -96,6 +105,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	scoreTimeout, err := durationEnv("SCORE_SERVICE_TIMEOUT", 5*time.Second)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		App: App{
 			Environment: env("APP_ENV", "development"),
@@ -125,6 +139,10 @@ func Load() (Config, error) {
 		},
 		CORS: CORS{
 			AllowedOrigins: listEnv("CORS_ALLOWED_ORIGINS", []string{"http://localhost:5173"}),
+		},
+		Score: Score{
+			BaseURL: env("SCORE_SERVICE_URL", ""),
+			Timeout: scoreTimeout,
 		},
 	}, nil
 }
