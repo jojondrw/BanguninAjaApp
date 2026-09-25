@@ -32,6 +32,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/news"
 )
 
 const (
@@ -113,6 +114,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	location.NewModule(db, tokens).RegisterRoutes(api)
 	reporting.NewModule(db, tokens).RegisterRoutes(api)
 	regulation.NewModule(db, tokens).RegisterRoutes(api)
+	news.NewModule(db, tokens).RegisterRoutes(api)
 
 	return router
 }
