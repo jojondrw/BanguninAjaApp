@@ -20,3 +20,71 @@ export const financeApi = {
   cashTransactions: (pageSize = 10) =>
     request<Page<CashTransaction>>(`/finance/cash-transactions${toQueryString({ pageSize })}`),
 }
+
+export interface SiteEvaluateRequest {
+  project_id?: string
+  latitude: number
+  longitude: number
+  building_profile_id: string
+  name: string
+}
+
+export interface SiteDimensionScore {
+  dimension_code: string
+  value: number
+  explanation: string
+}
+
+export interface SiteRiskFlag {
+  code: string
+  severity: string
+  message: string
+}
+
+export interface SiteRegulation {
+  kdb: number
+  klb: number
+  zona: string
+  is_simulated: boolean
+}
+
+export interface SiteNews {
+  title: string
+  url: string
+  source: string
+  published_at: string
+}
+
+export interface SiteEvaluateResponse {
+  saved_location_id: string
+  predictive: {
+    overall_score: number
+    dimension_scores: SiteDimensionScore[]
+    risk_flags: SiteRiskFlag[]
+  }
+  descriptive: {
+    regulasi: SiteRegulation | null
+    news: SiteNews[]
+  } | null
+}
+
+export interface BuildingProfile {
+  id: string
+  code: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const scoringApi = {
+  buildingProfiles: () =>
+    request<BuildingProfile[]>('/scoring/building-profiles'),
+}
+
+export const siteApi = {
+  evaluate: (body: SiteEvaluateRequest) =>
+    request<SiteEvaluateResponse>('/site/evaluate', {
+      method: 'POST',
+      body,
+    }),
+}

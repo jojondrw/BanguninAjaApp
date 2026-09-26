@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/location"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/news"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/regulation"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/geo"
@@ -27,12 +29,24 @@ type Service interface {
 }
 
 type service struct {
-	repository Repository
-	scores     ScoreClient
+	repository        Repository
+	scores            ScoreClient
+	regulationService regulation.Service
+	newsService       news.Service
 }
 
-func NewService(repository Repository, scores ScoreClient) Service {
-	return &service{repository: repository, scores: scores}
+func NewService(
+	repository Repository,
+	scores ScoreClient,
+	regulationService regulation.Service,
+	newsService news.Service,
+) Service {
+	return &service{
+		repository:        repository,
+		scores:            scores,
+		regulationService: regulationService,
+		newsService:       newsService,
+	}
 }
 
 func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request EvaluateRequest) (EvaluateResponse, error) {
@@ -54,8 +68,6 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 		BuildingProfileCode: profile.Code,
 	})
 	if err != nil {
-		// Unknown profile means the DB and scoring service disagree on codes — a
-		// server-side config problem, surfaced as 502 not 400 (§2.4 mapping note).
 		if errors.Is(err, errUnknownProfile) {
 			return EvaluateResponse{}, errScoringUnavail
 		}
@@ -68,8 +80,45 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 		return EvaluateResponse{}, err
 	}
 
-	// 5. Assemble the public response. Per contract §2.3 (Option A), descriptive is
-	// always null until Ian's T18 lands; the shape is reserved but not populated here.
+	// 5. Build descriptive context from T9 regulation + T10 news.
+	descriptive := &Descriptive{
+		News: make([]News, 0),
+	}
+
+	regulationData, _ := s.regulationService.GetByPoint(
+		ctx,
+		*request.Latitude,
+		*request.Longitude,
+	)
+
+	if regulationData != nil {
+		descriptive.Regulasi = &Regulasi{
+			KDB:         regulationData.KDB,
+			KLB:         regulationData.KLB,
+			Zona:        regulationData.ZoneName,
+			IsSimulated: regulationData.IsSimulated,
+		}
+
+		// News is contextual only. Do not fetch broad news when
+		// the regulation lookup has no district.
+		if strings.TrimSpace(regulationData.District) != "" {
+			newsData, _ := s.newsService.FetchNews(ctx, news.NewsQuery{
+				District: regulationData.District,
+			})
+
+			for _, item := range newsData {
+				descriptive.News = append(descriptive.News, News{
+					Title:       item.Title,
+					URL:         item.URL,
+					Source:      item.Source,
+					PublishedAt: item.PublishedAt,
+				})
+			}
+		}
+	}
+
+	// 6. Assemble the public response.
+	// Predictive data remains completely separate from descriptive context.
 	return EvaluateResponse{
 		SavedLocationID: saved.Location.ID,
 		Predictive: Predictive{
@@ -77,7 +126,7 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 			DimensionScores: result.DimensionScores,
 			RiskFlags:       nonNilFlags(result.RiskFlags),
 		},
-		Descriptive: nil,
+		Descriptive: descriptive,
 	}, nil
 }
 
@@ -85,13 +134,16 @@ func (s *service) ensureProject(ctx context.Context, projectID *uuid.UUID) error
 	if projectID == nil {
 		return nil
 	}
+
 	exists, err := s.repository.ProjectExists(ctx, *projectID)
 	if err != nil {
 		return apperror.Internal(err)
 	}
+
 	if !exists {
 		return errProjectNotFound
 	}
+
 	return nil
 }
 
@@ -105,11 +157,13 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 	for _, dimension := range result.DimensionScores {
 		id, ok := dimensionIDs[dimension.DimensionCode]
 		if !ok {
-			// A returned code with no seeded dimension row is a server-side config
-			// mismatch — do not silently drop it (§3.4).
 			return SavedRecord{}, errScoringUnavail
 		}
-		scores = append(scores, location.DimensionScore{DimensionID: id, Value: dimension.Value})
+
+		scores = append(scores, location.DimensionScore{
+			DimensionID: id,
+			Value:       dimension.Value,
+		})
 	}
 
 	saved := SavedRecord{
@@ -117,8 +171,11 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 			UserID:            userID,
 			Name:              strings.TrimSpace(request.Name),
 			BuildingProfileID: &profileID,
-			Point:             geo.Point{Lon: *request.Longitude, Lat: *request.Latitude},
-			Score:             result.OverallScore,
+			Point: geo.Point{
+				Lon: *request.Longitude,
+				Lat: *request.Latitude,
+			},
+			Score: result.OverallScore,
 		},
 		Scores: scores,
 	}
@@ -129,6 +186,7 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 	if err != nil {
 		return SavedRecord{}, apperror.From(err)
 	}
+
 	return saved, nil
 }
 
@@ -136,5 +194,6 @@ func nonNilFlags(flags []RiskFlag) []RiskFlag {
 	if flags == nil {
 		return []RiskFlag{}
 	}
+
 	return flags
 }

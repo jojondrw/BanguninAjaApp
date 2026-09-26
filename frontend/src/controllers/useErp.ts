@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { financeApi, projectApi } from '../models/erpApi'
+import { financeApi, projectApi, scoringApi, siteApi } from '../models/erpApi'
 import type { CashFlowFilter } from '../models/finance'
 import type { ProjectFilter } from '../models/project'
 
@@ -39,6 +39,20 @@ export function useCashTransactions(pageSize = 10) {
   return useQuery({
     queryKey: ['cash-transactions', pageSize],
     queryFn: () => financeApi.cashTransactions(pageSize),
+    ...DATA_QUERY,
+  })
+}
+
+export function useSiteEvaluate() {
+  return useMutation({
+    mutationFn: siteApi.evaluate,
+  })
+}
+
+export function useBuildingProfiles() {
+  return useQuery({
+    queryKey: ['building-profiles'],
+    queryFn: scoringApi.buildingProfiles,
     ...DATA_QUERY,
   })
 }
