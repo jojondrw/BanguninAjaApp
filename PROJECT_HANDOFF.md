@@ -44,7 +44,8 @@
 | `/tagihan` | Faktur, Piutang, Utang with payment recording |
 | `/penjualan` | Unit, Prospek, Pelanggan, Kontrak (+ installment payments) |
 | `/pengadaan` | Pesanan pembelian, Penerimaan barang, Vendor, Permintaan pembelian |
-| `/inventaris`, `/sdm` | Inventory and HR |
+| `/inventaris` | Stok dan mutasi, Material dan gudang, Aset dan alat (full CRUD) |
+| `/sdm` | Employees, attendance, payroll (edit/delete, SQL payroll summary) |
 
 Pages are lazy-loaded per route; a route-level error boundary keeps one broken page from blanking the app.
 
@@ -117,7 +118,7 @@ Gotchas seen on Derick's laptop:
 | G2 | Cash transactions don't post journal entries | Cash and the ledger are separate books; the UI says so | P3 |
 | G3 | Receivables/payables have no project, contract, or PO link; an invoice and a receivable can record the same debt twice | Billing data model | P3 |
 | G4 | Leads aren't linked to the customer created from them | Sales data model | P3 |
-| G5 | Several lists resolve names from the first 100 records only (vendors, projects, warehouses in some tables) | Needs joins/preloads in the backend responses | P3 |
+| G5 | Dropdowns (materials, warehouses, parent assets, active employees) and some name lookups in procurement/billing tables still load at most 100 records | Stock tables already get names from the backend (#34); the rest needs searchable selects or joins | P3 |
 
 ---
 
