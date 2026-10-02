@@ -67,6 +67,11 @@ def test_score_shape_matches_go_contract():
     assert all(d["explanation"] for d in result["dimension_scores"])
 
 
+def test_facts_are_clamped_and_nullable():
+    result = score(linear_model(), dict(FEATURES, hazard_banjir=1.4, hazard_gempabumi=None, land_price=None), "housing")
+    assert result["facts"] == {"flood_index": 1.0, "earthquake_index": None, "land_price_per_sqm": None}
+
+
 def test_overall_is_weighted_sum():
     weights = {profile: {"fisik_lingkungan": 100, "infrastruktur": 0, "demografi_sosial": 0, "pasar_kompetisi": 0, "finansial_proyek": 0} for profile in config.PROFILES}
     result = score(linear_model(weights), FEATURES, "mall")
@@ -107,7 +112,8 @@ def test_api_contract():
     with TestClient(create_app(FakeExtractor(), linear_model())) as client:
         ok = client.post("/score", json={"latitude": -6.2, "longitude": 106.8, "building_profile_code": "mall"})
         assert ok.status_code == 200
-        assert set(ok.json()) == {"overall_score", "dimension_scores", "risk_flags", "region"}
+        assert set(ok.json()) == {"overall_score", "dimension_scores", "risk_flags", "region", "facts"}
+        assert set(ok.json()["facts"]) == {"flood_index", "earthquake_index", "land_price_per_sqm"}
         assert ok.json()["region"] == "Kota Contoh"
 
         unknown = client.post("/score", json={"latitude": -6.2, "longitude": 106.8, "building_profile_code": "castle"})

@@ -165,7 +165,27 @@ function physicalLevel(score: number | undefined): RiskLevel | null {
   return score < PHYSICAL_RISK_BELOW.medium ? 'medium' : null
 }
 
+const STORED_RISK_LABEL: Record<string, string> = {
+  rawan_banjir: 'banjir',
+  rawan_gempabumi: 'gempa bumi',
+  rawan_longsor: 'tanah longsor',
+  rawan_tsunami: 'tsunami',
+  rawan_likuefaksi: 'likuefaksi',
+  rawan_gunungapi: 'gunung api',
+  lereng_curam: 'lereng curam',
+  di_luar_cakupan_data: 'di luar cakupan data',
+}
+
+export function hasStoredRisk(location: SavedLocationDetail): boolean {
+  return location.riskFlags !== null && location.riskFlags !== undefined
+}
+
 function riskFlags(location: SavedLocationDetail, physicalDimensionId: string | undefined): RiskFlag[] {
+  if (location.riskFlags) {
+    return location.riskFlags
+      .map((flag) => ({ key: flag.code, label: STORED_RISK_LABEL[flag.code] ?? flag.code.replace(/_/g, ' '), level: flag.severity }))
+      .sort((a, b) => (a.level === b.level ? 0 : a.level === 'high' ? -1 : 1))
+  }
   const physicalScore = location.dimensionScores.find((score) => score.dimensionId === physicalDimensionId)?.value
   const candidates: { key: string; label: string; level: RiskLevel | null }[] = [
     { key: 'banjir', label: 'banjir', level: hazardLevel(location.floodIndex) },
@@ -215,6 +235,7 @@ export interface ComparisonTable {
   hasLandPrice: boolean
   hasHazardIndex: boolean
   hasNote: boolean
+  hasEstimatedRisk: boolean
   summary: string
 }
 
@@ -350,6 +371,7 @@ export function compareLocations(locations: SavedLocationDetail[], dimensions: D
     hasLandPrice: locations.some((location) => location.landPricePerSqm > 0),
     hasHazardIndex: locations.some((location) => location.floodIndex > 0 || location.earthquakeIndex > 0),
     hasNote: locations.some((location) => location.note.trim() !== ''),
+    hasEstimatedRisk: locations.some((location) => !hasStoredRisk(location)),
     summary: summarize(labels, scores, scoreBest, dimensionRows, risks),
   }
 }

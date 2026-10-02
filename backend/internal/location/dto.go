@@ -1,6 +1,7 @@
 package location
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -61,9 +62,16 @@ type SavedLocationResponse struct {
 	FloodIndex        float64    `json:"floodIndex"`
 	EarthquakeIndex   float64    `json:"earthquakeIndex"`
 	Note              string     `json:"note"`
+	RiskFlags         []RiskFlag `json:"riskFlags"`
 	SavedAt           time.Time  `json:"savedAt"`
 	CreatedAt         time.Time  `json:"createdAt"`
 	UpdatedAt         time.Time  `json:"updatedAt"`
+}
+
+type RiskFlag struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
 }
 
 type SavedLocationDetailResponse struct {
@@ -119,6 +127,7 @@ func newSavedLocationResponse(location SavedLocation) SavedLocationResponse {
 		FloodIndex:        location.FloodIndex,
 		EarthquakeIndex:   location.EarthquakeIndex,
 		Note:              location.Note,
+		RiskFlags:         decodeRiskFlags(location.RiskFlags),
 		SavedAt:           location.SavedAt,
 		CreatedAt:         location.CreatedAt,
 		UpdatedAt:         location.UpdatedAt,
@@ -151,4 +160,15 @@ func newComparisonItemResponse(item ComparisonItem, location SavedLocation, scor
 		EarthquakeIndex: location.EarthquakeIndex,
 		DimensionScores: scores,
 	}
+}
+
+func decodeRiskFlags(raw *string) []RiskFlag {
+	if raw == nil {
+		return nil
+	}
+	flags := []RiskFlag{}
+	if err := json.Unmarshal([]byte(*raw), &flags); err != nil {
+		return nil
+	}
+	return flags
 }
