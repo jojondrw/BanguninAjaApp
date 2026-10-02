@@ -7,22 +7,31 @@ arah ketergantungan, tanpa lapisan tambahan yang tidak dipakai.
 
 ```
 frontend/src/
-  models/          data dan cara mengambilnya
-    auth.ts        bentuk DTO
-    authApi.ts     pemanggilan endpoint
-  controllers/     penghubung data dan tampilan
-    sessionStore.ts  penyimpan sesi di memori
-    useAuth.ts     hook TanStack Query
-  views/           yang dilihat pengguna
-    LoginPage.tsx
-    RegisterPage.tsx
-    DashboardPage.tsx
-    components/      potongan yang dipakai berulang
-  shared/          dipakai lintas bagian
-    apiClient.ts
-    errorMessage.ts
-  App.tsx          rute dan provider
+  models/            data dan cara mengambilnya
+    <modul>.ts         bentuk DTO, label dan warna status
+    <modul>Api.ts      pemanggilan endpoint (salesApi, procurementApi, hrApi, ...)
+    erpApi.ts          proyek, keuangan, lokasi, scoring
+  controllers/       penghubung data dan tampilan
+    sessionStore.ts    penyimpan sesi di memori
+    use<Modul>.ts      hook TanStack Query per modul
+  views/             yang dilihat pengguna
+    <Modul>Page.tsx    satu berkas per rute (dimuat lazy di App.tsx)
+    project/           tab ruang kerja proyek
+    overview/          potongan khusus halaman Ringkasan
+    components/        dipakai berulang: AppShell, Data, Form, ListTools,
+                       RecordControls, Tabs, CommandPalette, ErrorBoundary,
+                       CashFlowChart, navigation.ts (daftar menu)
+  shared/            dipakai lintas bagian
+    apiClient.ts       request(), refresh sesi, toQueryString
+    errorMessage.ts    pesan galat dari backend
+    format.ts          rupiah, tanggal, angka
+    localDate.ts       tanggal lokal peramban
+  App.tsx            rute, Suspense, error boundary, provider
 ```
+
+Halaman baru: buat `views/<Modul>Page.tsx` yang dibungkus `AppShell`, daftarkan
+rutenya secara lazy di `App.tsx`, lalu tambahkan menunya di
+`views/components/navigation.ts` (otomatis ikut ke sidebar dan command palette).
 
 ## Pembagian tugas
 
