@@ -58,7 +58,7 @@ export const MAP_LAYERS: MapLayerDefinition[] = [
     description: 'Jiwa per km² dari WorldPop 2020',
     minZoom: 7,
     gradient: 'linear-gradient(90deg, rgb(196 181 253 / 0.45), #8b5cf6, #5b21b6, #2e1065)',
-    ticks: ['100', '1.000', '20.000+ jiwa/km²'],
+    ticks: ['300', '4.000', '40.000+ jiwa/km²'],
     attribution: 'Penduduk: <a href="https://www.worldpop.org">WorldPop</a>',
   },
   {

@@ -23,6 +23,14 @@ const NO_SITES: SavedLocation[] = []
 
 export const SITE_EVALUATION_ID = 'evaluasi-lokasi'
 
+const DIMENSION_LABEL: Record<string, string> = {
+  fisik_lingkungan: 'Fisik & Lingkungan',
+  infrastruktur: 'Infrastruktur & Aksesibilitas',
+  demografi_sosial: 'Demografi & Sosial',
+  pasar_kompetisi: 'Pasar & Kompetisi',
+  finansial_proyek: 'Finansial Proyek',
+}
+
 const SELECT_CLASS = `${CONTROL_CLASS} h-10 w-full px-3 disabled:cursor-not-allowed`
 
 function toMapPoint(latitude: string, longitude: string): MapPoint | null {
@@ -150,7 +158,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
                   htmlFor="building-profile"
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
-                  Building Profile
+                  Profil bangunan
                 </label>
 
                 <select
@@ -166,8 +174,8 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
                 >
                   <option value="">
                     {profiles.isLoading
-                      ? 'Memuat building profile...'
-                      : 'Pilih building profile'}
+                      ? 'Memuat profil bangunan...'
+                      : 'Pilih profil bangunan'}
                   </option>
 
                   {profiles.data?.map((profile) => (
@@ -185,14 +193,14 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
 
                 {profiles.isError ? (
                   <p className="mt-1.5 text-xs text-red-600">
-                    Gagal mengambil building profile.
+                    Gagal mengambil daftar profil bangunan.
                   </p>
                 ) : null}
               </div>
 
               <Field
                 id="latitude"
-                label="Latitude"
+                label="Lintang (latitude)"
                 type="number"
                 step="any"
                 min={-MAX_LATITUDE}
@@ -205,7 +213,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
 
               <Field
                 id="longitude"
-                label="Longitude"
+                label="Bujur (longitude)"
                 type="number"
                 step="any"
                 min={-MAX_LONGITUDE}
@@ -310,13 +318,13 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
     <>
       <KpiRow>
         <Kpi
-          label="Overall Score"
+          label="Skor keseluruhan"
           value={`${result.predictive.overall_score}`}
           note="Skor kelayakan lokasi"
         />
 
         <Kpi
-          label="Risk Flags"
+          label="Penanda risiko"
           value={`${result.predictive.risk_flags.length}`}
           note="Risiko yang terdeteksi"
         />
@@ -341,11 +349,11 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card
           title="Skor kelayakan"
-          description="Hasil predictive dari Site Intelligence."
+          description="Skor 0 sampai 100 dari lima dimensi data GIS, dibobot per profil bangunan."
         >
           <div className="space-y-4">
             {result.predictive.dimension_scores.length === 0 ? (
-              <Empty message="Belum ada dimension score." />
+              <Empty message="Belum ada skor dimensi." />
             ) : (
               result.predictive.dimension_scores.map((dimension) => (
                 <div
@@ -354,7 +362,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium text-slate-900">
-                      {dimension.dimension_code}
+                      {DIMENSION_LABEL[dimension.dimension_code] ?? dimension.dimension_code}
                     </p>
 
                     <p className="text-lg font-semibold tabular-nums text-slate-900">
@@ -400,7 +408,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
 
         <Card
           title="Konteks regulasi"
-          description="Informasi deskriptif dari T9. Tidak masuk ke scoring."
+          description="Informasi deskriptif dari RDTR. Tidak ikut dihitung dalam skor."
         >
           {result.descriptive?.regulasi ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -446,7 +454,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
 
       <Card
         title="Berita sekitar lokasi"
-        description="Konteks berita terbaru. Tidak digunakan dalam scoring."
+        description="Berita terbaru tentang wilayah ini. Tidak ikut dihitung dalam skor."
       >
         {result.descriptive?.news.length ? (
           <div className="space-y-3">
