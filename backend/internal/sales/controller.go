@@ -184,6 +184,21 @@ func (c *Controller) UpdateLead(ctx *gin.Context) {
 	httpresponse.Respond(ctx, lead, err)
 }
 
+func (c *Controller) ConvertLead(ctx *gin.Context) {
+	id, err := httprequest.PathID(ctx, idParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request CustomerRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	response, err := c.service.ConvertLead(ctx.Request.Context(), id, request)
+	httpresponse.RespondCreated(ctx, response, err)
+}
+
 func (c *Controller) DeleteLead(ctx *gin.Context) {
 	id, err := httprequest.PathID(ctx, idParam)
 	if err != nil {

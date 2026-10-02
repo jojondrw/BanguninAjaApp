@@ -149,6 +149,12 @@ export function useDeleteUnit() {
   return useSalesMutation((unit: PropertyUnit) => salesApi.deleteUnit(unit.id))
 }
 
+export function useConvertLead() {
+  return useSalesMutation(({ leadId, values }: { leadId: string; values: CustomerFormValues }) =>
+    salesApi.convertLead(leadId, toCustomerRequest(values)),
+  )
+}
+
 export function useCreateCustomer() {
   return useSalesMutation((values: CustomerFormValues) =>
     salesApi.createCustomer(toCustomerRequest(values)),

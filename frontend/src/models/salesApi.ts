@@ -14,6 +14,7 @@ import {
   type InstallmentPaymentRequest,
   type InstallmentRequest,
   type Lead,
+  type LeadConversion,
   type LeadFilter,
   type LeadRequest,
   type LeadStageCounts,
@@ -68,6 +69,8 @@ export const salesApi = {
   updateLead: (id: string, body: LeadRequest) => request<Lead>(`/sales/leads/${id}`, { method: 'PUT', body }),
 
   deleteLead: (id: string) => request<void>(`/sales/leads/${id}`, { method: 'DELETE' }),
+  convertLead: (id: string, body: CustomerRequest) =>
+    request<LeadConversion>(`/sales/leads/${id}/convert`, { method: 'POST', body }),
 
   contracts: (filter: ContractFilter = {}) =>
     request<Page<Contract>>(`/sales/contracts${toQueryString({ ...filter })}`),

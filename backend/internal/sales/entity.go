@@ -44,6 +44,7 @@ type Lead struct {
 	Source          string     `gorm:"type:varchar(60)"`
 	Stage           string     `gorm:"type:varchar(20);not null;index:idx_lead_stage"`
 	LastContactedAt *time.Time `gorm:"type:date"`
+	CustomerID      *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_lead_customer"`
 }
 
 func (Lead) TableName() string {
@@ -96,6 +97,7 @@ func Constraints() []string {
 	return []string{
 		database.ForeignKey("unit", "project_id", "project", database.DeleteRestrict),
 		database.ForeignKey("lead", "project_id", "project", database.DeleteSetNull),
+		database.ForeignKey("lead", "customer_id", "customer", database.DeleteSetNull),
 		database.ForeignKey("contract", "customer_id", "customer", database.DeleteRestrict),
 		database.ForeignKey("contract", "unit_id", "unit", database.DeleteRestrict),
 		database.ForeignKey("installment", "contract_id", "contract", database.DeleteCascade),

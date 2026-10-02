@@ -94,8 +94,14 @@ type LeadResponse struct {
 	Source          string     `json:"source"`
 	Stage           string     `json:"stage"`
 	LastContactedAt *time.Time `json:"lastContactedAt"`
+	CustomerID      *uuid.UUID `json:"customerId"`
 	CreatedAt       time.Time  `json:"createdAt"`
 	UpdatedAt       time.Time  `json:"updatedAt"`
+}
+
+type LeadConversionResponse struct {
+	Lead     LeadResponse     `json:"lead"`
+	Customer CustomerResponse `json:"customer"`
 }
 
 type ContractRequest struct {
@@ -208,6 +214,7 @@ func newLeadResponse(lead Lead) LeadResponse {
 		Source:          lead.Source,
 		Stage:           lead.Stage,
 		LastContactedAt: lead.LastContactedAt,
+		CustomerID:      lead.CustomerID,
 		CreatedAt:       lead.CreatedAt,
 		UpdatedAt:       lead.UpdatedAt,
 	}
