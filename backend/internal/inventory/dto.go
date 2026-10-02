@@ -72,15 +72,16 @@ type StockQuery struct {
 }
 
 type StockResponse struct {
-	ID            uuid.UUID `json:"id"`
-	MaterialID    uuid.UUID `json:"materialId"`
-	MaterialCode  string    `json:"materialCode"`
-	MaterialName  string    `json:"materialName"`
-	WarehouseID   uuid.UUID `json:"warehouseId"`
-	WarehouseCode string    `json:"warehouseCode"`
-	WarehouseName string    `json:"warehouseName"`
-	Quantity      float64   `json:"quantity"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID                uuid.UUID `json:"id"`
+	MaterialID        uuid.UUID `json:"materialId"`
+	MaterialCode      string    `json:"materialCode"`
+	MaterialName      string    `json:"materialName"`
+	UnitOfMeasureCode string    `json:"unitOfMeasureCode"`
+	WarehouseID       uuid.UUID `json:"warehouseId"`
+	WarehouseCode     string    `json:"warehouseCode"`
+	WarehouseName     string    `json:"warehouseName"`
+	Quantity          float64   `json:"quantity"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 type StockMovementRequest struct {
@@ -103,15 +104,22 @@ type StockMovementQuery struct {
 }
 
 type StockMovementResponse struct {
-	ID                uuid.UUID  `json:"id"`
-	Date              time.Time  `json:"date"`
-	Type              string     `json:"type"`
-	MaterialID        uuid.UUID  `json:"materialId"`
-	Quantity          float64    `json:"quantity"`
-	SourceWarehouseID *uuid.UUID `json:"sourceWarehouseId"`
-	TargetWarehouseID *uuid.UUID `json:"targetWarehouseId"`
-	Reference         string     `json:"reference"`
-	CreatedAt         time.Time  `json:"createdAt"`
+	ID                  uuid.UUID  `json:"id"`
+	Date                time.Time  `json:"date"`
+	Type                string     `json:"type"`
+	MaterialID          uuid.UUID  `json:"materialId"`
+	MaterialCode        string     `json:"materialCode"`
+	MaterialName        string     `json:"materialName"`
+	UnitOfMeasureCode   string     `json:"unitOfMeasureCode"`
+	Quantity            float64    `json:"quantity"`
+	SourceWarehouseID   *uuid.UUID `json:"sourceWarehouseId"`
+	SourceWarehouseCode *string    `json:"sourceWarehouseCode"`
+	SourceWarehouseName *string    `json:"sourceWarehouseName"`
+	TargetWarehouseID   *uuid.UUID `json:"targetWarehouseId"`
+	TargetWarehouseCode *string    `json:"targetWarehouseCode"`
+	TargetWarehouseName *string    `json:"targetWarehouseName"`
+	Reference           string     `json:"reference"`
+	CreatedAt           time.Time  `json:"createdAt"`
 }
 
 func newMaterialResponse(material Material) MaterialResponse {
@@ -152,28 +160,36 @@ func newWarehouseResponse(warehouse Warehouse) WarehouseResponse {
 
 func newStockResponse(row StockRow) StockResponse {
 	return StockResponse{
-		ID:            row.ID,
-		MaterialID:    row.MaterialID,
-		MaterialCode:  row.MaterialCode,
-		MaterialName:  row.MaterialName,
-		WarehouseID:   row.WarehouseID,
-		WarehouseCode: row.WarehouseCode,
-		WarehouseName: row.WarehouseName,
-		Quantity:      row.Quantity,
-		UpdatedAt:     row.UpdatedAt,
+		ID:                row.ID,
+		MaterialID:        row.MaterialID,
+		MaterialCode:      row.MaterialCode,
+		MaterialName:      row.MaterialName,
+		UnitOfMeasureCode: row.UnitOfMeasureCode,
+		WarehouseID:       row.WarehouseID,
+		WarehouseCode:     row.WarehouseCode,
+		WarehouseName:     row.WarehouseName,
+		Quantity:          row.Quantity,
+		UpdatedAt:         row.UpdatedAt,
 	}
 }
 
-func newStockMovementResponse(movement StockMovement) StockMovementResponse {
+func newStockMovementResponse(row StockMovementRow) StockMovementResponse {
 	return StockMovementResponse{
-		ID:                movement.ID,
-		Date:              movement.Date,
-		Type:              movement.Type,
-		MaterialID:        movement.MaterialID,
-		Quantity:          movement.Quantity,
-		SourceWarehouseID: movement.SourceWarehouseID,
-		TargetWarehouseID: movement.TargetWarehouseID,
-		Reference:         movement.Reference,
-		CreatedAt:         movement.CreatedAt,
+		ID:                  row.ID,
+		Date:                row.Date,
+		Type:                row.Type,
+		MaterialID:          row.MaterialID,
+		MaterialCode:        row.MaterialCode,
+		MaterialName:        row.MaterialName,
+		UnitOfMeasureCode:   row.UnitOfMeasureCode,
+		Quantity:            row.Quantity,
+		SourceWarehouseID:   row.SourceWarehouseID,
+		SourceWarehouseCode: row.SourceWarehouseCode,
+		SourceWarehouseName: row.SourceWarehouseName,
+		TargetWarehouseID:   row.TargetWarehouseID,
+		TargetWarehouseCode: row.TargetWarehouseCode,
+		TargetWarehouseName: row.TargetWarehouseName,
+		Reference:           row.Reference,
+		CreatedAt:           row.CreatedAt,
 	}
 }

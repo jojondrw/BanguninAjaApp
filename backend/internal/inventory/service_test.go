@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
 
 type stockKey struct {
@@ -29,8 +31,37 @@ func (f *fakeRepository) Transaction(_ context.Context, work func(Repository) er
 }
 
 func (f *fakeRepository) CreateStockMovement(_ context.Context, movement *StockMovement) error {
+	movement.ID = uuid.New()
 	f.movements = append(f.movements, *movement)
 	return nil
+}
+
+func (f *fakeRepository) FindStockMovementRow(_ context.Context, id uuid.UUID) (StockMovementRow, error) {
+	for _, movement := range f.movements {
+		if movement.ID == id {
+			return StockMovementRow{
+				ID:                  movement.ID,
+				Type:                movement.Type,
+				MaterialID:          movement.MaterialID,
+				MaterialName:        "Semen Portland 50 kg",
+				UnitOfMeasureCode:   "sak",
+				Quantity:            movement.Quantity,
+				SourceWarehouseID:   movement.SourceWarehouseID,
+				SourceWarehouseName: warehouseName(movement.SourceWarehouseID),
+				TargetWarehouseID:   movement.TargetWarehouseID,
+				TargetWarehouseName: warehouseName(movement.TargetWarehouseID),
+			}, nil
+		}
+	}
+	return StockMovementRow{}, database.ErrNotFound
+}
+
+func warehouseName(id *uuid.UUID) *string {
+	if id == nil {
+		return nil
+	}
+	name := "Gudang " + id.String()[:8]
+	return &name
 }
 
 func (f *fakeRepository) IncreaseStock(_ context.Context, materialID, warehouseID uuid.UUID, quantity float64) error {
@@ -107,12 +138,15 @@ func TestTransferMovesStockBetweenWarehouses(t *testing.T) {
 	repository.stock[stockKey{material, source}] = 10
 	service := NewService(repository)
 
-	_, err := service.RecordStockMovement(context.Background(), StockMovementRequest{
+	response, err := service.RecordStockMovement(context.Background(), StockMovementRequest{
 		Date: time.Now(), Type: movementTransfer, MaterialID: material, Quantity: 4.255,
 		SourceWarehouseID: &source, TargetWarehouseID: &target,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if response.MaterialName == "" || response.UnitOfMeasureCode != "sak" || response.SourceWarehouseName == nil || response.TargetWarehouseName == nil {
+		t.Fatalf("recorded movement must carry material and warehouse names, got %+v", response)
 	}
 	if got := repository.stock[stockKey{material, source}]; got != 10-4.26 {
 		t.Fatalf("source stock got %v", got)

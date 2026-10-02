@@ -13,6 +13,19 @@ import (
 const (
 	lowStockCondition = "m.minimum_stock > 0 AND COALESCE(s.total, 0) < m.minimum_stock"
 	lowStockSource    = "material m LEFT JOIN (SELECT material_id, SUM(quantity) AS total FROM stock GROUP BY material_id) s ON s.material_id = m.id"
+
+	unitJoin     = "JOIN unit_of_measure ON unit_of_measure.id = material.unit_of_measure_id"
+	stockColumns = "stock.id, stock.material_id, material.code AS material_code, material.name AS material_name, " +
+		"unit_of_measure.code AS unit_of_measure_code, stock.warehouse_id, warehouse.code AS warehouse_code, " +
+		"warehouse.name AS warehouse_name, stock.quantity, stock.updated_at"
+	movementColumns = "stock_movement.id, stock_movement.date, stock_movement.type, stock_movement.material_id, " +
+		"material.code AS material_code, material.name AS material_name, unit_of_measure.code AS unit_of_measure_code, " +
+		"stock_movement.quantity, stock_movement.source_warehouse_id, source_warehouse.code AS source_warehouse_code, " +
+		"source_warehouse.name AS source_warehouse_name, stock_movement.target_warehouse_id, " +
+		"target_warehouse.code AS target_warehouse_code, target_warehouse.name AS target_warehouse_name, " +
+		"stock_movement.reference, stock_movement.created_at"
+	sourceWarehouseJoin = "LEFT JOIN warehouse AS source_warehouse ON source_warehouse.id = stock_movement.source_warehouse_id"
+	targetWarehouseJoin = "LEFT JOIN warehouse AS target_warehouse ON target_warehouse.id = stock_movement.target_warehouse_id"
 )
 
 type MaterialFilter struct {
@@ -56,15 +69,35 @@ type StockLevel struct {
 }
 
 type StockRow struct {
-	ID            uuid.UUID
-	MaterialID    uuid.UUID
-	MaterialCode  string
-	MaterialName  string
-	WarehouseID   uuid.UUID
-	WarehouseCode string
-	WarehouseName string
-	Quantity      float64
-	UpdatedAt     time.Time
+	ID                uuid.UUID
+	MaterialID        uuid.UUID
+	MaterialCode      string
+	MaterialName      string
+	UnitOfMeasureCode string
+	WarehouseID       uuid.UUID
+	WarehouseCode     string
+	WarehouseName     string
+	Quantity          float64
+	UpdatedAt         time.Time
+}
+
+type StockMovementRow struct {
+	ID                  uuid.UUID
+	Date                time.Time
+	Type                string
+	MaterialID          uuid.UUID
+	MaterialCode        string
+	MaterialName        string
+	UnitOfMeasureCode   string
+	Quantity            float64
+	SourceWarehouseID   *uuid.UUID
+	SourceWarehouseCode *string
+	SourceWarehouseName *string
+	TargetWarehouseID   *uuid.UUID
+	TargetWarehouseCode *string
+	TargetWarehouseName *string
+	Reference           string
+	CreatedAt           time.Time
 }
 
 type Repository interface {
@@ -87,8 +120,8 @@ type Repository interface {
 	IncreaseStock(ctx context.Context, materialID, warehouseID uuid.UUID, quantity float64) error
 	DecreaseStock(ctx context.Context, materialID, warehouseID uuid.UUID, quantity float64) (bool, error)
 
-	ListStockMovements(ctx context.Context, filter StockMovementFilter) ([]StockMovement, int64, error)
-	FindStockMovement(ctx context.Context, id uuid.UUID) (StockMovement, error)
+	ListStockMovements(ctx context.Context, filter StockMovementFilter) ([]StockMovementRow, int64, error)
+	FindStockMovementRow(ctx context.Context, id uuid.UUID) (StockMovementRow, error)
 	CreateStockMovement(ctx context.Context, movement *StockMovement) error
 }
 
@@ -189,9 +222,9 @@ func (r *gormRepository) ListStocks(ctx context.Context, filter StockFilter) ([]
 	err := r.db.WithContext(ctx).
 		Model(&Stock{}).
 		Scopes(filter.apply).
-		Select("stock.id, stock.material_id, material.code AS material_code, material.name AS material_name, " +
-			"stock.warehouse_id, warehouse.code AS warehouse_code, warehouse.name AS warehouse_name, stock.quantity, stock.updated_at").
+		Select(stockColumns).
 		Joins("JOIN material ON material.id = stock.material_id").
+		Joins(unitJoin).
 		Joins("JOIN warehouse ON warehouse.id = stock.warehouse_id").
 		Order("material.code ASC, warehouse.code ASC").
 		Offset(filter.Offset).
@@ -221,23 +254,40 @@ func (r *gormRepository) DecreaseStock(ctx context.Context, materialID, warehous
 	return result.RowsAffected > 0, nil
 }
 
-func (r *gormRepository) ListStockMovements(ctx context.Context, filter StockMovementFilter) ([]StockMovement, int64, error) {
-	return database.FindPage[StockMovement](ctx, r.db, database.Listing{
-		Filter: filter.apply,
-		Order:  "date DESC, created_at DESC",
-		Offset: filter.Offset,
-		Limit:  filter.Limit,
-	})
+func (r *gormRepository) ListStockMovements(ctx context.Context, filter StockMovementFilter) ([]StockMovementRow, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&StockMovement{}).Scopes(filter.apply).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]StockMovementRow, 0, filter.Limit)
+	err := r.movementRows(ctx).
+		Scopes(filter.apply).
+		Select(movementColumns).
+		Order("stock_movement.date DESC, stock_movement.created_at DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
 }
 
-func (r *gormRepository) FindStockMovement(ctx context.Context, id uuid.UUID) (StockMovement, error) {
-	var movement StockMovement
-	err := r.db.WithContext(ctx).Where("id = ?", id).Take(&movement).Error
-	return movement, database.Translate(err)
+func (r *gormRepository) FindStockMovementRow(ctx context.Context, id uuid.UUID) (StockMovementRow, error) {
+	var row StockMovementRow
+	err := r.movementRows(ctx).Select(movementColumns).Where("stock_movement.id = ?", id).Take(&row).Error
+	return row, database.Translate(err)
 }
 
 func (r *gormRepository) CreateStockMovement(ctx context.Context, movement *StockMovement) error {
 	return database.Translate(r.db.WithContext(ctx).Create(movement).Error)
+}
+
+func (r *gormRepository) movementRows(ctx context.Context) *gorm.DB {
+	return r.db.WithContext(ctx).
+		Model(&StockMovement{}).
+		Joins("JOIN material ON material.id = stock_movement.material_id").
+		Joins(unitJoin).
+		Joins(sourceWarehouseJoin).
+		Joins(targetWarehouseJoin)
 }
 
 func (r *gormRepository) deleteByID(ctx context.Context, model any, id uuid.UUID) error {
@@ -285,19 +335,19 @@ func (f StockFilter) apply(db *gorm.DB) *gorm.DB {
 
 func (f StockMovementFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.MaterialID != nil {
-		db = db.Where("material_id = ?", *f.MaterialID)
+		db = db.Where("stock_movement.material_id = ?", *f.MaterialID)
 	}
 	if f.WarehouseID != nil {
-		db = db.Where("(source_warehouse_id = ? OR target_warehouse_id = ?)", *f.WarehouseID, *f.WarehouseID)
+		db = db.Where("(stock_movement.source_warehouse_id = ? OR stock_movement.target_warehouse_id = ?)", *f.WarehouseID, *f.WarehouseID)
 	}
 	if f.Type != "" {
-		db = db.Where("type = ?", f.Type)
+		db = db.Where("stock_movement.type = ?", f.Type)
 	}
 	if f.DateFrom != nil {
-		db = db.Where("date >= ?", *f.DateFrom)
+		db = db.Where("stock_movement.date >= ?", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		db = db.Where("date <= ?", *f.DateTo)
+		db = db.Where("stock_movement.date <= ?", *f.DateTo)
 	}
 	return db
 }
