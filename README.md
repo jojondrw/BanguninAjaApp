@@ -49,8 +49,16 @@ reload. Setiap berkas Go yang disimpan langsung dibangun ulang otomatis.
 docker compose exec backend go run ./cmd/migrate
 ```
 
-Dijalankan sekali di awal, dan diulang setiap ada entity baru. Aman dijalankan
-berkali-kali.
+Dijalankan sekali di awal, dan diulang setiap kali menarik perubahan baru.
+Aman dijalankan berkali-kali.
+
+### 3a. Isi data awal
+
+```bash
+docker compose exec backend go run ./cmd/seed
+```
+
+Mengisi wilayah, satuan, bagan akun, dimensi dan bobot penilaian. Aman diulang.
 
 ### 3b. Isi data RDTR (opsional)
 
@@ -63,6 +71,20 @@ docker compose run --rm -v "/path/ke/BanguninAja/data/raw/rdtr:/rdtr" backend go
 
 Tanpa langkah ini, nilai regulasi tetap muncul tapi ditandai simulasi.
 
+### 3c. Nyalakan layanan penilaian lokasi (disarankan)
+
+Unduh `scoring-bundle.zip` (239 MB) dari Google Drive tim "AOL SWE", ekstrak ke
+`scoring/bundle`, lalu:
+
+```bash
+docker compose --profile scoring up -d scoring
+```
+
+dan isi `SCORE_SERVICE_URL=http://scoring:8090` serta `SCORE_SERVICE_TIMEOUT=15s`
+di `.env`. Tanpa layanan ini skor tetap muncul tapi dari data simulasi
+(penjelasannya diakhiri "(data simulasi)"), dan lapisan peta tidak tersedia.
+Cara lain dan cara membangun bundle ada di `scoring/README.md`.
+
 ### 4. Nyalakan tampilannya
 
 ```bash
@@ -71,7 +93,10 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173`, buat akun, lalu masuk.
+Buka `http://localhost:5173`, buat akun, lalu masuk. Pakai nama host yang sama
+untuk tampilan dan API (`localhost` dengan `localhost`, atau `127.0.0.1` dengan
+`VITE_API_URL=http://127.0.0.1:8080/api`): cookie sesi memakai SameSite=Lax, jadi
+kalau hostnya beda sesi hilang setiap halaman dimuat ulang.
 
 ## Memeriksa isi database
 
@@ -94,23 +119,27 @@ Alasan di balik tiap keputusan ada di `docs/requirements`.
 | `database/index.md` | Kapan sebuah kolom diberi index, dan kapan tidak |
 | `database/skema.md` | Daftar entity per slice dan alasan setiap tambahan |
 | `frontend/arsitektur.md` | Susunan MVC, alur token, larangan penyimpanan |
-| `frontend/aturan-ui.md` | Aturan UI gabungan Shneiderman dan Nielsen |
+| `frontend/aturan-ui.md` | Aturan UI gabungan Shneiderman dan Nielsen, dan bahasa visual |
 
 ## Keadaan sekarang
 
 Sudah jalan:
 
 - Daftar, masuk, keluar, dan sesi yang bertahan setelah halaman dimuat ulang
-- Skema database lengkap untuk semua modul, 47 tabel berikut constraintnya
-- API untuk data master (wilayah, satuan, akun), proyek (tahapan, RAB, izin), dan
-  persediaan (material, gudang, stok, mutasi stok)
-- API untuk pengadaan, aset, penjualan, keuangan, tagihan, SDM, penilaian,
-  lokasi tersimpan, dan daftar laporan. Rinciannya ada di
-  `backend/slice-bisnis.md`
+- Skema database lengkap untuk semua modul berikut constraintnya
+- Penilaian lokasi dari data GIS nyata (layanan `scoring/`), peta dengan lapisan
+  bahaya, kepadatan penduduk, dan harga tanah, serta perbandingan kandidat lokasi
+- Layar untuk semua modul: Ringkasan, Proyek (ruang kerja per proyek), Analisis
+  Lokasi, Keuangan (anggaran, kas, jurnal, buku besar), Tagihan, Penjualan,
+  Pengadaan, Inventaris, dan SDM
+- CI di GitHub Actions untuk backend, frontend, dan layanan scoring
 
 Belum dikerjakan:
 
+- Simulasi pembayaran on-chain
 - Pembatasan akses berdasarkan peran
-- Penerimaan barang yang langsung menambah stok gudang
+- Penerimaan barang yang langsung menambah stok gudang (sementara lewat tombol
+  "Catat stok masuk")
 - Pembuatan berkas laporan PDF, XLSX, dan CSV
-- Layar modul proyek, pengadaan, penjualan, keuangan, SDM, dan peta lokasi
+
+Rincian dan sisa pekerjaan lain ada di `PROJECT_HANDOFF.md`.
