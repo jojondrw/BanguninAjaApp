@@ -170,8 +170,8 @@ Semua di bawah `/api/procurement`.
 | GET, POST | `/purchase-orders` | Filter `search`, `vendorId`, `projectId`, `status`, `dateFrom`, `dateTo` |
 | GET, PUT, DELETE | `/purchase-orders/:id` | GET berisi item, jumlah yang sudah diterima, dan sisanya |
 | PATCH | `/purchase-orders/:id/status` | Hanya `sent` atau `cancelled` |
-| GET, POST | `/goods-receipts` | Filter `search`, `purchaseOrderId`, `warehouseId`, `dateFrom`, `dateTo` |
-| GET | `/goods-receipts/:id` | |
+| GET, POST | `/goods-receipts` | Filter `search`, `purchaseOrderId`, `warehouseId`, `dateFrom`, `dateTo`. POST membalas rincian yang sama dengan GET `/:id` |
+| GET | `/goods-receipts/:id` | Berisi baris beserta material, satuan pesanan, satuan stok, dan status stok per baris, ditambah `unpostedLines` |
 
 | Dokumen | Dari | Boleh ke |
 |---|---|---|
@@ -188,10 +188,47 @@ pesanan menjadi `completed` kalau semua baris sudah diterima penuh, selain itu
 dicatat supaya dua penerimaan yang bersamaan tidak melewati jumlah pesanan.
 
 Penerimaan barang tidak bisa diubah maupun dihapus, sama seperti mutasi stok.
-Penerimaan belum menambah stok gudang secara otomatis, karena stok milik slice
-`inventory` dan slice tidak boleh saling impor. Untuk sementara stok masuk
-dicatat lewat `POST /api/inventory/stock-movements` jenis `in` dengan
-`reference` berisi nomor penerimaan.
+
+### Penerimaan langsung menambah stok
+
+Dalam transaksi yang sama dengan penyimpanan penerimaan, setiap baris dengan
+jumlah diterima lebih dari nol dicatat sebagai satu mutasi `in` ke gudang
+penerimaan, bertanggal tanggal penerimaan, dengan `reference` berisi nomor
+penerimaan. Jumlah yang ditolak tidak masuk stok. Mutasi dan penambahan stok
+memakai logika yang sama dengan `POST /api/inventory/stock-movements`
+(`INSERT ... ON CONFLICT` pada stok), jadi hasilnya tidak bisa dibedakan dari
+mutasi masuk biasa.
+
+`procurement` tidak memanggil repository `inventory` secara langsung. Service
+`procurement` mendeklarasikan interface kecil `StockLedger` dengan satu method
+`RecordIncoming`. Repository `procurement` membuat ledger itu dari koneksi yang
+sedang dipakai, jadi di dalam `Transaction` ledger ikut terikat ke transaksi yang
+sama. Implementasinya, `inventory.StockLedger`, dirakit di `module.go` milik
+`procurement`, satu-satunya berkas `procurement` yang mengimpor `inventory`.
+`inventory` tidak tahu apa pun soal `procurement`, jadi tidak ada impor
+melingkar.
+
+Stok dihitung dalam satuan material (`material.unit_of_measure_id`), sedangkan
+baris pesanan punya satuannya sendiri. Tabel `unit_of_measure` tidak menyimpan
+konversi, jadi baris yang satuannya berbeda tidak ditebak: baris itu dilewati,
+`stock_skip_reason` diisi `unit_mismatch`, dan dilaporkan di `unpostedLines`
+supaya pengguna mencatatnya manual setelah jumlahnya dikonversi. Kalau mutasi
+untuk baris yang satuannya cocok gagal dicatat, seluruh penerimaan dibatalkan
+(rollback), termasuk perubahan status pesanan.
+
+Setiap baris penerimaan menyimpan `stock_movement_id` (unik, `RESTRICT` ke
+`stock_movement`) untuk mutasi yang dibuat otomatis. Status stok per baris di
+respons diturunkan dari kolom itu:
+
+| `stockStatus` | Arti |
+|---|---|
+| `posted` | Mutasi masuk dibuat otomatis, `stockMovementId` terisi, `stockPosted` bernilai `true` |
+| `skipped` | Tidak dicatat otomatis, alasan di `unpostedReason` dan baris ini muncul di `unpostedLines` (`lineId`, `materialId`, `materialName`, `reason`) |
+| `legacy` | Penerimaan dicatat sebelum fitur ini ada. Stok masuknya mungkin sudah dicatat manual, jadi tidak diisi ulang otomatis supaya tidak tercatat dua kali |
+| `none` | Tidak ada jumlah diterima, tidak ada yang perlu masuk stok |
+
+Untuk baris `legacy` dan `skipped`, frontend masih mencari mutasi manual dengan
+`reference` nomor penerimaan dan menyediakan tombol "Catat stok masuk".
 
 | Aturan | Kode error |
 |---|---|
@@ -203,6 +240,7 @@ dicatat lewat `POST /api/inventory/stock-movements` jenis `in` dengan
 | Barang hanya diterima untuk pesanan `sent` atau `partially_received` | `purchase_order_not_receivable` |
 | Baris penerimaan harus milik pesanan itu, tidak ganda, dan punya jumlah diterima atau ditolak | `goods_receipt_item_invalid`, `goods_receipt_item_duplicate`, `goods_receipt_quantity_invalid` |
 | Total diterima per baris tidak boleh melebihi jumlah pesanan | `goods_receipt_exceeds_order` |
+| Stok gagal ditambah untuk baris yang satuannya cocok. Seluruh penerimaan dibatalkan, pesan menyebut material dan sebabnya. Status mengikuti sebabnya (422 untuk aturan stok, 500 untuk kegagalan database) | `goods_receipt_stock_failed` |
 
 ## Asset
 
@@ -433,6 +471,4 @@ belum dikerjakan.
 1. Belum ada pembatasan akses berdasarkan peran. Tabel `role` dan
    `project_member` sudah ada, tapi semua user yang punya access token saat ini
    bisa memakai semua endpoint.
-2. Penerimaan barang belum menambah stok secara otomatis. Perlu diputuskan cara
-   slice `procurement` meminta `inventory` mencatat mutasi tanpa saling impor.
-3. Pembuatan berkas laporan di slice `reporting`.
+2. Pembuatan berkas laporan di slice `reporting`.
