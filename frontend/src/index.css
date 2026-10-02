@@ -35,11 +35,18 @@
   --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
 
   --animate-enter: enter 280ms var(--ease-fluid) both;
+  --animate-fade: fade 160ms ease-out both;
 
   @keyframes enter {
     from {
       opacity: 0;
       transform: translateY(6px);
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
     }
   }
 }

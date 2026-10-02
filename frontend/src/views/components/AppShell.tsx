@@ -1,55 +1,14 @@
-import {
-  Boxes,
-  FolderKanban,
-  Handshake,
-  LayoutDashboard,
-  LogOut,
-  type LucideIcon,
-  MapPinned,
-  ShoppingCart,
-  Users,
-  Wallet,
-} from 'lucide-react'
+import { LogOut, Search } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 
 import { useLogout, useSession } from '../../controllers/useAuth'
 import { BrandName } from './Brand'
+import { CommandPalette } from './CommandPalette'
+import { MENU, MENU_ITEMS, type MenuItem } from './navigation'
 
-interface MenuItem {
-  to: string
-  label: string
-  icon: LucideIcon
-}
-
-interface MenuGroup {
-  label: string
-  items: MenuItem[]
-}
-
-const MENU: MenuGroup[] = [
-  {
-    label: 'Ruang kerja',
-    items: [
-      { to: '/', label: 'Ringkasan', icon: LayoutDashboard },
-      { to: '/proyek', label: 'Proyek', icon: FolderKanban },
-      { to: '/lokasi', label: 'Analisis Lokasi', icon: MapPinned },
-      { to: '/keuangan', label: 'Keuangan', icon: Wallet },
-    ],
-  },
-  {
-    label: 'Operasional',
-    items: [
-      { to: '/penjualan', label: 'Penjualan', icon: Handshake },
-      { to: '/pengadaan', label: 'Pengadaan', icon: ShoppingCart },
-      { to: '/inventaris', label: 'Inventaris', icon: Boxes },
-      { to: '/sdm', label: 'SDM', icon: Users },
-    ],
-  },
-]
-
-const MENU_ITEMS = MENU.flatMap((group) => group.items)
 const SCROLL_EDGE_PX = 4
+const PALETTE_SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K'
 
 interface AppShellProps {
   title: string
@@ -65,6 +24,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
   const panelRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false)
 
   useEffect(() => {
     const panel = panelRef.current
@@ -83,6 +43,17 @@ export function AppShell({ title, description, actions, children }: AppShellProp
       ?.scrollIntoView({ block: 'nearest', inline: 'center' })
   }, [])
 
+  useEffect(() => {
+    const openPalette = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setIsPaletteOpen((open) => !open)
+      }
+    }
+    window.addEventListener('keydown', openPalette)
+    return () => window.removeEventListener('keydown', openPalette)
+  }, [])
+
   const endSession = () => {
     logout.mutate(undefined, { onSettled: () => navigate('/masuk', { replace: true }) })
   }
@@ -92,7 +63,18 @@ export function AppShell({ title, description, actions, children }: AppShellProp
       <aside className="hidden lg:flex lg:min-h-0 lg:flex-col lg:px-3 lg:pt-4 lg:pb-3">
         <BrandName className="h-9 px-2" />
 
-        <nav className="mt-5 flex flex-1 flex-col gap-5 overflow-y-auto" aria-label="Menu utama">
+        <button
+          type="button"
+          onClick={() => setIsPaletteOpen(true)}
+          className="mt-4 flex h-8 items-center gap-2 rounded-lg bg-white/70 px-2.5 text-[13px] text-slate-500 shadow-hairline
+                     transition-[background-color,transform] hover:bg-white motion-safe:active:scale-[0.98]"
+        >
+          <Search aria-hidden="true" className="size-3.5" strokeWidth={2} />
+          <span className="flex-1 text-left">Cari…</span>
+          <kbd className="rounded bg-slate-100 px-1 font-sans text-[10px] font-medium text-slate-500">{PALETTE_SHORTCUT}</kbd>
+        </button>
+
+        <nav className="mt-4 flex flex-1 flex-col gap-5 overflow-y-auto" aria-label="Menu utama">
           {MENU.map((group) => (
             <div key={group.label}>
               <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-slate-500">{group.label}</p>
@@ -128,7 +110,17 @@ export function AppShell({ title, description, actions, children }: AppShellProp
           >
             <div className="flex items-center justify-between gap-3 px-5 pt-3 lg:hidden">
               <BrandName />
-              <SignOutButton isPending={logout.isPending} onClick={endSession} />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsPaletteOpen(true)}
+                  aria-label="Cari halaman atau proyek"
+                  className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-black/[0.05] hover:text-slate-900"
+                >
+                  <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                </button>
+                <SignOutButton isPending={logout.isPending} onClick={endSession} />
+              </div>
             </div>
 
             <nav
@@ -168,6 +160,8 @@ export function AppShell({ title, description, actions, children }: AppShellProp
           </main>
         </div>
       </div>
+
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
     </div>
   )
 }
