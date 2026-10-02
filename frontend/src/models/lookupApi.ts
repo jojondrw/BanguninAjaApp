@@ -125,10 +125,17 @@ export const receivableOrderOptions: OptionSource = {
   fetchSelected: SENT_ORDERS.fetchSelected,
 }
 
-export function propertyUnitOptions(filter: { status?: UnitStatus; projectId?: string } = {}): OptionSource {
-  return source<PropertyUnit>(
+// Unit membawa harga untuk mengisi nilai kontrak.
+export interface PropertyUnitOption extends SearchOption {
+  price: number
+}
+
+export function propertyUnitOptions(
+  filter: { status?: UnitStatus; projectId?: string } = {},
+): OptionSource<PropertyUnitOption> {
+  return source<PropertyUnit, PropertyUnitOption>(
     '/sales/units',
-    (unit) => ({ value: unit.id, label: unit.code, hint: unit.unitType }),
+    (unit) => ({ value: unit.id, label: unit.code, hint: unit.unitType, price: unit.price }),
     filter,
   )
 }
