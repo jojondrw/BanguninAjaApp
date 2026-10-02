@@ -1,13 +1,15 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type { Budget, CashFlow, CashFlowFilter, CashTransaction } from './finance'
-import type { Project, ProjectFilter } from './project'
+import type { Project, ProjectFilter, ProjectRequest } from './project'
 
 export const projectApi = {
   list: (filter: ProjectFilter = {}) =>
     request<Page<Project>>(`/projects${toQueryString({ ...filter })}`),
 
   get: (id: string) => request<Project>(`/projects/${id}`),
+
+  create: (body: ProjectRequest) => request<Project>('/projects', { method: 'POST', body }),
 }
 
 export const financeApi = {

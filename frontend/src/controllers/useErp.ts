@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { financeApi, locationApi, projectApi, scoringApi, siteApi } from '../models/erpApi'
 import type { CashFlowFilter } from '../models/finance'
-import type { ProjectFilter } from '../models/project'
+import { toProjectRequest, type ProjectFilter, type ProjectFormValues } from '../models/project'
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
+const PROJECTS_KEY = 'projects'
 const SAVED_LOCATIONS_KEY = 'saved-locations'
 
 const DATA_QUERY = {
@@ -15,9 +16,20 @@ const DATA_QUERY = {
 
 export function useProjects(filter: ProjectFilter = {}) {
   return useQuery({
-    queryKey: ['projects', filter],
+    queryKey: [PROJECTS_KEY, filter],
     queryFn: () => projectApi.list(filter),
     ...DATA_QUERY,
+  })
+}
+
+// Membatalkan semua query proyek, jadi daftar di /proyek, pilihan proyek di
+// /lokasi, dan ringkasan ikut mengambil ulang data terbaru.
+export function useCreateProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (values: ProjectFormValues) => projectApi.create(toProjectRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
   })
 }
 
