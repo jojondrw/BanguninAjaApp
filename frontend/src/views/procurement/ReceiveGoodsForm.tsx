@@ -28,8 +28,12 @@ import { number } from '../../shared/format'
 import { Empty, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field } from '../components/Form'
 import { SelectField } from '../components/ListTools'
+import { warehouseOptions } from '../../models/lookupApi'
+import { SearchSelect } from '../components/SearchSelect'
 import { codeOf, nameOf } from './lookup'
 import { TextAreaField } from './parts'
+
+const ALL_WAREHOUSES = warehouseOptions()
 
 // Selisih pembulatan dua desimal, sama dengan presisi jumlah di backend.
 const QUANTITY_TOLERANCE = 0.005
@@ -89,7 +93,6 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
   // Gudang milik proyek pesanan didahulukan. Kalau proyeknya punya tepat satu
   // gudang, gudang itu langsung terpilih.
   const projectWarehouses = warehouseItems.filter((warehouse) => warehouse.projectId === detail.projectId)
-  const otherWarehouses = warehouseItems.filter((warehouse) => warehouse.projectId !== detail.projectId)
   const warehouseId = values.warehouseId || (projectWarehouses.length === 1 ? projectWarehouses[0].id : '')
 
   const resolved = detail.items.map((item) => {
@@ -150,33 +153,16 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
           value={values.number}
           onChange={update('number')}
         />
-        <SelectField
+        <SearchSelect
+          {...ALL_WAREHOUSES}
           id={`receipt-${detail.id}-warehouse`}
           label="Gudang penerima"
+          placeholder="Cari nama atau kode gudang"
+          hint={projectWarehouses.length > 0 ? `Gudang proyek ini: ${projectWarehouses.map((item) => item.name).join(', ')}` : undefined}
           required
           value={warehouseId}
-          onChange={update('warehouseId')}
-        >
-          <option value="">Pilih gudang</option>
-          {projectWarehouses.length > 0 ? (
-            <optgroup label="Gudang proyek ini">
-              {projectWarehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name} ({warehouse.code})
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-          {otherWarehouses.length > 0 ? (
-            <optgroup label={projectWarehouses.length > 0 ? 'Gudang lain' : 'Semua gudang'}>
-              {otherWarehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name} ({warehouse.code})
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-        </SelectField>
+          onChange={(value) => setValues((current) => ({ ...current, warehouseId: value }))}
+        />
         <Field
           id={`receipt-${detail.id}-date`}
           label="Tanggal diterima"

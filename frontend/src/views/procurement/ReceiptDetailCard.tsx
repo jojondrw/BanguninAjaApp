@@ -7,7 +7,6 @@ import {
   useReceiptStockMovements,
   useRecordReceiptStock,
   useUnitsOfMeasure,
-  useWarehouseOptions,
 } from '../../controllers/useProcurement'
 import {
   ORDER_STATUS_LABEL,
@@ -23,7 +22,10 @@ import { number, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip } from '../components/ListTools'
-import { codeOf, nameOf } from './lookup'
+import { LookupName } from '../components/LookupName'
+import { useLookupLabel } from '../components/searchSelectLogic'
+import { materialOptions, warehouseOptions } from '../../models/lookupApi'
+import { codeOf } from './lookup'
 import { ConfirmAction, Facts } from './parts'
 
 const STOCK_STATE_LABEL: Record<ReceiptStockState, string> = {
@@ -40,12 +42,14 @@ const STOCK_STATE_TONE: Record<ReceiptStockState, string> = {
   none: 'bg-slate-100 text-slate-700',
 }
 
+const ALL_WAREHOUSES = warehouseOptions()
+
 export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () => void }) {
   const receipt = useGoodsReceipt(id)
   const order = usePurchaseOrder(receipt.data?.purchaseOrderId ?? null)
   const materials = useMaterials()
   const units = useUnitsOfMeasure()
-  const warehouses = useWarehouseOptions()
+  const warehouseLabel = useLookupLabel(ALL_WAREHOUSES, receipt.data?.warehouseId)
   const movements = useReceiptStockMovements(receipt.data)
   const recordStock = useRecordReceiptStock()
   const [isConfirming, setIsConfirming] = useState(false)
@@ -75,7 +79,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
   const detail = receipt.data
   const materialItems = materials.data?.items ?? []
   const unitItems = units.data?.items ?? []
-  const warehouseName = nameOf(warehouses.data?.items ?? [], detail.warehouseId)
+  const warehouseName = warehouseLabel ?? '-'
   const isStockKnown = order.data !== undefined && movements.data !== undefined && materials.data !== undefined
   const lines = receiptStockLines(detail, order.data?.items ?? [], materialItems, movements.data?.items ?? [])
   const pending = receiptStockRequests(detail, lines)
@@ -116,7 +120,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
         rows={lines}
         emptyMessage="Penerimaan ini tidak punya baris barang."
         columns={[
-          { header: 'Material', cell: (row) => nameOf(materialItems, row.materialId) },
+          { header: 'Material', cell: (row) => <LookupName source={materialOptions} value={row.materialId} /> },
           { header: 'Diterima baik', align: 'right', cell: (row) => number(row.acceptedQuantity) },
           { header: 'Ditolak', align: 'right', cell: (row) => number(row.rejectedQuantity) },
           { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },

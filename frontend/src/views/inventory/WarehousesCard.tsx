@@ -9,15 +9,17 @@ import {
   type Warehouse,
   type WarehouseFormValues,
 } from '../../models/inventory'
-import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { FilterSelect, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
+import { LookupName } from '../components/LookupName'
+import { FormPanel, FormToggle, Pager, Toolbar } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { pageAfterRemoval, refusalText } from '../hr/hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from '../hr/RowActions'
-import { PAGE_SIZE, projectLabel, type Lookups } from './inventoryShared'
+import { PAGE_SIZE } from './inventoryShared'
 
 type ChangeWarehouse = (key: keyof WarehouseFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
 
@@ -27,14 +29,16 @@ function useWarehouseValues(initial: WarehouseFormValues) {
   const change: ChangeWarehouse = (key) => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
 
-  return { values, setValues, change }
+  const pickProject = (projectId: string) => setValues((current) => ({ ...current, projectId }))
+
+  return { values, setValues, change, pickProject }
 }
 
-function WarehouseFields({ idPrefix, values, onChange, projects }: {
+function WarehouseFields({ idPrefix, values, onChange, onProject }: {
   idPrefix: string
   values: WarehouseFormValues
   onChange: ChangeWarehouse
-  projects: Project[]
+  onProject: (projectId: string) => void
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -59,26 +63,23 @@ function WarehouseFields({ idPrefix, values, onChange, projects }: {
         value={values.name}
         onChange={onChange('name')}
       />
-      <SelectField
+      <SearchSelect
+        {...projectOptions}
         id={`${idPrefix}-project`}
         label="Proyek (opsional)"
+        placeholder="Cari proyek"
         hint="Kosongkan untuk gudang pusat"
+        allowEmpty
+        emptyLabel="Gudang pusat, tanpa proyek"
         value={values.projectId}
-        onChange={onChange('projectId')}
-      >
-        <option value="">Gudang pusat, tanpa proyek</option>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </SelectField>
+        onChange={onProject}
+      />
     </div>
   )
 }
 
-function NewWarehouseForm({ projects }: { projects: Project[] }) {
-  const { values, setValues, change } = useWarehouseValues(EMPTY_WAREHOUSE_FORM)
+function NewWarehouseForm() {
+  const { values, setValues, change, pickProject } = useWarehouseValues(EMPTY_WAREHOUSE_FORM)
   const createWarehouse = useCreateWarehouse()
 
   const submit = (event: FormEvent) => {
@@ -89,7 +90,7 @@ function NewWarehouseForm({ projects }: { projects: Project[] }) {
   return (
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
-        <WarehouseFields idPrefix="warehouse-new" values={values} onChange={change} projects={projects} />
+        <WarehouseFields idPrefix="warehouse-new" values={values} onChange={change} onProject={pickProject} />
 
         <Button type="submit" isPending={createWarehouse.isPending} pendingLabel="Menyimpan gudang">
           Simpan gudang
@@ -104,13 +105,12 @@ function NewWarehouseForm({ projects }: { projects: Project[] }) {
   )
 }
 
-function EditWarehouseForm({ warehouse, projects, onSaved, onCancel }: {
+function EditWarehouseForm({ warehouse, onSaved, onCancel }: {
   warehouse: Warehouse
-  projects: Project[]
   onSaved: (saved: Warehouse) => void
   onCancel: () => void
 }) {
-  const { values, change } = useWarehouseValues(warehouseFormValues(warehouse))
+  const { values, change, pickProject } = useWarehouseValues(warehouseFormValues(warehouse))
   const updateWarehouse = useUpdateWarehouse()
 
   const submit = (event: FormEvent) => {
@@ -122,7 +122,7 @@ function EditWarehouseForm({ warehouse, projects, onSaved, onCancel }: {
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
         <h3 className="text-[15px] font-semibold text-slate-900">Ubah gudang {warehouse.code}</h3>
-        <WarehouseFields idPrefix="warehouse-edit" values={values} onChange={change} projects={projects} />
+        <WarehouseFields idPrefix="warehouse-edit" values={values} onChange={change} onProject={pickProject} />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={updateWarehouse.isPending} pendingLabel="Menyimpan perubahan">
@@ -139,7 +139,7 @@ function EditWarehouseForm({ warehouse, projects, onSaved, onCancel }: {
   )
 }
 
-export function WarehousesCard({ lookups }: { lookups: Lookups }) {
+export function WarehousesCard() {
   const [projectId, setProjectId] = useState('')
   const [page, setPage] = useState(1)
   const [isCreating, setIsCreating] = useState(false)
@@ -199,31 +199,28 @@ export function WarehousesCard({ lookups }: { lookups: Lookups }) {
       description="Gudang pusat dan gudang lapangan per proyek. Gudang yang sudah punya mutasi stok atau penerimaan barang tidak bisa dihapus."
     >
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="warehouse-filter-project"
           label="Saring menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          onChange={(event) => {
-            setProjectId(event.target.value)
+          onChange={(value) => {
+            setProjectId(value)
             setPage(1)
           }}
-        >
-          <option value="">Semua proyek</option>
-          {lookups.projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
         <FormToggle isOpen={isFormOpen} openLabel="Tambah gudang" onToggle={toggleForm} />
       </Toolbar>
 
-      {isCreating ? <NewWarehouseForm projects={lookups.projects} /> : null}
+      {isCreating ? <NewWarehouseForm /> : null}
       {editing ? (
         <EditWarehouseForm
           key={editing.id}
           warehouse={editing}
-          projects={lookups.projects}
           onCancel={closeForm}
           onSaved={(saved) => {
             closeForm()
@@ -251,7 +248,11 @@ export function WarehousesCard({ lookups }: { lookups: Lookups }) {
             columns={[
               { header: 'Kode', cell: (row) => row.code },
               { header: 'Nama', cell: (row) => row.name },
-              { header: 'Proyek', cell: (row) => projectLabel(lookups, row.projectId, 'Gudang pusat') },
+              {
+                header: 'Proyek',
+                cell: (row) =>
+                  row.projectId ? <LookupName source={projectOptions} value={row.projectId} /> : 'Gudang pusat',
+              },
               {
                 header: 'Aksi',
                 align: 'right',

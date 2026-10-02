@@ -1,21 +1,21 @@
 import type { ChangeEvent } from 'react'
 
+import { materialOptions, type MaterialOption } from '../../models/lookupApi'
 import {
   emptyOrderLine,
   orderLineTotal,
-  type Material,
   type OrderLineValues,
   type UnitOfMeasure,
 } from '../../models/procurement'
 import { rupiah } from '../../shared/format'
 import { Button, Field } from '../components/Form'
 import { SelectField } from '../components/ListTools'
+import { SearchSelect } from '../components/SearchSelect'
 
-function MaterialLineFields({ idPrefix, line, index, materials, units, usedMaterials, showPrice, canRemove, onChange, onRemove }: {
+function MaterialLineFields({ idPrefix, line, index, units, usedMaterials, showPrice, canRemove, onChange, onRemove }: {
   idPrefix: string
   line: OrderLineValues
   index: number
-  materials: Material[]
   units: UnitOfMeasure[]
   usedMaterials: string[]
   showPrice: boolean
@@ -27,11 +27,10 @@ function MaterialLineFields({ idPrefix, line, index, materials, units, usedMater
 
   // Memilih material mengisi satuan bawaan dan harga terakhirnya. Keduanya
   // tetap boleh diubah sesudahnya.
-  const chooseMaterial = (event: ChangeEvent<HTMLSelectElement>) => {
-    const material = materials.find((item) => item.id === event.target.value)
+  const chooseMaterial = (materialId: string, material: MaterialOption | null) => {
     onChange({
       ...line,
-      materialId: event.target.value,
+      materialId,
       unitOfMeasureId: material?.unitOfMeasureId ?? line.unitOfMeasureId,
       unitPrice: line.unitPrice === '' && material ? String(material.lastPrice) : line.unitPrice,
     })
@@ -44,18 +43,16 @@ function MaterialLineFields({ idPrefix, line, index, materials, units, usedMater
     <fieldset className="rounded-xl bg-white p-4 shadow-hairline">
       <legend className="float-left mb-3 w-full text-xs font-medium text-slate-500">Baris {index + 1}</legend>
       <div className={`clear-both grid gap-4 ${showPrice ? 'md:grid-cols-[2fr_1fr_1fr_1fr]' : 'md:grid-cols-[2fr_1fr_1fr]'}`}>
-        <SelectField id={`${id}-material`} label="Material" required value={line.materialId} onChange={chooseMaterial}>
-          <option value="">Pilih material</option>
-          {materials.map((material) => (
-            <option
-              key={material.id}
-              value={material.id}
-              disabled={material.id !== line.materialId && usedMaterials.includes(material.id)}
-            >
-              {material.name} ({material.code})
-            </option>
-          ))}
-        </SelectField>
+        <SearchSelect
+          {...materialOptions}
+          id={`${id}-material`}
+          label="Material"
+          placeholder="Cari nama atau kode material"
+          required
+          exclude={usedMaterials}
+          value={line.materialId}
+          onChange={chooseMaterial}
+        />
         <Field
           id={`${id}-quantity`}
           label="Jumlah"
@@ -114,10 +111,9 @@ function MaterialLineFields({ idPrefix, line, index, materials, units, usedMater
 // Daftar baris material untuk permintaan (tanpa harga) dan pesanan (dengan
 // harga). Satu material hanya boleh sekali per dokumen, sama dengan aturan
 // material_duplicate di backend, jadi material yang sudah dipakai dikunci.
-export function MaterialLinesEditor({ idPrefix, lines, materials, units, showPrice, onChange }: {
+export function MaterialLinesEditor({ idPrefix, lines, units, showPrice, onChange }: {
   idPrefix: string
   lines: OrderLineValues[]
-  materials: Material[]
   units: UnitOfMeasure[]
   showPrice: boolean
   onChange: (lines: OrderLineValues[]) => void
@@ -133,7 +129,6 @@ export function MaterialLinesEditor({ idPrefix, lines, materials, units, showPri
           idPrefix={idPrefix}
           line={line}
           index={index}
-          materials={materials}
           units={units}
           usedMaterials={usedMaterials}
           showPrice={showPrice}

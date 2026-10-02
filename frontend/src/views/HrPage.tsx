@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-import { useProjects } from '../controllers/useErp'
 import { useAttendanceCount, useEmployeeHeadcount, usePayrollSummary } from '../controllers/useHr'
 import { EMPLOYMENT_TYPE_LABEL, type EmploymentCount } from '../models/hr'
 import { monthLabel, number, rupiahShort } from '../shared/format'
@@ -26,16 +25,6 @@ export function HrPage() {
   const presentToday = useAttendanceCount({ dateFrom: today, dateTo: today, status: 'present' })
   const recordedToday = useAttendanceCount({ dateFrom: today, dateTo: today })
   const payrollSummary = usePayrollSummary({ period })
-  const projects = useProjects({ pageSize: 100 })
-  const projectList = projects.data?.items ?? []
-
-  const projectName = (id: string | null) => {
-    if (id === null) {
-      return 'Kantor pusat'
-    }
-    return projectList.find((project) => project.id === id)?.name ?? id.slice(0, 8)
-  }
-
   return (
     <AppShell title="SDM" description="Karyawan, absensi harian, dan penggajian per periode">
       <KpiRow>
@@ -62,9 +51,9 @@ export function HrPage() {
       </KpiRow>
 
       <div className="mt-6 grid gap-6">
-        <EmployeesSection projects={projectList} projectName={projectName} today={today} />
+        <EmployeesSection today={today} />
         <AttendanceSection today={today} />
-        <PayrollSection period={period} onPeriodChange={setPeriod} projects={projectList} />
+        <PayrollSection period={period} onPeriodChange={setPeriod} />
       </div>
     </AppShell>
   )

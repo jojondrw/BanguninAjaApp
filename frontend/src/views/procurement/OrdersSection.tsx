@@ -1,18 +1,15 @@
 import { useState } from 'react'
 
-import { useProjects } from '../../controllers/useErp'
 import {
   useDeletePurchaseOrder,
   useGoodsReceipts,
-  useMaterials,
   usePurchaseOrder,
   usePurchaseOrders,
   usePurchaseRequest,
   useUnitsOfMeasure,
   useUpdatePurchaseOrderStatus,
-  useVendorOptions,
-  useWarehouseOptions,
 } from '../../controllers/useProcurement'
+import { materialOptions, projectOptions, vendorOptions } from '../../models/lookupApi'
 import {
   ORDER_NUMBER_MAX_LENGTH,
   ORDER_STATUS_LABEL,
@@ -22,16 +19,16 @@ import {
   emptyPurchaseOrderForm,
   purchaseOrderFormFrom,
   type PurchaseOrderStatus,
-  type Vendor,
 } from '../../models/procurement'
-import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
+import { LookupName } from '../components/LookupName'
 import { ToolbarInput } from '../components/RecordControls'
-import { OPTION_LIMIT, PAGE_SIZE, codeOf, nameOf, type OrderPrefill } from './lookup'
+import { useLookupLabel } from '../components/searchSelectLogic'
+import { OPTION_LIMIT, PAGE_SIZE, codeOf, type OrderPrefill } from './lookup'
 import { ConfirmAction, Facts } from './parts'
 import { PurchaseOrderFormCard } from './PurchaseOrderForm'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
@@ -57,11 +54,10 @@ const STATUS_HINT: Record<PurchaseOrderStatus, string> = {
 type DetailMode = 'view' | 'edit' | 'receive'
 type OrderConfirm = 'cancel' | 'delete'
 
-function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDeleted }: {
+const ALL_VENDORS = vendorOptions()
+
+function PurchaseOrderDetailCard({ id, onDeleted }: {
   id: string
-  vendors: Vendor[]
-  projects: Project[]
-  isLoadingOptions: boolean
   onDeleted: (number: string) => void
 }) {
   const [mode, setMode] = useState<DetailMode>('view')
@@ -71,14 +67,12 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
   const order = usePurchaseOrder(id)
   const sourceRequest = usePurchaseRequest(order.data?.purchaseRequestId ?? null)
   const receipts = useGoodsReceipts({ purchaseOrderId: id, pageSize: OPTION_LIMIT })
-  const materials = useMaterials()
   const units = useUnitsOfMeasure()
-  const warehouses = useWarehouseOptions()
   const updateStatus = useUpdatePurchaseOrderStatus()
   const deleteOrder = useDeletePurchaseOrder()
-  const materialItems = materials.data?.items ?? []
   const unitItems = units.data?.items ?? []
-  const warehouseItems = warehouses.data?.items ?? []
+  const vendorName = useLookupLabel(ALL_VENDORS, order.data?.vendorId) ?? '-'
+  const projectName = useLookupLabel(projectOptions, order.data?.projectId) ?? '-'
 
   if (order.isPending) {
     return (
@@ -105,9 +99,6 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
         editingId={detail.id}
         initial={purchaseOrderFormFrom(detail)}
         requestNumber={requestNumber}
-        vendors={vendors}
-        projects={projects}
-        isLoadingOptions={isLoadingOptions}
         onSaved={(saved) => {
           setMode('view')
           setNotice(`Perubahan pesanan ${saved.number} tersimpan, nilainya sekarang ${rupiah(saved.value)}.`)
@@ -228,7 +219,7 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
     <div className="space-y-6">
       <Card
         title={`Rincian pesanan ${detail.number}`}
-        description={`${nameOf(vendors, detail.vendorId)} untuk ${nameOf(projects, detail.projectId)}, ${shortDate(detail.date)}`}
+        description={`${vendorName} untuk ${projectName}, ${shortDate(detail.date)}`}
       >
         <Facts
           items={[
@@ -254,7 +245,7 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
           rows={detail.items}
           emptyMessage="Pesanan ini tidak punya baris material."
           columns={[
-            { header: 'Material', cell: (row) => nameOf(materialItems, row.materialId) },
+            { header: 'Material', cell: (row) => <LookupName source={materialOptions} value={row.materialId} /> },
             { header: 'Jumlah', align: 'right', cell: (row) => number(row.quantity) },
             { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },
             { header: 'Harga satuan', align: 'right', cell: (row) => rupiah(row.unitPrice) },
@@ -277,7 +268,7 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
                 columns={[
                   { header: 'Nomor', cell: (row) => row.number },
                   { header: 'Tanggal', cell: (row) => shortDate(row.date) },
-                  { header: 'Gudang', cell: (row) => nameOf(warehouseItems, row.warehouseId) },
+                  { header: 'Gudang', cell: (row) => row.warehouseName ?? '-' },
                   {
                     header: 'Kondisi',
                     cell: (row) => (
@@ -305,7 +296,7 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
       {mode === 'receive' && canReceive ? (
         <Card
           title={`Terima barang untuk ${detail.number}`}
-          description={`Dari ${nameOf(vendors, detail.vendorId)}. Jumlah diterima sudah diisi sisa pesanan per baris.`}
+          description={`Dari ${vendorName}. Jumlah diterima sudah diisi sisa pesanan per baris.`}
         >
           <ReceiveGoodsForm
             orderId={detail.id}
@@ -343,11 +334,6 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
     page,
     pageSize: PAGE_SIZE,
   })
-  const vendors = useVendorOptions()
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
-  const vendorItems = vendors.data?.items ?? []
-  const projectItems = projects.data?.items ?? []
-  const isLoadingOptions = vendors.isPending || projects.isPending
 
   const toggleForm = () => {
     if (isFormOpen) {
@@ -363,9 +349,6 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
           editingId={null}
           initial={formSeed?.values ?? emptyPurchaseOrderForm()}
           requestNumber={formSeed?.requestNumber ?? null}
-          vendors={vendorItems}
-          projects={projectItems}
-          isLoadingOptions={isLoadingOptions}
           onSaved={(order) => {
             setNotice(null)
             setSelectedId(order.id)
@@ -426,8 +409,8 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
               }
               columns={[
                 { header: 'Nomor', cell: (row) => row.number },
-                { header: 'Vendor', cell: (row) => nameOf(vendorItems, row.vendorId) },
-                { header: 'Proyek', cell: (row) => nameOf(projectItems, row.projectId) },
+                { header: 'Vendor', cell: (row) => row.vendorName ?? '-' },
+                { header: 'Proyek', cell: (row) => row.projectName ?? '-' },
                 { header: 'Tanggal', cell: (row) => shortDate(row.date) },
                 { header: 'Jatuh tempo', cell: (row) => shortDate(row.dueDate) },
                 { header: 'Nilai', align: 'right', cell: (row) => rupiahShort(row.value) },
@@ -462,9 +445,6 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
         <PurchaseOrderDetailCard
           key={selectedId}
           id={selectedId}
-          vendors={vendorItems}
-          projects={projectItems}
-          isLoadingOptions={isLoadingOptions}
           onDeleted={(deletedNumber) => {
             setSelectedId(null)
             setNotice(`Pesanan ${deletedNumber} dihapus.`)

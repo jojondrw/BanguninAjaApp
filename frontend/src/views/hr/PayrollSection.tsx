@@ -1,7 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import {
-  useActiveEmployeeOptions,
   useCreatePayroll,
   useDeletePayroll,
   usePayPayroll,
@@ -9,7 +8,7 @@ import {
   useUpdatePayroll,
 } from '../../controllers/useHr'
 import { EMPTY_PAYROLL_FORM, payrollFormValues, type Payroll, type PayrollFormValues } from '../../models/hr'
-import type { Project } from '../../models/project'
+import { activeEmployeeOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { monthLabel, rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
@@ -21,11 +20,10 @@ import {
   FormPanel,
   FormToggle,
   Pager,
-  SelectField,
   Toolbar,
   ToolbarInput,
 } from '../components/RecordControls'
-import { EmployeeOptions } from './EmployeeOptions'
+import { SearchSelect } from '../components/SearchSelect'
 import { amountHint, PAGE_SIZE, pageAfterRemoval, refusalText } from './hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from './RowActions'
 
@@ -79,7 +77,6 @@ function AdjustmentFields({ idPrefix, values, onChange }: {
 
 function NewPayrollForm({ period }: { period: string }) {
   const { values, setValues, change } = usePayrollValues(EMPTY_PAYROLL_FORM)
-  const employees = useActiveEmployeeOptions()
   const createPayroll = useCreatePayroll(period)
 
   const submit = (event: FormEvent) => {
@@ -96,17 +93,15 @@ function NewPayrollForm({ period }: { period: string }) {
           karyawan harian.
         </p>
         <div className="grid gap-4 md:grid-cols-3">
-          <SelectField
+          <SearchSelect
+            {...activeEmployeeOptions}
             id="payroll-employee"
             label="Karyawan"
+            placeholder="Cari nama karyawan aktif"
             required
-            disabled={employees.isPending}
-            hint={employees.isError ? 'Daftar karyawan gagal dimuat' : undefined}
             value={values.employeeId}
-            onChange={change('employeeId')}
-          >
-            <EmployeeOptions employees={employees.data?.items ?? []} />
-          </SelectField>
+            onChange={(employeeId) => setValues((current) => ({ ...current, employeeId }))}
+          />
           <AdjustmentFields idPrefix="payroll-new" values={values} onChange={change} />
         </div>
 
@@ -222,10 +217,9 @@ function PayAction({ payroll, isAsking, isPaying, onAsk, onCancel, onConfirm }: 
   )
 }
 
-export function PayrollSection({ period, onPeriodChange, projects }: {
+export function PayrollSection({ period, onPeriodChange }: {
   period: string
   onPeriodChange: (period: string) => void
-  projects: Project[]
 }) {
   const [periodDraft, setPeriodDraft] = useState(period)
   const [paid, setPaid] = useState<PaidFilter>('')
@@ -337,22 +331,20 @@ export function PayrollSection({ period, onPeriodChange, projects }: {
             }
           }}
         />
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="payroll-filter-project"
           label="Saring menurut proyek karyawan"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          onChange={(event) => {
-            setProjectId(event.target.value)
+          onChange={(value) => {
+            setProjectId(value)
             setPage(1)
           }}
-        >
-          <option value="">Semua proyek</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
         <FilterSelect
           id="payroll-filter-paid"
           label="Saring menurut status pembayaran"

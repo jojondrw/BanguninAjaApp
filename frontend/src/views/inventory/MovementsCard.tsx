@@ -28,7 +28,10 @@ import {
   Toolbar,
 } from '../components/RecordControls'
 import { quantityText, unitCode, warehouseText, type Lookups } from './inventoryShared'
-import { WarehouseOptions } from './WarehouseOptions'
+import { materialOptions, warehouseOptions } from '../../models/lookupApi'
+import { SearchSelect } from '../components/SearchSelect'
+
+const ALL_WAREHOUSES = warehouseOptions()
 
 const MOVEMENT_PAGE_SIZE = 10
 
@@ -48,8 +51,8 @@ function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }
   const recordMovement = useRecordStockMovement()
   const needsSource = movementNeedsSource(values)
   const needsTarget = movementNeedsTarget(values)
-  const material = lookups.materials.find((item) => item.id === values.materialId)
-  const unit = unitCode(lookups, material?.unitOfMeasureId)
+  const [materialUnitId, setMaterialUnitId] = useState<string>()
+  const unit = values.materialId === '' ? '' : unitCode(lookups, materialUnitId)
 
   const update =
     (key: keyof MovementFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -63,9 +66,6 @@ function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }
   }
 
   const targetsTransferSource = values.type === 'transfer' && values.sourceWarehouseId !== ''
-  const targetWarehouses = targetsTransferSource
-    ? lookups.warehouses.filter((warehouse) => warehouse.id !== values.sourceWarehouseId)
-    : lookups.warehouses
 
   return (
     <FormPanel>
@@ -109,14 +109,18 @@ function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }
               <option value="decrease">Kurangi stok</option>
             </SelectField>
           ) : null}
-          <SelectField id="movement-material" label="Material" required value={values.materialId} onChange={update('materialId')}>
-            <option value="">Pilih material</option>
-            {lookups.materials.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.code})
-              </option>
-            ))}
-          </SelectField>
+          <SearchSelect
+            {...materialOptions}
+            id="movement-material"
+            label="Material"
+            placeholder="Cari nama atau kode material"
+            required
+            value={values.materialId}
+            onChange={(materialId, material) => {
+              setMaterialUnitId(material?.unitOfMeasureId)
+              setValues((current) => ({ ...current, materialId }))
+            }}
+          />
           <Field
             id="movement-quantity"
             label={unit === '' ? 'Jumlah' : `Jumlah (${unit})`}
@@ -131,34 +135,34 @@ function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }
             onChange={update('quantity')}
           />
           {needsSource ? (
-            <SelectField
+            <SearchSelect
+              {...ALL_WAREHOUSES}
               id="movement-source"
               label="Gudang asal"
+              placeholder="Cari gudang asal"
               hint="Stok di gudang ini harus mencukupi"
               required
               value={values.sourceWarehouseId}
-              onChange={(event) => {
-                const sourceWarehouseId = event.target.value
+              onChange={(sourceWarehouseId) =>
                 setValues((current) => ({
                   ...current,
                   sourceWarehouseId,
                   targetWarehouseId: current.targetWarehouseId === sourceWarehouseId ? '' : current.targetWarehouseId,
                 }))
-              }}
-            >
-              <WarehouseOptions warehouses={lookups.warehouses} placeholder="Pilih gudang asal" />
-            </SelectField>
+              }
+            />
           ) : null}
           {needsTarget ? (
-            <SelectField
+            <SearchSelect
+              {...ALL_WAREHOUSES}
               id="movement-target"
               label="Gudang tujuan"
+              placeholder="Cari gudang tujuan"
               required
+              exclude={targetsTransferSource ? [values.sourceWarehouseId] : undefined}
               value={values.targetWarehouseId}
-              onChange={update('targetWarehouseId')}
-            >
-              <WarehouseOptions warehouses={targetWarehouses} placeholder="Pilih gudang tujuan" />
-            </SelectField>
+              onChange={(targetWarehouseId) => setValues((current) => ({ ...current, targetWarehouseId }))}
+            />
           ) : null}
           <Field
             id="movement-reference"

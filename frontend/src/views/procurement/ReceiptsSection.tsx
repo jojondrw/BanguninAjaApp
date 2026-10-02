@@ -1,12 +1,7 @@
 import { type ChangeEvent, useState } from 'react'
 
-import {
-  useGoodsReceipts,
-  usePurchaseOrderOptions,
-  usePurchaseOrders,
-  useVendorOptions,
-  useWarehouseOptions,
-} from '../../controllers/useProcurement'
+import { useGoodsReceipts } from '../../controllers/useProcurement'
+import { purchaseOrderOptions, receivableOrderOptions, warehouseOptions } from '../../models/lookupApi'
 import {
   ORDER_STATUS_LABEL,
   RECEIPT_CONDITION_LABEL,
@@ -14,13 +9,17 @@ import {
   RECEIPT_NUMBER_MAX_LENGTH,
 } from '../../models/procurement'
 import { number, shortDate } from '../../shared/format'
-import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SuccessNote } from '../components/Form'
-import { Chip, Pager, RowAction, SelectField } from '../components/ListTools'
-import { FilterSelect, FormToggle, Toolbar, ToolbarInput } from '../components/RecordControls'
-import { OPTION_LIMIT, PAGE_SIZE, nameOf, numberOf } from './lookup'
+import { Chip, Pager, RowAction } from '../components/ListTools'
+import { FormToggle, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
+import { PAGE_SIZE } from './lookup'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
 import { ReceiveGoodsForm } from './ReceiveGoodsForm'
+
+const ALL_ORDERS = purchaseOrderOptions()
+const ALL_WAREHOUSES = warehouseOptions()
 
 function optional(value: string): string | undefined {
   const trimmed = value.trim()
@@ -48,24 +47,18 @@ export function ReceiptsSection() {
     page,
     pageSize: PAGE_SIZE,
   })
-  const orderOptions = usePurchaseOrderOptions()
-  const sentOrders = usePurchaseOrders({ status: 'sent', pageSize: OPTION_LIMIT })
-  const partialOrders = usePurchaseOrders({ status: 'partially_received', pageSize: OPTION_LIMIT })
-  const warehouses = useWarehouseOptions()
-  const vendors = useVendorOptions()
-
-  const orderItems = orderOptions.data?.items ?? []
-  const warehouseItems = warehouses.data?.items ?? []
-  const vendorItems = vendors.data?.items ?? []
-  const receivedOrders = orderItems.filter((order) => order.status === 'partially_received' || order.status === 'completed')
-  const receivableOrders = [...(sentOrders.data?.items ?? []), ...(partialOrders.data?.items ?? [])]
   const isFiltered = [search, orderId, warehouseId, dateFrom, dateTo].some((value) => value.trim() !== '')
 
   const changeFilter = (setter: (value: string) => void) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    (event: ChangeEvent<HTMLInputElement>) => {
       setter(event.target.value)
       setPage(1)
     }
+
+  const pickFilter = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setPage(1)
+  }
 
   return (
     <div className="space-y-6">
@@ -74,35 +67,18 @@ export function ReceiptsSection() {
           title="Terima barang"
           description="Pilih pesanan yang barangnya datang. Hanya pesanan yang sudah dikirim ke vendor atau baru diterima sebagian."
         >
-          {sentOrders.isPending || partialOrders.isPending ? <Loading label="Mengambil pesanan yang menunggu barang..." /> : null}
-          {sentOrders.isError || partialOrders.isError ? (
-            <LoadFailed
-              onRetry={() => {
-                void sentOrders.refetch()
-                void partialOrders.refetch()
-              }}
-            />
-          ) : null}
-          {sentOrders.data && partialOrders.data ? (
-            receivableOrders.length === 0 ? (
-              <Empty message="Tidak ada pesanan yang menunggu barang. Kirim pesanan ke vendor dulu di tab Pesanan pembelian." />
-            ) : (
               <div className="space-y-5">
                 <div className="max-w-md">
-                  <SelectField
+                  <SearchSelect
+                    {...receivableOrderOptions}
                     id="receive-order"
                     label="Pesanan pembelian"
+                    placeholder="Cari nomor PO"
+                    hint="Pesanan yang belum dikirim ke vendor tidak muncul di sini."
                     required
                     value={receivingOrderId}
-                    onChange={(event) => setReceivingOrderId(event.target.value)}
-                  >
-                    <option value="">Pilih pesanan</option>
-                    {receivableOrders.map((order) => (
-                      <option key={order.id} value={order.id}>
-                        {order.number}, {nameOf(vendorItems, order.vendorId)} ({ORDER_STATUS_LABEL[order.status]})
-                      </option>
-                    ))}
-                  </SelectField>
+                    onChange={setReceivingOrderId}
+                  />
                 </div>
                 {receivingOrderId ? (
                   <ReceiveGoodsForm
@@ -123,8 +99,6 @@ export function ReceiptsSection() {
                   />
                 ) : null}
               </div>
-            )
-          ) : null}
         </Card>
       ) : null}
 
@@ -143,32 +117,28 @@ export function ReceiptsSection() {
             value={search}
             onChange={changeFilter(setSearch)}
           />
-          <FilterSelect
+          <SearchSelect
+            {...ALL_ORDERS}
             id="receipt-filter-order"
             label="Saring menurut pesanan"
+            compact
+            allowEmpty
+            emptyLabel="Semua pesanan"
+            className="w-48"
             value={orderId}
-            onChange={changeFilter(setOrderId)}
-          >
-            <option value="">Semua pesanan</option>
-            {receivedOrders.map((order) => (
-              <option key={order.id} value={order.id}>
-                {order.number}
-              </option>
-            ))}
-          </FilterSelect>
-          <FilterSelect
+            onChange={pickFilter(setOrderId)}
+          />
+          <SearchSelect
+            {...ALL_WAREHOUSES}
             id="receipt-filter-warehouse"
             label="Saring menurut gudang"
+            compact
+            allowEmpty
+            emptyLabel="Semua gudang"
+            className="w-48"
             value={warehouseId}
-            onChange={changeFilter(setWarehouseId)}
-          >
-            <option value="">Semua gudang</option>
-            {warehouseItems.map((warehouse) => (
-              <option key={warehouse.id} value={warehouse.id}>
-                {warehouse.name}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={pickFilter(setWarehouseId)}
+          />
           <ToolbarInput
             id="receipt-date-from"
             label="Dari"
@@ -217,8 +187,8 @@ export function ReceiptsSection() {
               }
               columns={[
                 { header: 'Nomor', cell: (row) => row.number },
-                { header: 'Pesanan', cell: (row) => numberOf(orderItems, row.purchaseOrderId) },
-                { header: 'Gudang', cell: (row) => nameOf(warehouseItems, row.warehouseId) },
+                { header: 'Pesanan', cell: (row) => row.purchaseOrderNumber ?? '-' },
+                { header: 'Gudang', cell: (row) => row.warehouseName ?? '-' },
                 { header: 'Tanggal', cell: (row) => shortDate(row.date) },
                 {
                   header: 'Kondisi',
