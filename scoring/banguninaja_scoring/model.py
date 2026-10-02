@@ -84,6 +84,8 @@ def hazard_level(value) -> str:
 
 def physical(model: Model, f: dict):
     hazard, slope = f.get("hazard_multi"), f.get("slope_deg")
+    if hazard is None:
+        return 50.0, "Indeks bahaya InaRISK tidak tersedia di titik ini (di luar cakupan data)."
     value = combine([
         (inverse(model.percentile("hazard_multi", hazard)), 0.7),
         (inverse(model.percentile("slope_deg", slope)), 0.3),
