@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
@@ -11,9 +11,12 @@ import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { BUTTON_BASE, BUTTON_SUBTLE } from './components/Form'
 import { Tabs, type TabItem } from './components/Tabs'
 import { StatusChip } from './OverviewPage'
-import { ProgressMeter } from './project/parts'
+import { PanelToggle, ProgressMeter } from './project/parts'
+import { ProjectDeleteCard } from './project/ProjectDeleteCard'
+import { ProjectEditCard } from './project/ProjectEditCard'
 import { ProjectFinanceTab } from './project/ProjectFinanceTab'
 import { ProjectSiteTab } from './project/ProjectSiteTab'
+import { ProjectStatusCard } from './project/ProjectStatusCard'
 import { ProjectSummaryTab } from './project/ProjectSummaryTab'
 
 type WorkspaceTab = 'ringkasan' | 'lokasi' | 'keuangan'
@@ -36,6 +39,16 @@ function isMissingProject(error: unknown): boolean {
   return error instanceof ApiError && NOT_FOUND_STATUSES.includes(error.status)
 }
 
+type ManagePanel = 'status' | 'edit' | 'delete'
+
+const PANEL_ID = 'proyek-panel-kelola'
+
+const PANEL_TOGGLES: { panel: ManagePanel; label: string }[] = [
+  { panel: 'status', label: 'Ubah status' },
+  { panel: 'edit', label: 'Ubah proyek' },
+  { panel: 'delete', label: 'Hapus proyek' },
+]
+
 const BACK_LINK_CLASS = `h-9 pl-2.5 ${BUTTON_BASE} ${BUTTON_SUBTLE}`
 
 function BackLink() {
@@ -52,6 +65,10 @@ export function ProjectWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const project = useProject(id)
   const tab = toTab(searchParams.get(TAB_PARAM))
+  const [panel, setPanel] = useState<ManagePanel | null>(null)
+
+  const togglePanel = (next: ManagePanel) => setPanel((current) => (current === next ? null : next))
+  const closePanel = () => setPanel(null)
 
   // Tab disimpan di URL supaya muat ulang dan tautan yang dibagikan membuka tab
   // yang sama. replace dipakai agar tombol kembali tidak menelusuri tiap tab.
@@ -83,9 +100,37 @@ export function ProjectWorkspacePage() {
 
   const data = project.data
 
+  // Satu panel kelola terbuka pada satu waktu, tepat di bawah kepala halaman.
+  // Panel diberi key id proyek supaya isian ubah selalu mulai dari data proyek
+  // yang sedang dibuka.
   return (
-    <AppShell title={data.name} description={`${data.code} · ${data.type}`} actions={<BackLink />}>
+    <AppShell
+      title={data.name}
+      description={`${data.code} · ${data.type}`}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <BackLink />
+          {PANEL_TOGGLES.map((toggle) => (
+            <PanelToggle
+              key={toggle.panel}
+              label={toggle.label}
+              panelId={PANEL_ID}
+              isOpen={panel === toggle.panel}
+              onToggle={() => togglePanel(toggle.panel)}
+            />
+          ))}
+        </div>
+      }
+    >
       <div className="space-y-6">
+        {panel ? (
+          <div id={PANEL_ID} key={`${data.id}-${panel}`}>
+            {panel === 'status' ? <ProjectStatusCard project={data} onClose={closePanel} /> : null}
+            {panel === 'edit' ? <ProjectEditCard project={data} onClose={closePanel} /> : null}
+            {panel === 'delete' ? <ProjectDeleteCard project={data} onClose={closePanel} /> : null}
+          </div>
+        ) : null}
+
         <ProjectFacts project={data} />
 
         <Tabs idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={TABS} active={tab} onChange={changeTab}>
