@@ -38,6 +38,22 @@ export function shortDate(iso: string | null): string {
   })
 }
 
+export function dateRange(start: string | null, end: string | null): string {
+  if (!start && !end) {
+    return 'Jadwal belum diisi'
+  }
+  return `${shortDate(start)} sampai ${shortDate(end)}`
+}
+
+// Nilai kartu KPI selama data dimuat atau gagal dimuat, supaya tidak tampil
+// angka nol yang menyesatkan.
+export function kpiValue(isPending: boolean, isError: boolean, value: string): string {
+  if (isError) {
+    return '—'
+  }
+  return isPending ? '...' : value
+}
+
 export function monthLabel(period: string): string {
   const [year, month] = period.split('-')
   if (!month) {

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { useBudgets, useCashFlow, useProjects } from '../controllers/useErp'
 import { monthLabel, rupiahShort, shortDate } from '../shared/format'
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, type Project } from '../models/project'
@@ -56,7 +58,14 @@ export function OverviewPage() {
               emptyMessage="Belum ada proyek. Tambahkan lewat API POST /api/projects."
               columns={[
                 { header: 'Kode', cell: (row: Project) => row.code },
-                { header: 'Nama', cell: (row: Project) => row.name },
+                {
+                  header: 'Nama',
+                  cell: (row: Project) => (
+                    <Link to={`/proyek/${row.id}`} className="font-medium text-navy-700 hover:underline">
+                      {row.name}
+                    </Link>
+                  ),
+                },
                 { header: 'Status', cell: (row: Project) => <StatusChip project={row} /> },
                 { header: 'Target selesai', cell: (row: Project) => shortDate(row.targetEndDate) },
                 {
