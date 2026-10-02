@@ -18,7 +18,7 @@ type Vendor struct {
 	TaxNumber       string `gorm:"type:varchar(25)"`
 	PaymentTermDays int    `gorm:"not null;default:0"`
 	Rating          string `gorm:"type:varchar(20);not null;default:'new'"`
-	Active          bool   `gorm:"not null;default:true"`
+	Active          bool   `gorm:"not null"`
 }
 
 func (Vendor) TableName() string {
