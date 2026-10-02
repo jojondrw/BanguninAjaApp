@@ -12,6 +12,7 @@ import (
 type fakeRepository struct {
 	Repository
 	project        Project
+	unlockedRead   *Project
 	phases         []ProjectPhase
 	savedProject   *Project
 	storedProgress *int
@@ -26,6 +27,9 @@ func (f *fakeRepository) LockProject(context.Context, uuid.UUID) (Project, error
 }
 
 func (f *fakeRepository) FindProject(context.Context, uuid.UUID) (Project, error) {
+	if f.unlockedRead != nil {
+		return *f.unlockedRead, nil
+	}
 	return f.project, nil
 }
 
@@ -162,6 +166,29 @@ func TestCreatePhaseRefreshesProjectProgress(t *testing.T) {
 	}
 	if repository.storedProgress == nil || *repository.storedProgress != 75 {
 		t.Fatalf("got stored progress %v, want 75", repository.storedProgress)
+	}
+}
+
+func TestUpdateProjectKeepsStatusAndProgressFromLockedRow(t *testing.T) {
+	repository := &fakeRepository{
+		project:      Project{Code: "PRJ-01", Status: statusOngoing, Progress: 70},
+		unlockedRead: &Project{Code: "PRJ-01", Status: statusPlanning, Progress: 10},
+	}
+	service := NewService(repository)
+
+	_, err := service.UpdateProject(context.Background(), uuid.New(), ProjectRequest{Code: "PRJ-02", Name: "Griya", Type: "Perumahan"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	saved := repository.savedProject
+	if saved == nil {
+		t.Fatal("project must be saved")
+	}
+	if saved.Status != statusOngoing || saved.Progress != 70 {
+		t.Fatalf("got status %s progress %d, want ongoing 70 from the locked row", saved.Status, saved.Progress)
+	}
+	if saved.Code != "PRJ-02" || saved.Name != "Griya" {
+		t.Fatalf("got code %s name %s, want request values", saved.Code, saved.Name)
 	}
 }
 

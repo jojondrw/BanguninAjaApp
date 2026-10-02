@@ -134,14 +134,14 @@ func (s *service) UpdateProject(ctx context.Context, id uuid.UUID, request Proje
 		return ProjectResponse{}, errInvalidDateRange
 	}
 
-	project, err := s.repository.FindProject(ctx, id)
+	var project Project
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		var err error
+		project, err = updateProject(ctx, repository, id, request)
+		return err
+	})
 	if err != nil {
-		return ProjectResponse{}, projectReadErrors.Resolve(err)
-	}
-
-	applyProjectRequest(&project, request)
-	if err := s.repository.SaveProject(ctx, &project); err != nil {
-		return ProjectResponse{}, projectWriteErrors.Resolve(err)
+		return ProjectResponse{}, apperror.From(err)
 	}
 	return newProjectResponse(project), nil
 }
@@ -332,6 +332,19 @@ func (s *service) ensureOpenProject(ctx context.Context, id uuid.UUID) error {
 		return projectReadErrors.Resolve(err)
 	}
 	return ensureOpen(project)
+}
+
+func updateProject(ctx context.Context, repository Repository, id uuid.UUID, request ProjectRequest) (Project, error) {
+	project, err := repository.LockProject(ctx, id)
+	if err != nil {
+		return Project{}, projectReadErrors.Resolve(err)
+	}
+
+	applyProjectRequest(&project, request)
+	if err := repository.SaveProject(ctx, &project); err != nil {
+		return Project{}, projectWriteErrors.Resolve(err)
+	}
+	return project, nil
 }
 
 func changeProjectStatus(ctx context.Context, repository Repository, id uuid.UUID, next string) (Project, error) {
