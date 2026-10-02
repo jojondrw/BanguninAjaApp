@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { useSession, useSessionRestore } from './controllers/useAuth'
+import { BrandMark } from './views/components/Brand'
 import { FinancialPage } from './views/FinancialPage'
 import { HrPage } from './views/HrPage'
 import { InventoryPage } from './views/InventoryPage'
@@ -51,8 +52,9 @@ function SessionGate({ children }: { children: ReactNode }) {
 
   if (!isRestored) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Memeriksa sesi...</p>
+      <div role="status" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-100">
+        <BrandMark className="size-9 motion-safe:animate-pulse" />
+        <p className="text-[13px] text-slate-500">Memeriksa sesi...</p>
       </div>
     )
   }

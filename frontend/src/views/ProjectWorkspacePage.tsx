@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { useProject } from '../controllers/useProjectWorkspace'
@@ -7,6 +8,7 @@ import { ApiError } from '../shared/apiClient'
 import { rupiah, shortDate } from '../shared/format'
 import { AppShell } from './components/AppShell'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
+import { BUTTON_BASE, BUTTON_SUBTLE } from './components/Form'
 import { Tabs, type TabItem } from './components/Tabs'
 import { StatusChip } from './OverviewPage'
 import { ProgressMeter } from './project/parts'
@@ -34,12 +36,12 @@ function isMissingProject(error: unknown): boolean {
   return error instanceof ApiError && NOT_FOUND_STATUSES.includes(error.status)
 }
 
-const BACK_LINK_CLASS =
-  'inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50'
+const BACK_LINK_CLASS = `h-9 pl-2.5 ${BUTTON_BASE} ${BUTTON_SUBTLE}`
 
 function BackLink() {
   return (
     <Link to="/proyek" className={BACK_LINK_CLASS}>
+      <ChevronLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
       Semua proyek
     </Link>
   )
@@ -98,7 +100,7 @@ export function ProjectWorkspacePage() {
 
 function ProjectFacts({ project }: { project: Project }) {
   return (
-    <section aria-label="Data proyek" className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+    <section aria-label="Data proyek" className="rounded-2xl bg-white px-5 py-4 shadow-hairline">
       <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-5">
         <Fact label="Status">
           <StatusChip project={project} />
@@ -119,8 +121,8 @@ function ProjectFacts({ project }: { project: Project }) {
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-slate-900">{children}</dd>
+      <dt className="text-xs font-medium text-slate-500">{label}</dt>
+      <dd className="mt-1.5 text-sm font-medium text-slate-900">{children}</dd>
     </div>
   )
 }

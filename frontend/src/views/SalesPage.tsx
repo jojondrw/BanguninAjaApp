@@ -48,7 +48,7 @@ import { number, rupiah, rupiahShort, shortDate } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
 import { AppShell } from './components/AppShell'
 import { Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
-import { Button, ErrorNote, Field, SuccessNote } from './components/Form'
+import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
 import { Chip, Pager, RowAction, SectionTabs, SelectField } from './components/ListTools'
 
 const PAGE_SIZE = 10
@@ -406,8 +406,7 @@ function CustomersSection() {
                 setPage(1)
               }}
               placeholder="Cari nama pelanggan"
-              className="w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm placeholder:text-slate-400
-                         focus:border-navy-600 focus:ring-2 focus:ring-navy-100"
+              className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
             />
           </div>
           <Button variant={isFormOpen ? 'subtle' : 'primary'} onClick={() => setIsFormOpen((open) => !open)}>

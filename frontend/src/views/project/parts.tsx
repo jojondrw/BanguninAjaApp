@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 
+import { CHIP_CLASS } from '../components/ListTools'
+
 const FULL_PERCENT = 100
 
 export function Chip({ tone, children }: { tone: string; children: ReactNode }) {
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap ${tone}`}>
+    <span className={`${CHIP_CLASS} ${tone}`}>
       {children}
     </span>
   )
@@ -27,7 +29,7 @@ export function ProgressMeter({ percent, label, suffix = '%' }: {
         aria-valuenow={safe}
         aria-valuemin={0}
         aria-valuemax={FULL_PERCENT}
-        className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200"
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"
       >
         <div className="h-full rounded-full bg-navy-600" style={{ width: `${safe}%` }} />
       </div>
@@ -43,8 +45,8 @@ export function ProgressMeter({ percent, label, suffix = '%' }: {
 // bagian mana yang data dan bagian mana yang isian.
 export function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mt-5 border-t border-slate-200 pt-5">
-      <h3 className="mb-4 text-sm font-semibold text-slate-900">{title}</h3>
+    <div className="mt-5 border-t border-slate-100 pt-5">
+      <h3 className="mb-4 text-[15px] font-semibold text-slate-900">{title}</h3>
       {children}
     </div>
   )

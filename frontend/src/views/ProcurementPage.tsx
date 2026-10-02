@@ -50,7 +50,7 @@ import { number, rupiah, rupiahShort, shortDate } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
 import { AppShell } from './components/AppShell'
 import { Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
-import { Button, ErrorNote, Field, SuccessNote } from './components/Form'
+import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
 import { Chip, FilterChips, Pager, RowAction, SectionTabs, SelectField } from './components/ListTools'
 
 const PAGE_SIZE = 10
@@ -161,9 +161,9 @@ function OrderLineFields({ line, index, materials, units, usedMaterials, canRemo
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange({ ...line, [key]: event.target.value })
 
   return (
-    <fieldset className="rounded-lg border border-slate-200 p-4">
-      <legend className="px-1 text-xs font-medium text-slate-500">Baris {index + 1}</legend>
-      <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_1fr]">
+    <fieldset className="rounded-xl bg-white p-4 shadow-hairline">
+      <legend className="float-left mb-3 w-full text-xs font-medium text-slate-500">Baris {index + 1}</legend>
+      <div className="clear-both grid gap-4 md:grid-cols-[2fr_1fr_1fr_1fr]">
         <SelectField id={`${id}-material`} label="Material" required value={line.materialId} onChange={chooseMaterial}>
           <option value="">Pilih material</option>
           {materials.map((material) => (
@@ -678,8 +678,7 @@ function VendorsSection() {
                 setPage(1)
               }}
               placeholder="Cari nama vendor"
-              className="w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm placeholder:text-slate-400
-                         focus:border-navy-600 focus:ring-2 focus:ring-navy-100"
+              className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
             />
             <FilterChips
               filters={ACTIVE_FILTERS}

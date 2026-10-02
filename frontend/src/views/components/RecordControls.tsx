@@ -1,10 +1,9 @@
+import { Plus, Search, X } from 'lucide-react'
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
 
 import { number } from '../../shared/format'
-
-const CONTROL_STYLE =
-  'rounded-lg border border-slate-300 bg-white text-sm text-slate-900 transition ' +
-  'focus:border-navy-600 focus:ring-2 focus:ring-navy-100 disabled:bg-slate-100 disabled:text-slate-500'
+import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE, CONTROL_CLASS, LABEL_CLASS } from './Form'
+import { CHIP_CLASS, PageButtons } from './ListTools'
 
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   id: string
@@ -20,10 +19,10 @@ export function SelectField({ id, label, hint, children, ...rest }: SelectFieldP
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+      <label htmlFor={id} className={LABEL_CLASS}>
         {label}
       </label>
-      <select id={id} aria-describedby={hintId} className={`${CONTROL_STYLE} px-3 py-2`} {...rest}>
+      <select id={id} aria-describedby={hintId} className={`${CONTROL_CLASS} h-9 px-2.5`} {...rest}>
         {children}
       </select>
       {hint ? (
@@ -49,7 +48,7 @@ export function FilterSelect({ id, label, children, ...rest }: FilterSelectProps
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <select id={id} className={`${CONTROL_STYLE} px-3 py-1.5`} {...rest}>
+      <select id={id} className={`${CONTROL_CLASS} h-8 px-2.5 text-[13px]`} {...rest}>
         {children}
       </select>
     </div>
@@ -64,17 +63,28 @@ interface ToolbarInputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 // Isian ringkas untuk baris penyaring: pencarian, tanggal, atau periode.
 export function ToolbarInput({ id, label, showLabel = false, className = '', ...rest }: ToolbarInputProps) {
+  const isSearch = rest.type === 'search'
+
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={id} className={showLabel ? 'text-sm text-slate-600' : 'sr-only'}>
+      <label htmlFor={id} className={showLabel ? 'text-[13px] text-slate-600' : 'sr-only'}>
         {label}
       </label>
-      <input
-        id={id}
-        autoComplete="off"
-        {...rest}
-        className={`${CONTROL_STYLE} px-3 py-1.5 placeholder:text-slate-400 ${className}`}
-      />
+      <div className="relative">
+        {isSearch ? (
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-400"
+            strokeWidth={2}
+          />
+        ) : null}
+        <input
+          id={id}
+          autoComplete="off"
+          {...rest}
+          className={`${CONTROL_CLASS} h-8 text-[13px] ${isSearch ? 'pr-3 pl-8' : 'px-2.5'} ${className}`}
+        />
+      </div>
     </div>
   )
 }
@@ -84,7 +94,7 @@ export function Toolbar({ children }: { children: ReactNode }) {
 }
 
 export function Chip({ tone, children }: { tone: string; children: ReactNode }) {
-  return <span className={`rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap ${tone}`}>{children}</span>
+  return <span className={`${CHIP_CLASS} ${tone}`}>{children}</span>
 }
 
 interface PagerProps {
@@ -100,31 +110,13 @@ export function Pager({ page, totalPages, totalItems, unit, onChange }: PagerPro
     return null
   }
 
-  const pageButton =
-    'rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition ' +
-    'hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-white'
-
   return (
     <nav aria-label="Halaman tabel" className="mt-4 flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-500 tabular-nums">
         {number(totalItems)} {unit}
         {totalPages > 1 ? ` · halaman ${page} dari ${totalPages}` : ''}
       </p>
-      {totalPages > 1 ? (
-        <div className="flex gap-2">
-          <button type="button" className={pageButton} disabled={page <= 1} onClick={() => onChange(page - 1)}>
-            Sebelumnya
-          </button>
-          <button
-            type="button"
-            className={pageButton}
-            disabled={page >= totalPages}
-            onClick={() => onChange(page + 1)}
-          >
-            Berikutnya
-          </button>
-        </div>
-      ) : null}
+      {totalPages > 1 ? <PageButtons page={page} totalPages={totalPages} onChange={onChange} /> : null}
     </nav>
   )
 }
@@ -141,17 +133,18 @@ export function FormToggle({ isOpen, openLabel, onToggle }: {
       type="button"
       onClick={onToggle}
       aria-expanded={isOpen}
-      className={`ml-auto rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-        isOpen
-          ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-          : 'bg-navy-700 text-white hover:bg-navy-900'
-      }`}
+      className={`ml-auto h-8 ${BUTTON_BASE} ${isOpen ? BUTTON_SUBTLE : BUTTON_PRIMARY}`}
     >
+      {isOpen ? (
+        <X aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+      ) : (
+        <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+      )}
       {isOpen ? 'Tutup formulir' : openLabel}
     </button>
   )
 }
 
 export function FormPanel({ children }: { children: ReactNode }) {
-  return <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">{children}</div>
+  return <div className="mb-5 rounded-xl bg-slate-50 p-4 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.04)] motion-safe:animate-enter">{children}</div>
 }

@@ -8,7 +8,7 @@ import {
 } from '../../controllers/useErp'
 import type { SavedLocation, SiteEvaluateResponse } from '../../models/erpApi'
 import { suggestedProfileCode, type Project } from '../../models/project'
-import { Button, ErrorNote, Field } from './Form'
+import { Button, CONTROL_CLASS, ErrorNote, Field } from './Form'
 import { Card, Empty, Kpi, KpiRow, Loading } from './Data'
 import type { MapPoint } from './SiteMap'
 
@@ -23,8 +23,7 @@ const NO_SITES: SavedLocation[] = []
 
 export const SITE_EVALUATION_ID = 'evaluasi-lokasi'
 
-const SELECT_CLASS =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100'
+const SELECT_CLASS = `${CONTROL_CLASS} h-10 w-full px-3 disabled:cursor-not-allowed`
 
 function toMapPoint(latitude: string, longitude: string): MapPoint | null {
   if (latitude.trim() === '' || longitude.trim() === '') {
@@ -109,7 +108,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
           <form onSubmit={handleSubmit} className="space-y-5">
             <Suspense
               fallback={
-                <div className="flex h-80 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 sm:h-96">
+                <div className="flex h-80 items-center justify-center rounded-xl bg-slate-100 sm:h-96">
                   <p className="text-sm text-slate-500">Memuat peta...</p>
                 </div>
               }
@@ -351,7 +350,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
               result.predictive.dimension_scores.map((dimension) => (
                 <div
                   key={dimension.dimension_code}
-                  className="rounded-lg border border-slate-200 p-4"
+                  className="rounded-xl bg-slate-50 p-4"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium text-slate-900">
@@ -457,7 +456,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
                 href={article.url}
                 target="_blank"
                 rel="noreferrer"
-                className="block rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50"
+                className="block rounded-xl p-4 shadow-hairline transition-[background-color,transform] hover:bg-slate-50 motion-safe:active:scale-[0.99]"
               >
                 <p className="text-sm font-medium text-slate-900">
                   {article.title}

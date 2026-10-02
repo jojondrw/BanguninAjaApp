@@ -1,3 +1,4 @@
+import { Inbox } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Button, ErrorNote } from './Form'
@@ -8,32 +9,52 @@ export function Card({ title, description, children }: {
   children: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+    <section className="rounded-2xl bg-white shadow-hairline">
+      <div className="px-5 pt-4 pb-3">
+        <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
+        {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="px-5 pb-5">{children}</div>
     </section>
   )
 }
 
 export function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</p>
+    <div className="min-w-0 bg-white px-4 py-3.5 sm:px-5 sm:py-4">
+      <p className="text-[13px] font-medium text-slate-500">{label}</p>
+      <p className="mt-1.5 text-[22px] leading-7 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums sm:text-[26px] sm:leading-8">
+        {value}
+      </p>
       {note ? <p className="mt-1 text-xs text-slate-500">{note}</p> : null}
     </div>
   )
 }
 
+// Celah 1px di atas latar abu menjadi garis pemisah, jadi pemisahnya tetap rapi
+// di semua jumlah kolom.
 export function KpiRow({ children }: { children: ReactNode }) {
-  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{children}</div>
+  return (
+    <div className="grid gap-px overflow-hidden rounded-2xl bg-slate-200/70 shadow-hairline grid-cols-2 xl:grid-cols-4">
+      {children}
+    </div>
+  )
 }
 
 export function Loading({ label = 'Mengambil data...' }: { label?: string }) {
-  return <p className="py-6 text-sm text-slate-500">{label}</p>
+  return (
+    <div role="status" className="flex flex-col gap-2.5 py-4">
+      <span className="sr-only">{label}</span>
+      {[92, 76, 84].map((width) => (
+        <span
+          key={width}
+          aria-hidden="true"
+          className="h-3 rounded-full bg-slate-100 motion-safe:animate-pulse"
+          style={{ width: `${width}%` }}
+        />
+      ))}
+    </div>
+  )
 }
 
 export function LoadFailed({ onRetry }: { onRetry: () => void }) {
@@ -51,8 +72,9 @@ export function LoadFailed({ onRetry }: { onRetry: () => void }) {
 
 export function Empty({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 px-4 py-10 text-center">
-      <p className="text-sm text-slate-500">{message}</p>
+    <div className="flex flex-col items-center gap-2 rounded-xl bg-slate-50 px-4 py-10 text-center">
+      <Inbox aria-hidden="true" className="size-5 text-slate-400" strokeWidth={1.6} />
+      <p className="max-w-sm text-[13px] text-slate-500">{message}</p>
     </div>
   )
 }
@@ -73,15 +95,15 @@ export function Table<T>({ rows, columns, emptyMessage }: {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="-mx-5 overflow-x-auto">
+      <table className="w-full text-[13px]">
         <thead>
-          <tr className="border-b border-slate-200">
+          <tr className="border-y border-slate-100 bg-slate-50/70">
             {columns.map((column) => (
               <th
                 key={column.header}
                 scope="col"
-                className={`px-3 py-2 text-xs font-medium tracking-wide text-slate-500 uppercase ${
+                className={`px-3 py-2 text-xs font-medium whitespace-nowrap text-slate-500 first:pl-5 last:pr-5 ${
                   column.align === 'right' ? 'text-right' : 'text-left'
                 }`}
               >
@@ -92,12 +114,12 @@ export function Table<T>({ rows, columns, emptyMessage }: {
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index} className="border-b border-slate-100 last:border-0">
+            <tr key={index} className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/80">
               {columns.map((column) => (
                 <td
                   key={column.header}
-                  className={`px-3 py-2.5 text-slate-700 ${
-                    column.align === 'right' ? 'text-right tabular-nums' : 'text-left'
+                  className={`px-3 py-3 text-slate-700 first:pl-5 last:pr-5 max-md:whitespace-nowrap ${
+                    column.align === 'right' ? 'text-right whitespace-nowrap tabular-nums' : 'text-left'
                   }`}
                 >
                   {column.cell(row)}
@@ -116,7 +138,7 @@ export function Bar({ percent }: { percent: number }) {
 
   return (
     <span className="flex items-center justify-end gap-2">
-      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200">
+      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
         <span className="block h-full rounded-full bg-navy-600" style={{ width: `${safe}%` }} />
       </span>
       <span className="w-9 text-right text-xs tabular-nums text-slate-600">{safe}%</span>
