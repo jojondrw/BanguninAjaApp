@@ -17,7 +17,7 @@ const (
 	budgetColumns = "budget.id, budget.project_id, budget.year, budget.value, budget.note, budget.created_at, budget.updated_at, " +
 		"COALESCE((SELECT SUM(cash_transaction.amount) FROM cash_transaction " +
 		"WHERE cash_transaction.project_id = budget.project_id AND cash_transaction.type = ? " +
-		"AND cash_transaction.date >= make_date(budget.year, 1, 1) AND cash_transaction.date < make_date(budget.year + 1, 1, 1)), 0) AS realized"
+		"AND cash_transaction.date >= make_date(budget.year::int, 1, 1) AND cash_transaction.date < make_date((budget.year + 1)::int, 1, 1)), 0) AS realized"
 	journalColumns = "journal_entry.id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.source, journal_entry.created_at, " +
 		"(SELECT COALESCE(SUM(journal_line.debit), 0) FROM journal_line WHERE journal_line.journal_entry_id = journal_entry.id) AS total"
 	ledgerColumns = "journal_entry.id AS journal_entry_id, journal_entry.number, journal_entry.date, journal_entry.note, " +
