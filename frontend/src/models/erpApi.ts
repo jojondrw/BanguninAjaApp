@@ -1,7 +1,26 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
-import type { Budget, CashFlow, CashFlowFilter, CashTransaction } from './finance'
-import type { Project, ProjectFilter, ProjectRequest } from './project'
+import type {
+  Budget,
+  CashFlow,
+  CashFlowFilter,
+  CashTransaction,
+  CashTransactionFilter,
+  CashTransactionRequest,
+} from './finance'
+import type { Account, UnitOfMeasure } from './master'
+import type {
+  BudgetItemPage,
+  Permit,
+  PermitRequest,
+  PhaseRequest,
+  Project,
+  ProjectFilter,
+  ProjectPhase,
+  ProjectRequest,
+} from './project'
+
+const MAX_PAGE_SIZE = 100
 
 export const projectApi = {
   list: (filter: ProjectFilter = {}) =>
@@ -10,6 +29,19 @@ export const projectApi = {
   get: (id: string) => request<Project>(`/projects/${id}`),
 
   create: (body: ProjectRequest) => request<Project>('/projects', { method: 'POST', body }),
+
+  phases: (id: string) => request<ProjectPhase[]>(`/projects/${id}/phases`),
+
+  createPhase: (id: string, body: PhaseRequest) =>
+    request<ProjectPhase>(`/projects/${id}/phases`, { method: 'POST', body }),
+
+  permits: (id: string) => request<Permit[]>(`/projects/${id}/permits`),
+
+  createPermit: (id: string, body: PermitRequest) =>
+    request<Permit>(`/projects/${id}/permits`, { method: 'POST', body }),
+
+  budgetItems: (id: string) =>
+    request<BudgetItemPage>(`/projects/${id}/budget-items${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
 }
 
 export const financeApi = {
@@ -19,8 +51,19 @@ export const financeApi = {
   cashFlow: (filter: CashFlowFilter = {}) =>
     request<CashFlow>(`/finance/cash-flow${toQueryString({ ...filter })}`),
 
-  cashTransactions: (pageSize = 10) =>
-    request<Page<CashTransaction>>(`/finance/cash-transactions${toQueryString({ pageSize })}`),
+  cashTransactions: (filter: CashTransactionFilter = {}) =>
+    request<Page<CashTransaction>>(`/finance/cash-transactions${toQueryString({ ...filter })}`),
+
+  createCashTransaction: (body: CashTransactionRequest) =>
+    request<CashTransaction>('/finance/cash-transactions', { method: 'POST', body }),
+}
+
+export const masterApi = {
+  accounts: () =>
+    request<Page<Account>>(`/master/accounts${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
+
+  unitsOfMeasure: () =>
+    request<Page<UnitOfMeasure>>(`/master/units-of-measure${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
 }
 
 export interface SiteEvaluateRequest {

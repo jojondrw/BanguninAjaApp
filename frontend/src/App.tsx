@@ -9,6 +9,7 @@ import { LoginPage } from './views/LoginPage'
 import { OverviewPage } from './views/OverviewPage'
 import { ProcurementPage } from './views/ProcurementPage'
 import { ProjectsPage } from './views/ProjectsPage'
+import { ProjectWorkspacePage } from './views/ProjectWorkspacePage'
 import { RegisterPage } from './views/RegisterPage'
 import { SalesPage } from './views/SalesPage'
 
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
             <Route path="/" element={<RequireSession><OverviewPage /></RequireSession>} />
             <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
+            <Route path="/proyek/:id" element={<RequireSession><ProjectWorkspacePage /></RequireSession>} />
             <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
             <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
             <Route path="/penjualan" element={<RequireSession><SalesPage /></RequireSession>} />
