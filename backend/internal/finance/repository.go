@@ -14,13 +14,21 @@ const (
 	cashOut = "out"
 	cashIn  = "in"
 
+	cashJournalSequence = "journal_entry_cash_number_seq"
+
+	cashColumns = "cash_transaction.id, cash_transaction.date, cash_transaction.type, cash_transaction.account_id, " +
+		"cash_transaction.project_id, cash_transaction.amount, cash_transaction.note, cash_transaction.created_at, " +
+		"cash_transaction.updated_at, journal_entry.id AS journal_entry_id"
+	cashJournalJoin = "LEFT JOIN journal_entry ON journal_entry.cash_transaction_id = cash_transaction.id"
+
 	budgetColumns = "budget.id, budget.project_id, budget.year, budget.value, budget.note, budget.created_at, budget.updated_at, " +
 		"COALESCE((SELECT SUM(cash_transaction.amount) FROM cash_transaction " +
 		"WHERE cash_transaction.project_id = budget.project_id AND cash_transaction.type = ? " +
 		"AND cash_transaction.date >= make_date(budget.year::int, 1, 1) AND cash_transaction.date < make_date((budget.year + 1)::int, 1, 1)), 0) AS realized"
-	journalColumns = "journal_entry.id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.source, journal_entry.created_at, " +
+	journalColumns = "journal_entry.id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.source, " +
+		"journal_entry.cash_transaction_id, journal_entry.created_at, " +
 		"(SELECT COALESCE(SUM(journal_line.debit), 0) FROM journal_line WHERE journal_line.journal_entry_id = journal_entry.id) AS total"
-	ledgerColumns = "journal_entry.id AS journal_entry_id, journal_entry.number, journal_entry.date, journal_entry.note, " +
+	ledgerColumns = "journal_entry.id AS journal_entry_id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.cash_transaction_id, " +
 		"journal_line.id AS line_id, journal_line.debit, journal_line.kredit AS credit, " +
 		"SUM(journal_line.debit - journal_line.kredit) OVER (ORDER BY journal_entry.date, journal_entry.number, journal_line.id) AS running_balance"
 )
@@ -76,6 +84,19 @@ type BudgetRow struct {
 	UpdatedAt time.Time
 }
 
+type CashTransactionRow struct {
+	ID             uuid.UUID
+	Date           time.Time
+	Type           string
+	AccountID      uuid.UUID
+	ProjectID      *uuid.UUID
+	Amount         int64
+	Note           string
+	JournalEntryID *uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 type CashFlowRow struct {
 	Period  time.Time
 	CashIn  int64
@@ -83,23 +104,29 @@ type CashFlowRow struct {
 }
 
 type JournalEntryRow struct {
-	ID        uuid.UUID
-	Number    string
-	Date      time.Time
-	Note      string
-	Source    string
-	Total     int64
-	CreatedAt time.Time
+	ID                uuid.UUID
+	Number            string
+	Date              time.Time
+	Note              string
+	Source            string
+	CashTransactionID *uuid.UUID
+	Total             int64
+	CreatedAt         time.Time
 }
 
 type LedgerRow struct {
-	JournalEntryID uuid.UUID
-	Number         string
-	Date           time.Time
-	Note           string
-	Debit          int64
-	Credit         int64
-	RunningBalance int64
+	JournalEntryID    uuid.UUID
+	Number            string
+	Date              time.Time
+	Note              string
+	CashTransactionID *uuid.UUID
+	Debit             int64
+	Credit            int64
+	RunningBalance    int64
+}
+
+type accountRow struct {
+	ID uuid.UUID
 }
 
 type LedgerTotals struct {
@@ -117,13 +144,22 @@ type Repository interface {
 	SaveBudget(ctx context.Context, budget *Budget) error
 	DeleteBudget(ctx context.Context, id uuid.UUID) error
 
-	ListCashTransactions(ctx context.Context, filter CashTransactionFilter) ([]CashTransaction, int64, error)
+	ListCashTransactions(ctx context.Context, filter CashTransactionFilter) ([]CashTransactionRow, int64, error)
+	FindCashTransactionRow(ctx context.Context, id uuid.UUID) (CashTransactionRow, error)
 	FindCashTransaction(ctx context.Context, id uuid.UUID) (CashTransaction, error)
+	ListCashTransactionsWithoutJournal(ctx context.Context) ([]CashTransaction, error)
 	CreateCashTransaction(ctx context.Context, transaction *CashTransaction) error
 	SaveCashTransaction(ctx context.Context, transaction *CashTransaction) error
 	DeleteCashTransaction(ctx context.Context, id uuid.UUID) error
 	SumCashFlowByMonth(ctx context.Context, filter CashFlowFilter) ([]CashFlowRow, error)
 	CashBalance(ctx context.Context, projectID *uuid.UUID, until time.Time) (int64, error)
+
+	FindAccountIDByCode(ctx context.Context, code string) (uuid.UUID, error)
+	NextCashJournalSequence(ctx context.Context) (int64, error)
+	FindCashJournal(ctx context.Context, cashTransactionID uuid.UUID) (JournalEntry, error)
+	SaveJournalEntry(ctx context.Context, entry *JournalEntry) error
+	DeleteJournalLines(ctx context.Context, journalEntryID uuid.UUID) error
+	DeleteCashJournal(ctx context.Context, cashTransactionID uuid.UUID) error
 
 	ListJournalEntries(ctx context.Context, filter JournalEntryFilter) ([]JournalEntryRow, int64, error)
 	FindJournalEntryRow(ctx context.Context, id uuid.UUID) (JournalEntryRow, error)
@@ -192,19 +228,49 @@ func (r *gormRepository) DeleteBudget(ctx context.Context, id uuid.UUID) error {
 	return r.deleteByID(ctx, &Budget{}, id)
 }
 
-func (r *gormRepository) ListCashTransactions(ctx context.Context, filter CashTransactionFilter) ([]CashTransaction, int64, error) {
-	return database.FindPage[CashTransaction](ctx, r.db, database.Listing{
-		Filter: filter.apply,
-		Order:  "date DESC, created_at DESC",
-		Offset: filter.Offset,
-		Limit:  filter.Limit,
-	})
+func (r *gormRepository) ListCashTransactions(ctx context.Context, filter CashTransactionFilter) ([]CashTransactionRow, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&CashTransaction{}).Scopes(filter.apply).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]CashTransactionRow, 0, filter.Limit)
+	err := r.db.WithContext(ctx).
+		Model(&CashTransaction{}).
+		Joins(cashJournalJoin).
+		Scopes(filter.apply).
+		Select(cashColumns).
+		Order("cash_transaction.date DESC, cash_transaction.created_at DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
+}
+
+func (r *gormRepository) FindCashTransactionRow(ctx context.Context, id uuid.UUID) (CashTransactionRow, error) {
+	var row CashTransactionRow
+	err := r.db.WithContext(ctx).
+		Model(&CashTransaction{}).
+		Joins(cashJournalJoin).
+		Select(cashColumns).
+		Where("cash_transaction.id = ?", id).
+		Take(&row).Error
+	return row, database.Translate(err)
 }
 
 func (r *gormRepository) FindCashTransaction(ctx context.Context, id uuid.UUID) (CashTransaction, error) {
 	var transaction CashTransaction
 	err := r.db.WithContext(ctx).Where("id = ?", id).Take(&transaction).Error
 	return transaction, database.Translate(err)
+}
+
+func (r *gormRepository) ListCashTransactionsWithoutJournal(ctx context.Context) ([]CashTransaction, error) {
+	var transactions []CashTransaction
+	err := r.db.WithContext(ctx).
+		Where("NOT EXISTS (SELECT 1 FROM journal_entry WHERE journal_entry.cash_transaction_id = cash_transaction.id)").
+		Order("cash_transaction.date ASC, cash_transaction.created_at ASC, cash_transaction.id ASC").
+		Find(&transactions).Error
+	return transactions, database.Translate(err)
 }
 
 func (r *gormRepository) CreateCashTransaction(ctx context.Context, transaction *CashTransaction) error {
@@ -244,6 +310,40 @@ func (r *gormRepository) CashBalance(ctx context.Context, projectID *uuid.UUID, 
 	}
 	err := query.Scan(&balance).Error
 	return balance, database.Translate(err)
+}
+
+func (r *gormRepository) FindAccountIDByCode(ctx context.Context, code string) (uuid.UUID, error) {
+	var account accountRow
+	err := r.db.WithContext(ctx).Table("account").Select("id").Where("code = ?", code).Take(&account).Error
+	return account.ID, database.Translate(err)
+}
+
+func (r *gormRepository) NextCashJournalSequence(ctx context.Context) (int64, error) {
+	var sequence int64
+	err := r.db.WithContext(ctx).Raw("SELECT nextval(?::regclass)", cashJournalSequence).Scan(&sequence).Error
+	return sequence, database.Translate(err)
+}
+
+func (r *gormRepository) FindCashJournal(ctx context.Context, cashTransactionID uuid.UUID) (JournalEntry, error) {
+	var entry JournalEntry
+	err := r.db.WithContext(ctx).Where("cash_transaction_id = ?", cashTransactionID).Take(&entry).Error
+	return entry, database.Translate(err)
+}
+
+func (r *gormRepository) SaveJournalEntry(ctx context.Context, entry *JournalEntry) error {
+	return database.Translate(r.db.WithContext(ctx).Save(entry).Error)
+}
+
+func (r *gormRepository) DeleteJournalLines(ctx context.Context, journalEntryID uuid.UUID) error {
+	return database.Translate(r.db.WithContext(ctx).Where("journal_entry_id = ?", journalEntryID).Delete(&JournalLine{}).Error)
+}
+
+func (r *gormRepository) DeleteCashJournal(ctx context.Context, cashTransactionID uuid.UUID) error {
+	entries := r.db.Model(&JournalEntry{}).Select("id").Where("cash_transaction_id = ?", cashTransactionID)
+	if err := r.db.WithContext(ctx).Where("journal_entry_id IN (?)", entries).Delete(&JournalLine{}).Error; err != nil {
+		return database.Translate(err)
+	}
+	return database.Translate(r.db.WithContext(ctx).Where("cash_transaction_id = ?", cashTransactionID).Delete(&JournalEntry{}).Error)
 }
 
 func (r *gormRepository) ListJournalEntries(ctx context.Context, filter JournalEntryFilter) ([]JournalEntryRow, int64, error) {
@@ -359,19 +459,19 @@ func (f BudgetFilter) apply(db *gorm.DB) *gorm.DB {
 
 func (f CashTransactionFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.Type != "" {
-		db = db.Where("type = ?", f.Type)
+		db = db.Where("cash_transaction.type = ?", f.Type)
 	}
 	if f.AccountID != nil {
-		db = db.Where("account_id = ?", *f.AccountID)
+		db = db.Where("cash_transaction.account_id = ?", *f.AccountID)
 	}
 	if f.ProjectID != nil {
-		db = db.Where("project_id = ?", *f.ProjectID)
+		db = db.Where("cash_transaction.project_id = ?", *f.ProjectID)
 	}
 	if f.DateFrom != nil {
-		db = db.Where("date >= ?", *f.DateFrom)
+		db = db.Where("cash_transaction.date >= ?", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		db = db.Where("date <= ?", *f.DateTo)
+		db = db.Where("cash_transaction.date <= ?", *f.DateTo)
 	}
 	return db
 }
