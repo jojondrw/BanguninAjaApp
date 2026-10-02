@@ -584,7 +584,8 @@ function PayAction({ payrollId, isPaid, confirmingId, onConfirm, pay }: {
       <button
         type="button"
         onClick={() => onConfirm(payrollId)}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        className="h-7 rounded-lg bg-white px-2.5 text-xs font-medium text-slate-700 shadow-hairline transition-[background-color,transform]
+                   hover:bg-slate-50 motion-safe:active:scale-[0.97]"
       >
         Tandai dibayar
       </button>

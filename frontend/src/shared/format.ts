@@ -14,11 +14,13 @@ export function rupiah(amount: number): string {
 }
 
 export function rupiahShort(amount: number): string {
-  if (Math.abs(amount) >= BILLION) {
-    return `Rp ${NUMBER.format(Number((amount / BILLION).toFixed(1)))} M`
+  const sign = amount < 0 ? '−' : ''
+  const size = Math.abs(amount)
+  if (size >= BILLION) {
+    return `${sign}Rp ${NUMBER.format(Number((size / BILLION).toFixed(1)))} M`
   }
-  if (Math.abs(amount) >= MILLION) {
-    return `Rp ${NUMBER.format(Math.round(amount / MILLION))} jt`
+  if (size >= MILLION) {
+    return `${sign}Rp ${NUMBER.format(Math.round(size / MILLION))} jt`
   }
   return RUPIAH.format(amount)
 }

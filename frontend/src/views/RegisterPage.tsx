@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useRegister } from '../controllers/useAuth'
 import { errorMessage } from '../shared/errorMessage'
 import { Button, ErrorNote, Field } from './components/Form'
-import { BrandPanel } from './components/BrandPanel'
+import { AuthLayout } from './components/BrandPanel'
 
 const MINIMUM_PASSWORD_LENGTH = 8
 
@@ -32,67 +32,61 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <main className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Buat akun</h1>
-          <p className="mt-2 text-sm text-slate-600">Cukup tiga isian, tidak sampai satu menit.</p>
+    <AuthLayout>
+      <h1 className="text-[28px] leading-9 font-semibold tracking-[-0.025em] text-slate-900">Buat akun</h1>
+      <p className="mt-2 text-[15px] text-slate-500">Cukup tiga isian, tidak sampai satu menit.</p>
 
-          <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>
-            {register.isError ? <ErrorNote message={errorMessage(register.error)} /> : null}
+      <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>
+        {register.isError ? <ErrorNote message={errorMessage(register.error)} /> : null}
 
-            <Field
-              id="name"
-              label="Nama lengkap"
-              autoComplete="name"
-              placeholder="Jonathan Andrew"
-              minLength={2}
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <Field
-              id="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="nama@kampus.ac.id"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <Field
-              id="password"
-              label="Kata sandi"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Minimal 8 karakter"
-              minLength={MINIMUM_PASSWORD_LENGTH}
-              required
-              hint={
-                passwordTooShort
-                  ? `Kurang ${MINIMUM_PASSWORD_LENGTH - password.length} karakter lagi`
-                  : 'Minimal 8 karakter'
-              }
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+        <Field
+          id="name"
+          label="Nama lengkap"
+          autoComplete="name"
+          placeholder="Jonathan Andrew"
+          minLength={2}
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <Field
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="nama@kampus.ac.id"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <Field
+          id="password"
+          label="Kata sandi"
+          type="password"
+          autoComplete="new-password"
+          placeholder="Minimal 8 karakter"
+          minLength={MINIMUM_PASSWORD_LENGTH}
+          required
+          hint={
+            passwordTooShort
+              ? `Kurang ${MINIMUM_PASSWORD_LENGTH - password.length} karakter lagi`
+              : 'Minimal 8 karakter'
+          }
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
 
-            <Button type="submit" isPending={register.isPending} pendingLabel="Membuat akun">
-              Daftar
-            </Button>
-          </form>
+        <Button type="submit" isPending={register.isPending} pendingLabel="Membuat akun">
+          Daftar
+        </Button>
+      </form>
 
-          <p className="mt-6 text-sm text-slate-600">
-            Sudah punya akun?{' '}
-            <Link to="/masuk" className="font-medium text-navy-600 underline-offset-4 hover:underline">
-              Masuk saja
-            </Link>
-          </p>
-        </div>
-      </main>
-
-      <BrandPanel />
-    </div>
+      <p className="mt-6 text-[13px] text-slate-500">
+        Sudah punya akun?{' '}
+        <Link to="/masuk" className="font-medium text-navy-600 underline-offset-4 hover:underline">
+          Masuk saja
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

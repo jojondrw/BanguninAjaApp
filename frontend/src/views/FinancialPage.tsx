@@ -41,7 +41,7 @@ export function FinancialPage() {
                   cell: (row) => (
                     <Link
                       to={`/proyek/${row.projectId}?tab=keuangan`}
-                      className="font-medium text-navy-700 hover:underline"
+                      className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline"
                     >
                       {projectName(row.projectId)}
                     </Link>

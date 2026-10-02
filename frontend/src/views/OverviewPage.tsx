@@ -4,6 +4,7 @@ import { useBudgets, useCashFlow, useProjects } from '../controllers/useErp'
 import { monthLabel, rupiahShort, shortDate } from '../shared/format'
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, type Project } from '../models/project'
 import { AppShell } from './components/AppShell'
+import { CHIP_CLASS } from './components/ListTools'
 import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
 
 export function OverviewPage() {
@@ -48,7 +49,7 @@ export function OverviewPage() {
         />
       </KpiRow>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="mt-6 grid gap-6 2xl:grid-cols-[1.4fr_1fr]">
         <Card title="Proyek" description="Diurutkan sesuai urutan dari server">
           {projects.isPending ? <Loading /> : null}
           {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
@@ -61,7 +62,7 @@ export function OverviewPage() {
                 {
                   header: 'Nama',
                   cell: (row: Project) => (
-                    <Link to={`/proyek/${row.id}`} className="font-medium text-navy-700 hover:underline">
+                    <Link to={`/proyek/${row.id}`} className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline">
                       {row.name}
                     </Link>
                   ),
@@ -131,7 +132,7 @@ function serapanNote(isError: boolean, budgetTotal: number, realizedTotal: numbe
 
 export function StatusChip({ project }: { project: Project }) {
   return (
-    <span className={`rounded px-2 py-0.5 text-xs font-medium ${PROJECT_STATUS_TONE[project.status]}`}>
+    <span className={`${CHIP_CLASS} ${PROJECT_STATUS_TONE[project.status]}`}>
       {PROJECT_STATUS_LABEL[project.status]}
     </span>
   )

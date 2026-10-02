@@ -843,7 +843,7 @@ function AssetsCard({ lookups }: { lookups: Lookups }) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">Alat berat dan peralatan</h3>
+          <h3 className="mb-2 text-[13px] font-semibold text-slate-900">Alat berat dan peralatan</h3>
           {equipment.isPending ? <Loading /> : null}
           {equipment.isError ? <LoadFailed onRetry={() => equipment.refetch()} /> : null}
           {equipment.data ? (

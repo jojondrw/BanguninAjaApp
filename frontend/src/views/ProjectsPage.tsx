@@ -16,7 +16,7 @@ import { errorMessage } from '../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../shared/format'
 import { AppShell } from './components/AppShell'
 import { Bar, Card, LoadFailed, Loading, Table } from './components/Data'
-import { Button, ErrorNote, Field, SuccessNote } from './components/Form'
+import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
 import { StatusChip } from './OverviewPage'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
@@ -179,20 +179,20 @@ export function ProjectsPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Cari nama proyek"
-            className="w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm placeholder:text-slate-400
-                       focus:border-navy-600 focus:ring-2 focus:ring-navy-100"
+            className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
           />
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {FILTERS.map((filter) => (
               <button
                 key={filter.label}
                 type="button"
                 onClick={() => setStatus(filter.value)}
                 aria-pressed={status === filter.value}
-                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                className={`h-8 rounded-full px-3 text-[13px] font-medium transition-[background-color,color,transform]
+                            motion-safe:active:scale-[0.97] ${
                   status === filter.value
-                    ? 'bg-navy-700 text-white'
-                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-600 shadow-hairline hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 {filter.label}
@@ -212,7 +212,7 @@ export function ProjectsPage() {
               {
                 header: 'Nama',
                 cell: (row) => (
-                  <Link to={`/proyek/${row.id}`} className="font-medium text-navy-700 hover:underline">
+                  <Link to={`/proyek/${row.id}`} className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline">
                     {row.name}
                   </Link>
                 ),

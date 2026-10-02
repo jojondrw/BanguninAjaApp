@@ -140,7 +140,7 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
         ref={containerRef}
         role="region"
         aria-label="Peta lokasi. Klik peta untuk memilih titik koordinat."
-        className="h-80 w-full overflow-hidden rounded-lg border border-slate-200 sm:h-96"
+        className="h-80 w-full overflow-hidden rounded-xl shadow-hairline sm:h-96"
       />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
         <LegendDot color={PICKED_COLOR} label="Titik yang dipilih" />

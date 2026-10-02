@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy-50: #eef2fb;
-  --color-navy-100: #d6e0f5;
-  --color-navy-500: #1857c4;
+  --color-slate-50: #f9f9fa;
+  --color-slate-100: #f2f2f4;
+  --color-slate-200: #e5e5e8;
+  --color-slate-300: #d2d2d7;
+  --color-slate-400: #a0a0a7;
+  --color-slate-500: #6e6e75;
+  --color-slate-600: #55555b;
+  --color-slate-700: #3b3b40;
+  --color-slate-800: #2a2a2e;
+  --color-slate-900: #1d1d1f;
+  --color-slate-950: #111113;
+
+  --color-navy-50: #eef3fc;
+  --color-navy-100: #d8e3f7;
+  --color-navy-200: #b3c8ee;
+  --color-navy-500: #1f5fd1;
   --color-navy-600: #124bb0;
   --color-navy-700: #0b2b6b;
+  --color-navy-800: #09245a;
   --color-navy-900: #071c46;
 
   --color-amber-merek: #fbbb16;
 
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Inter Variable", Inter,
+    ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-hairline: 0 0 0 1px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-panel: 0 0 0 1px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.08);
+  --shadow-button: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 1px 2px rgb(0 0 0 / 0.16);
+
+  --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-enter: enter 280ms var(--ease-fluid) both;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    font-optical-sizing: auto;
+  }
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-}
+  * {
+    scrollbar-color: var(--color-slate-300) transparent;
+    scrollbar-width: thin;
+  }
 
-:focus-visible {
-  @apply outline-2 outline-offset-2 outline-navy-600;
+  body {
+    @apply bg-white text-slate-900 antialiased;
+    letter-spacing: -0.008em;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.018em;
+  }
+
+  ::selection {
+    background-color: var(--color-navy-100);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-navy-500);
+    outline-offset: 2px;
+  }
+
+  input[type="date"],
+  input[type="month"],
+  input[type="time"] {
+    font-variant-numeric: tabular-nums;
+  }
 }

@@ -1,5 +1,8 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react'
 
+import { SegmentIndicator } from './Segmented'
+import { SEGMENT_LIST, segmentButton, useSegmentIndicator } from './segmentIndicator'
+
 export interface TabItem<T extends string> {
   id: T
   label: string
@@ -25,6 +28,7 @@ function tabId(prefix: string, id: string) {
 // dan kanan berpindah tab, Home dan End ke tab pertama dan terakhir.
 export function Tabs<T extends string>({ idPrefix, label, tabs, active, onChange, children }: TabsProps<T>) {
   const listRef = useRef<HTMLDivElement>(null)
+  const indicator = useSegmentIndicator(listRef, active)
   const panelId = `${idPrefix}-panel`
 
   function select(index: number) {
@@ -51,30 +55,22 @@ export function Tabs<T extends string>({ idPrefix, label, tabs, active, onChange
 
   return (
     <div>
-      <div
-        ref={listRef}
-        role="tablist"
-        aria-label={label}
-        onKeyDown={handleKeyDown}
-        className="flex gap-1 overflow-x-auto border-b border-slate-200"
-      >
+      <div ref={listRef} role="tablist" aria-label={label} onKeyDown={handleKeyDown} className={SEGMENT_LIST}>
+        <SegmentIndicator indicator={indicator} />
         {tabs.map((tab) => {
           const isActive = tab.id === active
           return (
             <button
               key={tab.id}
               id={tabId(idPrefix, tab.id)}
+              data-segment={tab.id}
               type="button"
               role="tab"
               aria-selected={isActive}
               aria-controls={panelId}
               tabIndex={isActive ? 0 : -1}
               onClick={() => onChange(tab.id)}
-              className={`-mb-px border-b-2 px-4 py-2.5 text-sm whitespace-nowrap transition ${
-                isActive
-                  ? 'border-navy-700 font-medium text-navy-700'
-                  : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900'
-              }`}
+              className={segmentButton(isActive, indicator !== null)}
             >
               {tab.label}
             </button>
@@ -82,7 +78,13 @@ export function Tabs<T extends string>({ idPrefix, label, tabs, active, onChange
         })}
       </div>
 
-      <div id={panelId} role="tabpanel" aria-labelledby={tabId(idPrefix, active)} className="pt-6">
+      <div
+        key={active}
+        id={panelId}
+        role="tabpanel"
+        aria-labelledby={tabId(idPrefix, active)}
+        className="pt-5 motion-safe:animate-enter"
+      >
         {children}
       </div>
     </div>
