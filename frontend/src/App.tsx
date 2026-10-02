@@ -8,6 +8,7 @@ import { LocationPage } from './views/LocationPage'
 import { LoginPage } from './views/LoginPage'
 import { OverviewPage } from './views/OverviewPage'
 import { ProjectsPage } from './views/ProjectsPage'
+import { ProjectWorkspacePage } from './views/ProjectWorkspacePage'
 import { RegisterPage } from './views/RegisterPage'
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
             <Route path="/" element={<RequireSession><OverviewPage /></RequireSession>} />
             <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
+            <Route path="/proyek/:id" element={<RequireSession><ProjectWorkspacePage /></RequireSession>} />
             <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
             <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
             <Route path="*" element={<Navigate to="/" replace />} />

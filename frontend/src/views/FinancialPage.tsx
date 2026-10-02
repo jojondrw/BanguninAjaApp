@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { useBudgets, useCashFlow, useCashTransactions, useProjects } from '../controllers/useErp'
 import { monthLabel, rupiah, rupiahShort, shortDate } from '../shared/format'
 import { AppShell } from './components/AppShell'
@@ -34,7 +36,17 @@ export function FinancialPage() {
               rows={budgets.data.items}
               emptyMessage="Belum ada anggaran. Tambahkan lewat API POST /api/finance/budgets."
               columns={[
-                { header: 'Proyek', cell: (row) => projectName(row.projectId) },
+                {
+                  header: 'Proyek',
+                  cell: (row) => (
+                    <Link
+                      to={`/proyek/${row.projectId}?tab=keuangan`}
+                      className="font-medium text-navy-700 hover:underline"
+                    >
+                      {projectName(row.projectId)}
+                    </Link>
+                  ),
+                },
                 { header: 'Tahun', cell: (row) => String(row.year) },
                 { header: 'Anggaran', align: 'right', cell: (row) => rupiahShort(row.value) },
                 { header: 'Realisasi', align: 'right', cell: (row) => rupiahShort(row.realized) },

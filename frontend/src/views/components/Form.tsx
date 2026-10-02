@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -21,6 +21,38 @@ export function Field({ label, hint, id, ...rest }: FieldProps) {
                    disabled:bg-slate-100"
         {...rest}
       />
+      {hint ? (
+        <p id={hintId} className="text-xs text-slate-500">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label: string
+  hint?: string
+  children: ReactNode
+}
+
+export function SelectField({ label, hint, id, children, ...rest }: SelectFieldProps) {
+  const hintId = hint ? `${id}-hint` : undefined
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+        {label}
+      </label>
+      <select
+        id={id}
+        aria-describedby={hintId}
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition
+                   focus:border-navy-600 focus:ring-2 focus:ring-navy-100 disabled:bg-slate-100"
+        {...rest}
+      >
+        {children}
+      </select>
       {hint ? (
         <p id={hintId} className="text-xs text-slate-500">
           {hint}

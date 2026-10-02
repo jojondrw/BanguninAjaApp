@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useCreateProject, useProjects } from '../controllers/useErp'
 import {
@@ -152,7 +153,7 @@ export function ProjectsPage() {
   return (
     <AppShell
       title="Proyek"
-      description="Daftar proyek, disaring dan dicari langsung di server"
+      description="Daftar proyek, disaring dan dicari langsung di server. Buka nama proyek untuk masuk ke ruang kerjanya."
       actions={
         <Button
           variant={isFormOpen ? 'subtle' : 'primary'}
@@ -208,7 +209,14 @@ export function ProjectsPage() {
             emptyMessage="Tidak ada proyek yang cocok dengan penyaringan ini."
             columns={[
               { header: 'Kode', cell: (row) => row.code },
-              { header: 'Nama', cell: (row) => row.name },
+              {
+                header: 'Nama',
+                cell: (row) => (
+                  <Link to={`/proyek/${row.id}`} className="font-medium text-navy-700 hover:underline">
+                    {row.name}
+                  </Link>
+                ),
+              },
               { header: 'Jenis', cell: (row) => row.type },
               { header: 'Status', cell: (row) => <StatusChip project={row} /> },
               { header: 'Mulai', cell: (row) => shortDate(row.startDate) },
