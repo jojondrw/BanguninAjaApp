@@ -7,8 +7,10 @@ import { FinancialPage } from './views/FinancialPage'
 import { LocationPage } from './views/LocationPage'
 import { LoginPage } from './views/LoginPage'
 import { OverviewPage } from './views/OverviewPage'
+import { ProcurementPage } from './views/ProcurementPage'
 import { ProjectsPage } from './views/ProjectsPage'
 import { RegisterPage } from './views/RegisterPage'
+import { SalesPage } from './views/SalesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +30,8 @@ export default function App() {
             <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
             <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
             <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
+            <Route path="/penjualan" element={<RequireSession><SalesPage /></RequireSession>} />
+            <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SessionGate>

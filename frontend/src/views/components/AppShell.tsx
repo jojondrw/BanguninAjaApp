@@ -15,6 +15,8 @@ const MENU: MenuItem[] = [
   { to: '/proyek', label: 'Proyek' },
   { to: '/keuangan', label: 'Keuangan' },
   { to: '/lokasi', label: 'Analisis Lokasi', note: 'Menyusul' },
+  { to: '/penjualan', label: 'Penjualan' },
+  { to: '/pengadaan', label: 'Pengadaan' },
 ]
 
 interface AppShellProps {
