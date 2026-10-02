@@ -60,21 +60,21 @@
     "hospital": {
       "fisik_lingkungan": 10,
       "infrastruktur": 10,
-      "demografi_sosial": 42,
+      "demografi_sosial": 43,
       "pasar_kompetisi": 23,
-      "finansial_proyek": 15
+      "finansial_proyek": 14
     },
     "mall": {
       "fisik_lingkungan": 10,
       "infrastruktur": 10,
       "demografi_sosial": 43,
-      "pasar_kompetisi": 23,
-      "finansial_proyek": 14
+      "pasar_kompetisi": 24,
+      "finansial_proyek": 13
     },
     "entertainment": {
       "fisik_lingkungan": 10,
-      "infrastruktur": 13,
-      "demografi_sosial": 51,
+      "infrastruktur": 12,
+      "demografi_sosial": 52,
       "pasar_kompetisi": 15,
       "finansial_proyek": 11
     }

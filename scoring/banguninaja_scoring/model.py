@@ -69,6 +69,8 @@ def fmt_decimal(value, digits=2) -> str:
 def fmt_distance(metres) -> str:
     if metres is None:
         return "tidak diketahui"
+    if metres >= config.ROAD_DISTANCE_CAP_M:
+        return f"lebih dari {fmt_int(config.ROAD_DISTANCE_CAP_M / 1000)} km"
     if metres < 1000:
         return f"{fmt_int(round(metres, -1))} m"
     return f"{fmt_decimal(metres / 1000, 1)} km"

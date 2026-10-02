@@ -47,7 +47,7 @@ def linear_model(weights=None):
 
 
 class FakeExtractor:
-    def extract(self, lon, lat, with_land_price=True):
+    def extract(self, lon, lat):
         return dict(FEATURES, lon=lon, lat=lat)
 
 

@@ -8,13 +8,12 @@ from dataclasses import dataclass
 import numpy as np
 import pyogrio
 import rasterio
-import requests
 import shapely
 from pyproj import Transformer
 from rasterio.windows import Window
 
 from . import config
-from .geo import METRES_PER_DEG_LAT, PointIndex, metres_per_deg_lon, min_distance_m
+from .geo import METRES_PER_DEG_LAT, PointIndex, metres_per_deg_lon
 
 TAG_PATTERN = re.compile(r'"([^"]+)"=>"([^"]*)"')
 
@@ -47,8 +46,9 @@ def matches(tags: dict, wanted: dict) -> bool:
 
 
 class Raster:
-    def __init__(self, path):
+    def __init__(self, path, scale=1.0):
         self.path = str(path)
+        self.scale = scale
         self.local = threading.local()
         with rasterio.open(self.path) as dataset:
             self.transform = dataset.transform
@@ -81,7 +81,11 @@ class Raster:
         values, valid = self.window(lon, lat, 1)
         if not valid.any():
             return None, None
-        return float(values[valid].mean()), float(values[valid].max())
+        return float(values[valid].mean()) * self.scale, float(values[valid].max()) * self.scale
+
+    def value_at(self, lon: float, lat: float):
+        values, valid = self.window(lon, lat, 0)
+        return float(values[0, 0]) * self.scale if valid[0, 0] else None
 
 
 class Population(Raster):
@@ -111,22 +115,13 @@ class Elevation(Raster):
         return float(math.degrees(math.atan(math.hypot(gx, gy))))
 
 
-class LineLayer:
-    def __init__(self, path, layer):
-        self.path = str(path)
-        self.layer = layer
-
-    def nearest_m(self, lon: float, lat: float, start_deg=0.02, max_deg=0.32) -> float | None:
-        half = start_deg
-        while half <= max_deg:
-            frame = pyogrio.read_dataframe(
-                self.path, layer=self.layer, bbox=(lon - half, lat - half, lon + half, lat + half), columns=[]
-            )
-            distance = min_distance_m(frame.geometry.values, lon, lat)
-            if distance is not None and distance <= half * METRES_PER_DEG_LAT * 0.95:
-                return distance
-            half *= 4
-        return None
+class LandPrice(Raster):
+    def price_at(self, lon: float, lat: float):
+        values, valid = self.window(lon, lat, 2)
+        priced = valid & (values > 0)
+        if priced[2, 2]:
+            return float(values[2, 2])
+        return float(np.median(values[priced])) if priced.any() else None
 
 
 @dataclass
@@ -187,63 +182,3 @@ class ConstructionCost:
                 return self.ikk[key], region["NAME_2"]
         close = difflib.get_close_matches(keys[0], self.ikk.keys(), n=1, cutoff=0.85)
         return (self.ikk[close[0]], region["NAME_2"]) if close else (None, region["NAME_2"])
-
-
-class LandValue:
-    def __init__(self, gpkg_path):
-        self.path = str(gpkg_path)
-        self.local_available = gpkg_path.exists() and gpkg_path.stat().st_size > 1_000_000_000
-
-    def price_at(self, lon: float, lat: float):
-        if self.local_available:
-            try:
-                return self._from_local(lon, lat), "ZNT"
-            except Exception:
-                pass
-        return self._from_live(lon, lat), "ZNT (live)"
-
-    def _from_local(self, lon: float, lat: float) -> float | None:
-        for half in (0.002, 0.01):
-            frame = pyogrio.read_dataframe(
-                self.path, layer="znt", bbox=(lon - half, lat - half, lon + half, lat + half), columns=["NILAI"]
-            )
-            price = pick_price(frame.geometry.values, frame["NILAI"].values, lon, lat)
-            if price is not None:
-                return price
-        return None
-
-    def _from_live(self, lon: float, lat: float) -> float | None:
-        half = 0.003
-        response = requests.get(
-            config.ZNT_LIVE_URL,
-            params={
-                "service": "WFS",
-                "version": "2.0.0",
-                "request": "GetFeature",
-                "typeName": "petabpn:ZONANILAITANAH",
-                "outputFormat": "application/json",
-                "count": 50,
-                "bbox": f"{lat - half},{lon - half},{lat + half},{lon + half},urn:ogc:def:crs:EPSG::4326",
-            },
-            headers={"User-Agent": "BanguninAja scoring (kuliah COMP6100001)"},
-            timeout=4,
-        )
-        response.raise_for_status()
-        features = response.json().get("features", [])
-        geometries = [shapely.geometry.shape(item["geometry"]) for item in features if item.get("geometry")]
-        prices = [item["properties"].get("NILAI") for item in features if item.get("geometry")]
-        return pick_price(np.array(geometries, dtype=object), np.array(prices, dtype=float), lon, lat)
-
-
-def pick_price(geometries, prices, lon: float, lat: float) -> float | None:
-    if len(geometries) == 0:
-        return None
-    prices = np.asarray(prices, dtype=float)
-    usable = np.isfinite(prices) & (prices > 0) & (prices < config.ZNT_MAX_VALID)
-    if not usable.any():
-        return None
-    point = shapely.Point(lon, lat)
-    containing = usable & shapely.contains(np.asarray(geometries), point)
-    if containing.any():
-        return float(np.median(prices[containing]))
-    return float(np.median(prices[usable]))

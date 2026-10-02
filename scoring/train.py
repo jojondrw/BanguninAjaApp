@@ -33,7 +33,7 @@ log = logging.getLogger("train")
 
 
 def sample_points(per_region: int, seed: int) -> list:
-    regions = pyogrio.read_dataframe(str(config.data_path("gadm41_indonesia.gpkg")), layer="ADM_ADM_2", columns=["TYPE_2"])
+    regions = pyogrio.read_dataframe(str(config.bundle_path("regions.gpkg")), layer="ADM_ADM_2", columns=["TYPE_2"])
     regions = regions[regions["TYPE_2"] != "Water Body"]
     rng = np.random.default_rng(seed)
     points = []
@@ -51,13 +51,9 @@ def sample_points(per_region: int, seed: int) -> list:
 
 def extract_all(extractor: FeatureExtractor, points: list) -> pd.DataFrame:
     started = time.time()
-    use_land_price = extractor.land.local_available
-    if not use_land_price:
-        log.warning("local ZNT file missing: training without land price (never bulk-query the live ATR/BPN server)")
-
     def work(point):
         try:
-            return extractor.extract(point[0], point[1], with_land_price=use_land_price)
+            return extractor.extract(point[0], point[1])
         except Exception as exc:
             log.warning("skip %s: %s", point, exc)
             return None
@@ -124,10 +120,8 @@ def main():
     points_file = HERE / "model" / "training_points.csv"
     if args.reuse_points:
         frame = pd.read_csv(points_file)
-        land_source = "ZNT local"
     else:
         extractor = FeatureExtractor()
-        land_source = "ZNT local" if extractor.land.local_available else "none"
         points = sample_points(args.per_region, args.seed)
         log.info("sampled %d candidate points", len(points))
         frame = extract_all(extractor, points)
@@ -145,7 +139,7 @@ def main():
         "meta": {
             "trained_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "points": int(len(frame)),
-            "land_price_source": land_source,
+            "data": "scoring bundle (build_bundle.py)",
             "weighting": f"each dimension gets {WEIGHT_FLOOR}% fixed plus a learned share of {LEARNED_SHARE}% "
             "(shrinkage toward equal weights, because the target shares population with demografi_sosial)",
             "fits": fits,
