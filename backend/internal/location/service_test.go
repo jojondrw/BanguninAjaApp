@@ -152,3 +152,15 @@ func TestComparisonRejectsForeignLocation(t *testing.T) {
 		t.Fatalf("got %v, want errComparisonLocationUnknown", err)
 	}
 }
+
+func TestComparisonRejectsBlankName(t *testing.T) {
+	request := ComparisonRequest{Name: "   ", SavedLocationIDs: []uuid.UUID{uuid.New(), uuid.New()}}
+	service := NewService(&fakeRepository{})
+
+	if _, err := service.CreateComparison(context.Background(), uuid.New(), request); !errors.Is(err, errComparisonNameBlank) {
+		t.Fatalf("create: got %v, want errComparisonNameBlank", err)
+	}
+	if _, err := service.UpdateComparison(context.Background(), uuid.New(), uuid.New(), request); !errors.Is(err, errComparisonNameBlank) {
+		t.Fatalf("update: got %v, want errComparisonNameBlank", err)
+	}
+}
