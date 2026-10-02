@@ -83,6 +83,10 @@ func run() error {
 	}
 	slog.Info("extensions ready", slog.Any("installed", installed))
 
+	if err := database.ApplyIndexes(db, hr.Repairs()); err != nil {
+		return err
+	}
+
 	slices := registeredSlices()
 
 	for _, current := range slices {
