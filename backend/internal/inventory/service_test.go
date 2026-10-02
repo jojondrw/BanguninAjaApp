@@ -132,6 +132,47 @@ func TestOutMovementWithoutEnoughStockIsRejected(t *testing.T) {
 	}
 }
 
+func TestStockLedgerRecordsIncomingMovementLikeAnInMovement(t *testing.T) {
+	material, warehouse := uuid.New(), uuid.New()
+	repository := newFakeRepository()
+	repository.stock[stockKey{material, warehouse}] = 2
+	date := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
+
+	movementID, err := NewStockLedger(repository).RecordIncoming(context.Background(), IncomingStock{
+		Date: date, MaterialID: material, WarehouseID: warehouse, Quantity: 7.255, Reference: " UJI-BPB-001 ",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(repository.movements) != 1 {
+		t.Fatalf("got %d movements, want 1", len(repository.movements))
+	}
+	movement := repository.movements[0]
+	if movementID != movement.ID || movement.Type != movementIn || movement.SourceWarehouseID != nil {
+		t.Fatalf("got id %s movement %+v", movementID, movement)
+	}
+	if movement.TargetWarehouseID == nil || *movement.TargetWarehouseID != warehouse || !movement.Date.Equal(date) {
+		t.Fatalf("got target %v date %v", movement.TargetWarehouseID, movement.Date)
+	}
+	if movement.Quantity != 7.26 || movement.Reference != "UJI-BPB-001" {
+		t.Fatalf("got quantity %v reference %q", movement.Quantity, movement.Reference)
+	}
+	if got := repository.stock[stockKey{material, warehouse}]; got != 2+7.26 {
+		t.Fatalf("stock got %v", got)
+	}
+}
+
+func TestStockLedgerRejectsEmptyQuantity(t *testing.T) {
+	repository := newFakeRepository()
+
+	_, err := NewStockLedger(repository).RecordIncoming(context.Background(), IncomingStock{
+		Date: time.Now(), MaterialID: uuid.New(), WarehouseID: uuid.New(), Quantity: 0.001,
+	})
+	if !errors.Is(err, errMovementQuantity) || len(repository.movements) != 0 {
+		t.Fatalf("got %v with %d movements", err, len(repository.movements))
+	}
+}
+
 func TestTransferMovesStockBetweenWarehouses(t *testing.T) {
 	material, source, target := uuid.New(), uuid.New(), uuid.New()
 	repository := newFakeRepository()

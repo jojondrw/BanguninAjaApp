@@ -192,15 +192,31 @@ type GoodsReceiptResponse struct {
 }
 
 type GoodsReceiptItemResponse struct {
-	ID                  uuid.UUID `json:"id"`
-	PurchaseOrderItemID uuid.UUID `json:"purchaseOrderItemId"`
-	AcceptedQuantity    float64   `json:"acceptedQuantity"`
-	RejectedQuantity    float64   `json:"rejectedQuantity"`
+	ID                   uuid.UUID  `json:"id"`
+	PurchaseOrderItemID  uuid.UUID  `json:"purchaseOrderItemId"`
+	MaterialID           uuid.UUID  `json:"materialId"`
+	MaterialName         string     `json:"materialName"`
+	UnitOfMeasureID      uuid.UUID  `json:"unitOfMeasureId"`
+	StockUnitOfMeasureID uuid.UUID  `json:"stockUnitOfMeasureId"`
+	AcceptedQuantity     float64    `json:"acceptedQuantity"`
+	RejectedQuantity     float64    `json:"rejectedQuantity"`
+	StockStatus          string     `json:"stockStatus"`
+	StockPosted          bool       `json:"stockPosted"`
+	StockMovementID      *uuid.UUID `json:"stockMovementId"`
+	UnpostedReason       string     `json:"unpostedReason"`
+}
+
+type UnpostedLineResponse struct {
+	LineID       uuid.UUID `json:"lineId"`
+	MaterialID   uuid.UUID `json:"materialId"`
+	MaterialName string    `json:"materialName"`
+	Reason       string    `json:"reason"`
 }
 
 type GoodsReceiptDetailResponse struct {
 	GoodsReceiptResponse
-	Items []GoodsReceiptItemResponse `json:"items"`
+	Items         []GoodsReceiptItemResponse `json:"items"`
+	UnpostedLines []UnpostedLineResponse     `json:"unpostedLines"`
 }
 
 func newVendorResponse(vendor Vendor) VendorResponse {
@@ -294,11 +310,45 @@ func newGoodsReceiptRowResponse(row GoodsReceiptRow) GoodsReceiptResponse {
 	return newGoodsReceiptResponse(row.GoodsReceipt, row.ItemCount)
 }
 
-func newGoodsReceiptItemResponse(item GoodsReceiptItem) GoodsReceiptItemResponse {
+func newGoodsReceiptItemResponse(line GoodsReceiptLine) GoodsReceiptItemResponse {
+	status := stockStatusOf(line.GoodsReceiptItem)
 	return GoodsReceiptItemResponse{
-		ID:                  item.ID,
-		PurchaseOrderItemID: item.PurchaseOrderItemID,
-		AcceptedQuantity:    item.AcceptedQuantity,
-		RejectedQuantity:    item.RejectedQuantity,
+		ID:                   line.ID,
+		PurchaseOrderItemID:  line.PurchaseOrderItemID,
+		MaterialID:           line.MaterialID,
+		MaterialName:         line.MaterialName,
+		UnitOfMeasureID:      line.UnitOfMeasureID,
+		StockUnitOfMeasureID: line.StockUnitOfMeasureID,
+		AcceptedQuantity:     line.AcceptedQuantity,
+		RejectedQuantity:     line.RejectedQuantity,
+		StockStatus:          status,
+		StockPosted:          status == stockPosted,
+		StockMovementID:      line.StockMovementID,
+		UnpostedReason:       unpostedReason(line),
 	}
+}
+
+func newGoodsReceiptDetail(receipt GoodsReceipt, lines []GoodsReceiptLine) GoodsReceiptDetailResponse {
+	items := pagination.Map(lines, newGoodsReceiptItemResponse)
+	return GoodsReceiptDetailResponse{
+		GoodsReceiptResponse: newGoodsReceiptResponse(receipt, len(items)),
+		Items:                items,
+		UnpostedLines:        unpostedLines(items),
+	}
+}
+
+func unpostedLines(items []GoodsReceiptItemResponse) []UnpostedLineResponse {
+	unposted := make([]UnpostedLineResponse, 0)
+	for _, item := range items {
+		if item.StockStatus != stockSkipped {
+			continue
+		}
+		unposted = append(unposted, UnpostedLineResponse{
+			LineID:       item.ID,
+			MaterialID:   item.MaterialID,
+			MaterialName: item.MaterialName,
+			Reason:       item.UnpostedReason,
+		})
+	}
+	return unposted
 }

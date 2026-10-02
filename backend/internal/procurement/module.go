@@ -1,9 +1,13 @@
 package procurement
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 )
@@ -15,9 +19,27 @@ type Module struct {
 
 func NewModule(db *gorm.DB, tokens *token.Manager) *Module {
 	return &Module{
-		controller: NewController(NewService(NewRepository(db))),
+		controller: NewController(NewService(NewRepository(db, newInventoryLedger))),
 		tokens:     tokens,
 	}
+}
+
+type inventoryLedger struct {
+	ledger inventory.StockLedger
+}
+
+func newInventoryLedger(db *gorm.DB) StockLedger {
+	return inventoryLedger{ledger: inventory.NewStockLedger(inventory.NewRepository(db))}
+}
+
+func (l inventoryLedger) RecordIncoming(ctx context.Context, stock IncomingStock) (uuid.UUID, error) {
+	return l.ledger.RecordIncoming(ctx, inventory.IncomingStock{
+		Date:        stock.Date,
+		MaterialID:  stock.MaterialID,
+		WarehouseID: stock.WarehouseID,
+		Quantity:    stock.Quantity,
+		Reference:   stock.Reference,
+	})
 }
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {
