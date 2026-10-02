@@ -56,7 +56,6 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 		return EvaluateResponse{}, profileReadErrors.Resolve(err)
 	}
 
-	// 2. Option (b) for GAP #1: validate project_id if present, but do not persist it (§3.2).
 	if err := s.ensureProject(ctx, request.ProjectID); err != nil {
 		return EvaluateResponse{}, err
 	}
@@ -171,6 +170,7 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 			UserID:            userID,
 			Name:              strings.TrimSpace(request.Name),
 			BuildingProfileID: &profileID,
+			ProjectID:         request.ProjectID,
 			Point: geo.Point{
 				Lon: *request.Longitude,
 				Lat: *request.Latitude,

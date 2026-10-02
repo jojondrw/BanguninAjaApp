@@ -395,7 +395,7 @@ sedang masuk. Lokasi atau perbandingan milik orang lain dibalas 404.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/saved` | Filter `search`, `regionId`, `buildingProfileId`, `minScore`, serta area peta `minLongitude`, `minLatitude`, `maxLongitude`, `maxLatitude`. Urut skor tertinggi |
+| GET, POST | `/saved` | Filter `search`, `regionId`, `buildingProfileId`, `projectId`, `minScore`, serta area peta `minLongitude`, `minLatitude`, `maxLongitude`, `maxLatitude`. Urut skor tertinggi |
 | GET, PUT, DELETE | `/saved/:id` | Berisi skor per dimensi. PUT mengganti seluruh skor dimensi |
 | GET, POST | `/comparisons` | Body berisi dua sampai lima `savedLocationIds` |
 | GET, PUT, DELETE | `/comparisons/:id` | GET berisi skor per dimensi setiap lokasi |
@@ -405,6 +405,11 @@ Area peta disaring dengan `point && ST_MakeEnvelope(...)` supaya index GiST
 karena mesin skoring belum diputuskan. `savedAt` diperbarui hanya kalau skor
 berubah, sesuai catatan prototipe bahwa skor yang tampil adalah skor saat
 lokasi disimpan.
+
+Lokasi boleh dikaitkan ke satu proyek lewat `projectId`. Evaluasi lewat
+`POST /api/site/evaluate` menyimpan `project_id` yang dikirim ke lokasi hasil
+evaluasi. Kaitan ini memakai `ON DELETE SET NULL`, jadi menghapus proyek tidak
+ikut menghapus lokasinya.
 
 | Aturan | Kode error |
 |---|---|

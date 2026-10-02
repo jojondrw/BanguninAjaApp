@@ -24,6 +24,7 @@ type SavedLocationFilter struct {
 	Search            string
 	RegionID          *uuid.UUID
 	BuildingProfileID *uuid.UUID
+	ProjectID         *uuid.UUID
 	MinScore          *int
 	Bounds            *Bounds
 	Offset            int
@@ -201,6 +202,9 @@ func (f SavedLocationFilter) apply(db *gorm.DB) *gorm.DB {
 	}
 	if f.BuildingProfileID != nil {
 		db = db.Where("building_profile_id = ?", *f.BuildingProfileID)
+	}
+	if f.ProjectID != nil {
+		db = db.Where("project_id = ?", *f.ProjectID)
 	}
 	if f.MinScore != nil {
 		db = db.Where("score >= ?", *f.MinScore)

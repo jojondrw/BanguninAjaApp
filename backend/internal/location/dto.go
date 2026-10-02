@@ -17,6 +17,7 @@ type SavedLocationRequest struct {
 	Name              string                  `json:"name" binding:"required,max=160"`
 	RegionID          *uuid.UUID              `json:"regionId"`
 	BuildingProfileID *uuid.UUID              `json:"buildingProfileId"`
+	ProjectID         *uuid.UUID              `json:"projectId"`
 	Latitude          *float64                `json:"latitude" binding:"required,min=-90,max=90"`
 	Longitude         *float64                `json:"longitude" binding:"required,min=-180,max=180"`
 	AreaSqm           float64                 `json:"areaSqm" binding:"min=0"`
@@ -33,6 +34,7 @@ type SavedLocationQuery struct {
 	Search            string     `form:"search" binding:"omitempty,max=160"`
 	RegionID          *uuid.UUID `form:"regionId,parser=encoding.TextUnmarshaler"`
 	BuildingProfileID *uuid.UUID `form:"buildingProfileId,parser=encoding.TextUnmarshaler"`
+	ProjectID         *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
 	MinScore          *int       `form:"minScore" binding:"omitempty,min=0,max=100"`
 	MinLongitude      *float64   `form:"minLongitude" binding:"omitempty,min=-180,max=180"`
 	MinLatitude       *float64   `form:"minLatitude" binding:"omitempty,min=-90,max=90"`
@@ -50,6 +52,7 @@ type SavedLocationResponse struct {
 	Name              string     `json:"name"`
 	RegionID          *uuid.UUID `json:"regionId"`
 	BuildingProfileID *uuid.UUID `json:"buildingProfileId"`
+	ProjectID         *uuid.UUID `json:"projectId"`
 	Latitude          float64    `json:"latitude"`
 	Longitude         float64    `json:"longitude"`
 	AreaSqm           float64    `json:"areaSqm"`
@@ -107,6 +110,7 @@ func newSavedLocationResponse(location SavedLocation) SavedLocationResponse {
 		Name:              location.Name,
 		RegionID:          location.RegionID,
 		BuildingProfileID: location.BuildingProfileID,
+		ProjectID:         location.ProjectID,
 		Latitude:          location.Point.Lat,
 		Longitude:         location.Point.Lon,
 		AreaSqm:           location.AreaSqm,

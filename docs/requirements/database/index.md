@@ -100,7 +100,7 @@ nanti dipakai di entity.
 | `receivable`, `payable` | gabungan `(status, due_date)` | Sama seperti cicilan |
 | `attendance` | gabungan `(employee_id, date)`, unik `(employee_id, date)` | Satu orang satu baris per hari |
 | `journal_entry` | `date`, `account_id` | Buku besar dibaca per rentang tanggal dan per akun |
-| `saved_location` | GiST pada `point`, `user_id` | Peta menyaring berdasarkan area tampilan |
+| `saved_location` | GiST pada `point`, `user_id`, `project_id` | Peta menyaring berdasarkan area tampilan dan proyek |
 | `employee` | trigram `name`, `status` | Daftar karyawan dicari lewat nama |
 
 ## Cara memeriksa apakah index terpakai

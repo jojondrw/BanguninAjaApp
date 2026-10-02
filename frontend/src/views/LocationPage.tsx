@@ -1,33 +1,86 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 
 import {
   useBuildingProfiles,
+  useProjects,
+  useSavedLocations,
   useSiteEvaluate,
 } from '../controllers/useErp'
+import type { SavedLocation } from '../models/erpApi'
 import { AppShell } from './components/AppShell'
 import { Button, ErrorNote, Field } from './components/Form'
 import { Card, Empty, Kpi, KpiRow, Loading } from './components/Data'
+import type { MapPoint } from './components/SiteMap'
+
+const SiteMap = lazy(() =>
+  import('./components/SiteMap').then((module) => ({ default: module.SiteMap })),
+)
+
+const PROJECT_OPTION_LIMIT = 100
+const MAX_LATITUDE = 90
+const MAX_LONGITUDE = 180
+const NO_SITES: SavedLocation[] = []
+
+const SELECT_CLASS =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100'
+
+function toMapPoint(latitude: string, longitude: string): MapPoint | null {
+  if (latitude.trim() === '' || longitude.trim() === '') {
+    return null
+  }
+  const point = { latitude: Number(latitude), longitude: Number(longitude) }
+  const isValid =
+    Number.isFinite(point.latitude) &&
+    Number.isFinite(point.longitude) &&
+    Math.abs(point.latitude) <= MAX_LATITUDE &&
+    Math.abs(point.longitude) <= MAX_LONGITUDE
+
+  return isValid ? point : null
+}
+
+function describeSites(shown: number, total: number, isProjectChosen: boolean): string {
+  const scope = isProjectChosen ? ' untuk proyek ini' : ''
+  if (total === 0) {
+    return `Belum ada lokasi tersimpan${scope}.`
+  }
+  return `Menampilkan ${shown} dari ${total} lokasi tersimpan${scope}.`
+}
 
 export function LocationPage() {
   const evaluate = useSiteEvaluate()
   const profiles = useBuildingProfiles()
+  const projects = useProjects({ pageSize: PROJECT_OPTION_LIMIT })
 
   const [name, setName] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
   const [buildingProfileId, setBuildingProfileId] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [focus, setFocus] = useState<MapPoint | null>(null)
 
+  const savedLocations = useSavedLocations(projectId || undefined)
+  const sites = savedLocations.data?.items ?? NO_SITES
+  const picked = toMapPoint(latitude, longitude)
   const result = evaluate.data
+
+  function handlePick(point: MapPoint) {
+    setLatitude(String(point.latitude))
+    setLongitude(String(point.longitude))
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    evaluate.mutate({
-      name: name.trim(),
-      latitude: Number(latitude),
-      longitude: Number(longitude),
-      building_profile_id: buildingProfileId,
-    })
+    const target = { latitude: Number(latitude), longitude: Number(longitude) }
+    evaluate.mutate(
+      {
+        name: name.trim(),
+        ...target,
+        building_profile_id: buildingProfileId,
+        project_id: projectId || undefined,
+      },
+      { onSuccess: () => setFocus(target) },
+    )
   }
 
   return (
@@ -38,9 +91,38 @@ export function LocationPage() {
       <div className="space-y-6">
         <Card
           title="Evaluasi lokasi"
-          description="Masukkan koordinat dan profil bangunan untuk menjalankan analisis."
+          description="Klik peta atau ketik koordinat, lalu pilih profil bangunan untuk menjalankan analisis."
         >
           <form onSubmit={handleSubmit} className="space-y-5">
+            <Suspense
+              fallback={
+                <div className="flex h-80 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 sm:h-96">
+                  <p className="text-sm text-slate-500">Memuat peta...</p>
+                </div>
+              }
+            >
+              <SiteMap
+                picked={picked}
+                sites={sites}
+                focus={focus}
+                onPick={handlePick}
+              />
+            </Suspense>
+
+            {savedLocations.isPending ? (
+              <p className="text-xs text-slate-500">Memuat lokasi tersimpan...</p>
+            ) : null}
+
+            {savedLocations.isError ? (
+              <ErrorNote message="Gagal memuat lokasi tersimpan di peta." />
+            ) : null}
+
+            {savedLocations.data ? (
+              <p role="status" className="text-xs text-slate-500">
+                {describeSites(sites.length, savedLocations.data.totalItems, projectId !== '')}
+              </p>
+            ) : null}
+
             <div className="grid gap-4 md:grid-cols-2">
               <Field
                 id="location-name"
@@ -67,7 +149,7 @@ export function LocationPage() {
                   }
                   required
                   disabled={profiles.isLoading}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className={SELECT_CLASS}
                 >
                   <option value="">
                     {profiles.isLoading
@@ -94,6 +176,8 @@ export function LocationPage() {
                 label="Latitude"
                 type="number"
                 step="any"
+                min={-MAX_LATITUDE}
+                max={MAX_LATITUDE}
                 placeholder="-6.200000"
                 value={latitude}
                 onChange={(event) => setLatitude(event.target.value)}
@@ -105,11 +189,52 @@ export function LocationPage() {
                 label="Longitude"
                 type="number"
                 step="any"
+                min={-MAX_LONGITUDE}
+                max={MAX_LONGITUDE}
                 placeholder="106.816666"
                 value={longitude}
                 onChange={(event) => setLongitude(event.target.value)}
                 required
               />
+
+              <div className="md:col-span-2">
+                <label
+                  htmlFor="project"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Proyek (opsional)
+                </label>
+
+                <select
+                  id="project"
+                  value={projectId}
+                  onChange={(event) => setProjectId(event.target.value)}
+                  disabled={projects.isLoading}
+                  aria-describedby="project-hint"
+                  className={SELECT_CLASS}
+                >
+                  <option value="">
+                    {projects.isLoading ? 'Memuat proyek...' : 'Tanpa proyek'}
+                  </option>
+
+                  {projects.data?.items.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name} ({project.code})
+                    </option>
+                  ))}
+                </select>
+
+                <p id="project-hint" className="mt-1.5 text-xs text-slate-500">
+                  Hasil evaluasi dikaitkan ke proyek ini. Saat proyek dipilih,
+                  peta hanya menampilkan lokasi milik proyek itu.
+                </p>
+
+                {projects.isError ? (
+                  <p role="alert" className="mt-1.5 text-xs text-red-600">
+                    Gagal mengambil daftar proyek.
+                  </p>
+                ) : null}
+              </div>
             </div>
 
             <Button
