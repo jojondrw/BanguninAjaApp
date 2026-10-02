@@ -37,10 +37,10 @@ type rssChannel struct {
 }
 
 type rssItem struct {
-	Title     string    `xml:"title"`
-	Link      string    `xml:"link"`
-	PubDate   string    `xml:"pubDate"`
-	Source    rssSource `xml:"source"`
+	Title   string    `xml:"title"`
+	Link    string    `xml:"link"`
+	PubDate string    `xml:"pubDate"`
+	Source  rssSource `xml:"source"`
 }
 
 type rssSource struct {
