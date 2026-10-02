@@ -1,5 +1,7 @@
 # BanguninAja
 
+[![CI](https://github.com/jojondrw/BanguninAjaApp/actions/workflows/ci.yml/badge.svg)](https://github.com/jojondrw/BanguninAjaApp/actions/workflows/ci.yml)
+
 Sistem pendukung keputusan pemilihan lokasi bangunan, digabung dengan modul ERP
 untuk mengelola proyek yang sudah berjalan.
 

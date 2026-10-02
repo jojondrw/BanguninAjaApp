@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from . import config
+from . import config, tiles
 from .model import Model, score
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -53,6 +53,15 @@ def create_app(extractor=None, model=None) -> FastAPI:
             return error(400, "unknown_building_profile", f"Profil {request.building_profile_code!r} tidak dikenal")
         features = await run_in_threadpool(state["extractor"].extract, request.longitude, request.latitude)
         return score(state["model"], features, request.building_profile_code)
+
+    @app.get("/tiles/{layer}/{z}/{x}/{y}.png")
+    async def map_tile(layer: str, z: int, x: int, y: int):
+        if layer not in tiles.LAYERS:
+            return error(404, "unknown_layer", f"Lapisan {layer!r} tidak dikenal")
+        if not tiles.valid_tile(z, x, y):
+            return error(400, "invalid_tile", "Koordinat tile di luar jangkauan")
+        content = await run_in_threadpool(tiles.render, layer, z, x, y)
+        return Response(content, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
     return app
 

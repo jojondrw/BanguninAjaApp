@@ -3,6 +3,8 @@ import { clearSession, getAccessToken, setSession } from '../controllers/session
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 
+export const API_BASE_URL = BASE_URL
+
 interface Envelope<T> {
   data?: T
   error?: ApiErrorBody
