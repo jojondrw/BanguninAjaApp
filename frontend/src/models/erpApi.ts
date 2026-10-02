@@ -88,3 +88,33 @@ export const siteApi = {
       body,
     }),
 }
+
+export interface SavedLocation {
+  id: string
+  name: string
+  regionId: string | null
+  buildingProfileId: string | null
+  projectId: string | null
+  latitude: number
+  longitude: number
+  areaSqm: number
+  landPricePerSqm: number
+  score: number
+  floodIndex: number
+  earthquakeIndex: number
+  note: string
+  savedAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SavedLocationFilter {
+  projectId?: string
+  page?: number
+  pageSize?: number
+}
+
+export const locationApi = {
+  saved: (filter: SavedLocationFilter = {}) =>
+    request<Page<SavedLocation>>(`/locations/saved${toQueryString({ ...filter })}`),
+}
