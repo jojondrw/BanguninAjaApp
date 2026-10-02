@@ -31,56 +31,19 @@ import {
   type Receivable,
   type ReceivableFormValues,
 } from '../../models/billing'
+import { customerOptions, projectOptions, vendorOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { SelectField } from '../components/RecordControls'
-import { amountHint, customerName, partyName, vendorName, type Directory } from './directory'
+import { SearchSelect } from '../components/SearchSelect'
+import { amountHint, type Directory } from './directory'
 
 const OPTION_LIMIT = 100
 
 type Change = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
 
-interface Option {
-  id: string
-  label: string
-}
-
-function customerOptions(directory: Directory): Option[] {
-  return directory.customers.map((customer) => ({
-    id: customer.id,
-    label: `${customer.name} (${customer.identityNumber})`,
-  }))
-}
-
-function vendorOptions(directory: Directory): Option[] {
-  return directory.vendors.map((vendor) => ({
-    id: vendor.id,
-    label: `${vendor.name} (${vendor.code})${vendor.active ? '' : ', nonaktif'}`,
-  }))
-}
-
-// Catatan lama bisa menunjuk pihak di luar 100 pilihan pertama. Pilihan itu
-// tetap ditampilkan supaya formulir ubah tidak diam diam mengosongkannya.
-function withCurrent(options: Option[], id: string, label: string): Option[] {
-  if (id === '' || options.some((option) => option.id === id)) {
-    return options
-  }
-  return [{ id, label }, ...options]
-}
-
-function OptionList({ placeholder, options }: { placeholder: string; options: Option[] }) {
-  return (
-    <>
-      <option value="">{placeholder}</option>
-      {options.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.label}
-        </option>
-      ))}
-    </>
-  )
-}
+const ALL_VENDORS = vendorOptions()
 
 function AmountField({ id, label, value, record, onChange }: {
   id: string
@@ -150,7 +113,7 @@ interface FormProps<T> {
   onCancel?: () => void
 }
 
-export function InvoiceForm({ record, directory, onSaved, onCancel }: FormProps<Invoice>) {
+export function InvoiceForm({ record, onSaved, onCancel }: FormProps<Invoice>) {
   const [values, setValues] = useState<InvoiceFormValues>(() => (record ? invoiceFormOf(record) : EMPTY_INVOICE_FORM))
   const create = useCreateInvoice()
   const update = useUpdateInvoice()
@@ -158,16 +121,6 @@ export function InvoiceForm({ record, directory, onSaved, onCancel }: FormProps<
   const idPrefix = record ? 'invoice-edit' : 'invoice-new'
   const isCustomer = values.partyType === 'customer'
   const partyNoun = PARTY_TYPE_LABEL[values.partyType]
-  const parties = withCurrent(
-    isCustomer ? customerOptions(directory) : vendorOptions(directory),
-    values.partyId,
-    partyName(directory, values.partyType, values.partyId),
-  )
-  const projects = withCurrent(
-    directory.projects.map((project) => ({ id: project.id, label: `${project.name} (${project.code})` })),
-    values.projectId,
-    values.projectId.slice(0, 8),
-  )
 
   const change = (key: keyof InvoiceFormValues): Change => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
@@ -217,30 +170,26 @@ export function InvoiceForm({ record, directory, onSaved, onCancel }: FormProps<
             </option>
           ))}
         </SelectField>
-        <SelectField
+        <SearchSelect
+          {...(isCustomer ? customerOptions : ALL_VENDORS)}
+          key={values.partyType}
           id={`${idPrefix}-party`}
           label={partyNoun}
+          placeholder={`Cari ${partyNoun.toLowerCase()}`}
           required
-          hint={
-            parties.length === 0
-              ? isCustomer
-                ? 'Belum ada pelanggan. Tambahkan dulu di menu Penjualan.'
-                : 'Belum ada vendor. Tambahkan dulu di menu Pengadaan.'
-              : undefined
-          }
           value={values.partyId}
-          onChange={change('partyId')}
-        >
-          <OptionList placeholder={`Pilih ${partyNoun.toLowerCase()}`} options={parties} />
-        </SelectField>
-        <SelectField
+          onChange={(partyId) => setValues((current) => ({ ...current, partyId }))}
+        />
+        <SearchSelect
+          {...projectOptions}
           id={`${idPrefix}-project`}
           label="Proyek (opsional)"
+          placeholder="Cari proyek"
+          allowEmpty
+          emptyLabel="Tanpa proyek"
           value={values.projectId}
-          onChange={change('projectId')}
-        >
-          <OptionList placeholder="Tanpa proyek" options={projects} />
-        </SelectField>
+          onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
+        />
         <Field
           id={`${idPrefix}-due-date`}
           label="Jatuh tempo"
@@ -283,7 +232,7 @@ export function InvoiceForm({ record, directory, onSaved, onCancel }: FormProps<
   )
 }
 
-export function ReceivableForm({ record, directory, onSaved, onCancel }: FormProps<Receivable>) {
+export function ReceivableForm({ record, onSaved, onCancel }: FormProps<Receivable>) {
   const [values, setValues] = useState<ReceivableFormValues>(() =>
     record ? receivableFormOf(record) : EMPTY_RECEIVABLE_FORM,
   )
@@ -296,7 +245,6 @@ export function ReceivableForm({ record, directory, onSaved, onCancel }: FormPro
     customerId: values.customerId === '' ? undefined : values.customerId,
     pageSize: OPTION_LIMIT,
   })
-  const customers = withCurrent(customerOptions(directory), values.customerId, customerName(directory, values.customerId))
 
   const change = (key: keyof ReceivableFormValues): Change => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
@@ -318,16 +266,15 @@ export function ReceivableForm({ record, directory, onSaved, onCancel }: FormPro
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SelectField
+        <SearchSelect
+          {...customerOptions}
           id={`${idPrefix}-customer`}
           label="Pelanggan"
+          placeholder="Cari nama atau NIK pelanggan"
           required
-          hint={customers.length === 0 ? 'Belum ada pelanggan. Tambahkan dulu di menu Penjualan.' : undefined}
           value={values.customerId}
-          onChange={change('customerId')}
-        >
-          <OptionList placeholder="Pilih pelanggan" options={customers} />
-        </SelectField>
+          onChange={(customerId) => setValues((current) => ({ ...current, customerId }))}
+        />
         <Field
           id={`${idPrefix}-reference`}
           label="Referensi"
@@ -377,7 +324,7 @@ export function ReceivableForm({ record, directory, onSaved, onCancel }: FormPro
   )
 }
 
-export function PayableForm({ record, directory, onSaved, onCancel }: FormProps<Payable>) {
+export function PayableForm({ record, onSaved, onCancel }: FormProps<Payable>) {
   const [values, setValues] = useState<PayableFormValues>(() => (record ? payableFormOf(record) : EMPTY_PAYABLE_FORM))
   const create = useCreatePayable()
   const update = useUpdatePayable()
@@ -388,7 +335,6 @@ export function PayableForm({ record, directory, onSaved, onCancel }: FormProps<
     vendorId: values.vendorId === '' ? undefined : values.vendorId,
     pageSize: OPTION_LIMIT,
   })
-  const vendors = withCurrent(vendorOptions(directory), values.vendorId, vendorName(directory, values.vendorId))
 
   const change = (key: keyof PayableFormValues): Change => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
@@ -410,16 +356,15 @@ export function PayableForm({ record, directory, onSaved, onCancel }: FormProps<
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <SelectField
+        <SearchSelect
+          {...ALL_VENDORS}
           id={`${idPrefix}-vendor`}
           label="Vendor"
+          placeholder="Cari nama atau kode vendor"
           required
-          hint={vendors.length === 0 ? 'Belum ada vendor. Tambahkan dulu di menu Pengadaan.' : undefined}
           value={values.vendorId}
-          onChange={change('vendorId')}
-        >
-          <OptionList placeholder="Pilih vendor" options={vendors} />
-        </SelectField>
+          onChange={(vendorId) => setValues((current) => ({ ...current, vendorId }))}
+        />
         <Field
           id={`${idPrefix}-reference`}
           label="Referensi"
