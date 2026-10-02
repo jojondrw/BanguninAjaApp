@@ -72,7 +72,19 @@ async function parseBody<T>(response: Response): Promise<T> {
   return envelope.data as T
 }
 
-export async function refreshSession(): Promise<boolean> {
+let pendingRefresh: Promise<boolean> | null = null
+
+export function refreshSession(): Promise<boolean> {
+  if (!pendingRefresh) {
+    pendingRefresh = performRefresh().finally(() => {
+      pendingRefresh = null
+    })
+  }
+
+  return pendingRefresh
+}
+
+async function performRefresh(): Promise<boolean> {
   const response = await send('/auth/refresh', { method: 'POST', skipTokenRefresh: true })
   if (!response.ok) {
     return false
