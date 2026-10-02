@@ -78,6 +78,16 @@ def test_missing_values_fall_back_to_neutral():
     result = score(linear_model(), {}, "housing")
     assert all(d["value"] == 50 for d in result["dimension_scores"])
     assert any(flag["code"] == "di_luar_cakupan_data" for flag in result["risk_flags"])
+    assert result["region"] is None
+
+
+def test_region_is_reported_but_never_scored():
+    with_region = score(linear_model(), FEATURES, "housing")
+    without_region = score(linear_model(), dict(FEATURES, region=None), "housing")
+    assert with_region["region"] == "Kota Contoh"
+    assert without_region["region"] is None
+    assert with_region["overall_score"] == without_region["overall_score"]
+    assert [d["value"] for d in with_region["dimension_scores"]] == [d["value"] for d in without_region["dimension_scores"]]
 
 
 def test_risk_flags_for_high_hazard():
@@ -97,7 +107,8 @@ def test_api_contract():
     with TestClient(create_app(FakeExtractor(), linear_model())) as client:
         ok = client.post("/score", json={"latitude": -6.2, "longitude": 106.8, "building_profile_code": "mall"})
         assert ok.status_code == 200
-        assert set(ok.json()) == {"overall_score", "dimension_scores", "risk_flags"}
+        assert set(ok.json()) == {"overall_score", "dimension_scores", "risk_flags", "region"}
+        assert ok.json()["region"] == "Kota Contoh"
 
         unknown = client.post("/score", json={"latitude": -6.2, "longitude": 106.8, "building_profile_code": "castle"})
         assert unknown.status_code == 400

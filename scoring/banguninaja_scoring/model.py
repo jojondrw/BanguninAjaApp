@@ -196,4 +196,5 @@ def score(model: Model, f: dict, profile: str) -> dict:
             for code in config.DIMENSIONS
         ],
         "risk_flags": risk_flags(f),
+        "region": f.get("region") or None,
     }
