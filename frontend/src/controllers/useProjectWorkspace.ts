@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { financeApi, masterApi, projectApi } from '../models/erpApi'
 import {
@@ -7,11 +7,22 @@ import {
   type CashTransactionFormValues,
 } from '../models/finance'
 import {
+  REGION_SEARCH_MIN_LENGTH,
+  toBudgetItemRequest,
   toPermitRequest,
+  toPhaseEditRequest,
   toPhaseRequest,
+  toProjectUpdateRequest,
+  type BudgetItemFilter,
+  type BudgetItemFormValues,
   type PermitFormValues,
+  type PhaseEditValues,
   type PhaseFormValues,
+  type Project,
+  type ProjectFormValues,
+  type ProjectStatus,
 } from '../models/project'
+import { projectWorkspaceApi, regionApi } from '../models/projectWorkspaceApi'
 import {
   BUDGETS_KEY,
   CASH_FLOW_KEY,
@@ -133,6 +144,149 @@ export function useUnitsOfMeasure() {
   return useQuery({
     queryKey: [MASTER_KEY, 'units-of-measure'],
     queryFn: masterApi.unitsOfMeasure,
+    ...DATA_QUERY,
+  })
+}
+
+// Kepala proyek langsung diganti dengan jawaban server supaya judul dan status
+// berubah tanpa menunggu, lalu semua query proyek (daftar /proyek, pilihan
+// proyek di /lokasi, ringkasan) ikut diambil ulang.
+function useProjectSaved(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return (project: Project) => {
+    queryClient.setQueryData(detailKey(projectId), project)
+    return queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] })
+  }
+}
+
+export function useUpdateProject(projectId: string) {
+  const onSaved = useProjectSaved(projectId)
+
+  return useMutation({
+    mutationFn: ({ values, regionId }: { values: ProjectFormValues; regionId: string }) =>
+      projectWorkspaceApi.update(projectId, toProjectUpdateRequest(values, regionId)),
+    onSuccess: onSaved,
+  })
+}
+
+export function useUpdateProjectStatus(projectId: string) {
+  const onSaved = useProjectSaved(projectId)
+
+  return useMutation({
+    mutationFn: (status: ProjectStatus) => projectWorkspaceApi.updateStatus(projectId, status),
+    onSuccess: onSaved,
+  })
+}
+
+// Menghapus proyek ikut menghapus tahap, izin, RAB, dan anggaran, serta
+// melepas transaksi kas dan lokasi dari proyek. Semua query cukup ditandai
+// basi tanpa diambil ulang sekarang: halaman ini akan ditinggalkan, dan
+// halaman tujuan mengambil data segar saat dibuka.
+export function useDeleteProject(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => projectWorkspaceApi.remove(projectId),
+    onSuccess: () => queryClient.invalidateQueries({ refetchType: 'none' }),
+  })
+}
+
+// Mengubah atau menghapus tahap menghitung ulang progres proyek di server,
+// jadi seluruh query proyek diambil ulang, bukan hanya daftar tahap.
+export function useUpdatePhase(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ phaseId, values }: { phaseId: string; values: PhaseEditValues }) =>
+      projectWorkspaceApi.updatePhase(projectId, phaseId, toPhaseEditRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
+  })
+}
+
+export function useDeletePhase(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (phaseId: string) => projectWorkspaceApi.deletePhase(projectId, phaseId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
+  })
+}
+
+export function useUpdatePermit(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ permitId, values }: { permitId: string; values: PermitFormValues }) =>
+      projectWorkspaceApi.updatePermit(projectId, permitId, toPermitRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'permits') }),
+  })
+}
+
+export function useDeletePermit(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (permitId: string) => projectWorkspaceApi.deletePermit(projectId, permitId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'permits') }),
+  })
+}
+
+// Kuncinya di bawah detailKey(projectId, 'budget-items'), jadi satu
+// pembatalan menyegarkan tabel RAB sekaligus KPI Nilai RAB.
+export function useBudgetItemPage(projectId: string, filter: BudgetItemFilter) {
+  return useQuery({
+    queryKey: [...detailKey(projectId, 'budget-items'), filter],
+    queryFn: () => projectWorkspaceApi.budgetItems(projectId, filter),
+    placeholderData: keepPreviousData,
+    ...DATA_QUERY,
+  })
+}
+
+export function useCreateBudgetItem(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (values: BudgetItemFormValues) =>
+      projectWorkspaceApi.createBudgetItem(projectId, toBudgetItemRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+  })
+}
+
+export function useUpdateBudgetItem(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ itemId, values }: { itemId: string; values: BudgetItemFormValues }) =>
+      projectWorkspaceApi.updateBudgetItem(projectId, itemId, toBudgetItemRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+  })
+}
+
+export function useDeleteBudgetItem(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (itemId: string) => projectWorkspaceApi.deleteBudgetItem(projectId, itemId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+  })
+}
+
+export function useRegion(regionId: string) {
+  return useQuery({
+    queryKey: [MASTER_KEY, 'region', regionId],
+    queryFn: () => regionApi.get(regionId),
+    enabled: regionId !== '',
+    ...DATA_QUERY,
+  })
+}
+
+export function useRegionSearch(term: string) {
+  return useQuery({
+    queryKey: [MASTER_KEY, 'region-search', term],
+    queryFn: () => regionApi.search(term),
+    enabled: term.length >= REGION_SEARCH_MIN_LENGTH,
+    placeholderData: keepPreviousData,
     ...DATA_QUERY,
   })
 }

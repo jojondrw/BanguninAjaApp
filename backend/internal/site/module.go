@@ -13,6 +13,7 @@ import (
 
 type Module struct {
 	controller *Controller
+	tiles      *TileProxy
 	tokens     *token.Manager
 }
 
@@ -31,6 +32,7 @@ func NewModule(db *gorm.DB, tokens *token.Manager, scoreConfig config.Score) *Mo
 
 	return &Module{
 		controller: NewController(service),
+		tiles:      NewTileProxy(scoreConfig.BaseURL, scoreConfig.Timeout),
 		tokens:     tokens,
 	}
 }
@@ -38,4 +40,5 @@ func NewModule(db *gorm.DB, tokens *token.Manager, scoreConfig config.Score) *Mo
 func (m *Module) RegisterRoutes(router gin.IRouter) {
 	routes := router.Group("/site", middleware.Authentication(m.tokens))
 	routes.POST("/evaluate", m.controller.Evaluate)
+	routes.GET("/tiles/:layer/:z/:x/:y", m.tiles.Tile)
 }

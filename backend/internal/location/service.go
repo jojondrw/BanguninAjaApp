@@ -27,6 +27,7 @@ var (
 	errDimensionScoreDuplicate = apperror.Unprocessable("dimension_score_duplicate", "Satu dimensi hanya boleh dinilai sekali per lokasi")
 
 	errComparisonNotFound          = apperror.NotFound("comparison_not_found", "Perbandingan tidak ditemukan")
+	errComparisonNameBlank         = apperror.Unprocessable("comparison_name_blank", "Nama perbandingan tidak boleh kosong")
 	errComparisonLocationDuplicate = apperror.Unprocessable("comparison_location_duplicate", "Lokasi yang sama tidak boleh dibandingkan dua kali")
 	errComparisonLocationUnknown   = apperror.Unprocessable("comparison_location_not_found", "Ada lokasi yang tidak ditemukan di daftar lokasi tersimpan Anda")
 )
@@ -159,7 +160,7 @@ func (s *service) GetComparison(ctx context.Context, userID, id uuid.UUID) (Comp
 }
 
 func (s *service) CreateComparison(ctx context.Context, userID uuid.UUID, request ComparisonRequest) (ComparisonDetailResponse, error) {
-	if err := validateComparisonLocations(request.SavedLocationIDs); err != nil {
+	if err := validateComparison(request); err != nil {
 		return ComparisonDetailResponse{}, err
 	}
 
@@ -174,7 +175,7 @@ func (s *service) CreateComparison(ctx context.Context, userID uuid.UUID, reques
 }
 
 func (s *service) UpdateComparison(ctx context.Context, userID, id uuid.UUID, request ComparisonRequest) (ComparisonDetailResponse, error) {
-	if err := validateComparisonLocations(request.SavedLocationIDs); err != nil {
+	if err := validateComparison(request); err != nil {
 		return ComparisonDetailResponse{}, err
 	}
 
@@ -329,6 +330,13 @@ func validateDimensionScores(items []DimensionScoreRequest) error {
 		seen[item.DimensionID] = true
 	}
 	return nil
+}
+
+func validateComparison(request ComparisonRequest) error {
+	if strings.TrimSpace(request.Name) == "" {
+		return errComparisonNameBlank
+	}
+	return validateComparisonLocations(request.SavedLocationIDs)
 }
 
 func validateComparisonLocations(ids []uuid.UUID) error {

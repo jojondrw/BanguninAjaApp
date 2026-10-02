@@ -1,8 +1,10 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 
 import { useCreateProject, useProjects } from '../controllers/useErp'
 import {
+  deletedProjectName,
   EMPTY_PROJECT_FORM,
   PROJECT_CODE_MAX_LENGTH,
   PROJECT_NAME_MAX_LENGTH,
@@ -15,9 +17,10 @@ import {
 import { errorMessage } from '../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../shared/format'
 import { AppShell } from './components/AppShell'
-import { Bar, Card, LoadFailed, Loading, Table } from './components/Data'
+import { Card, LoadFailed, Loading, Table } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
 import { StatusChip } from './OverviewPage'
+import { ProgressMeter } from './project/parts'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
 
@@ -27,7 +30,12 @@ const FILTERS: { value: ProjectStatus | ''; label: string }[] = [
   { value: 'ongoing', label: PROJECT_STATUS_LABEL.ongoing },
   { value: 'on_hold', label: PROJECT_STATUS_LABEL.on_hold },
   { value: 'completed', label: PROJECT_STATUS_LABEL.completed },
+  { value: 'cancelled', label: PROJECT_STATUS_LABEL.cancelled },
 ]
+
+const OPEN_LINK_CLASS =
+  'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap text-navy-600 ' +
+  'transition-[background-color,transform] hover:bg-navy-50 motion-safe:active:scale-95'
 
 function contractValueHint(value: string): string {
   const amount = Number(value)
@@ -144,6 +152,8 @@ export function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus | ''>('')
   const [search, setSearch] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const location = useLocation()
+  const deletedProject = deletedProjectName(location.state)
   const projects = useProjects({
     pageSize: 50,
     status: status === '' ? undefined : status,
@@ -153,7 +163,7 @@ export function ProjectsPage() {
   return (
     <AppShell
       title="Proyek"
-      description="Daftar proyek, disaring dan dicari langsung di server. Buka nama proyek untuk masuk ke ruang kerjanya."
+      description="Daftar proyek, disaring dan dicari langsung di server. Buka ruang kerja proyek untuk mengubah data, status, tahap, izin, dan RAB."
       actions={
         <Button
           variant={isFormOpen ? 'subtle' : 'primary'}
@@ -166,6 +176,12 @@ export function ProjectsPage() {
       {isFormOpen ? (
         <div className="mb-6">
           <NewProjectCard />
+        </div>
+      ) : null}
+
+      {deletedProject ? (
+        <div className="mb-6">
+          <SuccessNote message={`Proyek ${deletedProject} sudah dihapus.`} />
         </div>
       ) : null}
 
@@ -222,7 +238,24 @@ export function ProjectsPage() {
               { header: 'Mulai', cell: (row) => shortDate(row.startDate) },
               { header: 'Target', cell: (row) => shortDate(row.targetEndDate) },
               { header: 'Nilai', align: 'right', cell: (row) => rupiahShort(row.contractValue) },
-              { header: 'Progres', align: 'right', cell: (row) => <Bar percent={row.progress} /> },
+              {
+                header: 'Progres',
+                cell: (row) => (
+                  <div className="w-32">
+                    <ProgressMeter percent={row.progress} label={`Progres ${row.name}`} />
+                  </div>
+                ),
+              },
+              {
+                header: 'Aksi',
+                align: 'right',
+                cell: (row) => (
+                  <Link to={`/proyek/${row.id}`} className={OPEN_LINK_CLASS} aria-label={`Buka ruang kerja ${row.name}`}>
+                    Buka ruang kerja
+                    <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                  </Link>
+                ),
+              },
             ]}
           />
         ) : null}

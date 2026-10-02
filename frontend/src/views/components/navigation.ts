@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
   MapPinned,
+  ReceiptText,
   ShoppingCart,
   Users,
   Wallet,
@@ -30,6 +31,7 @@ export const MENU: MenuGroup[] = [
       { to: '/proyek', label: 'Proyek', icon: FolderKanban, keywords: 'project tahap izin rab' },
       { to: '/lokasi', label: 'Analisis Lokasi', icon: MapPinned, keywords: 'peta skor site evaluasi gis' },
       { to: '/keuangan', label: 'Keuangan', icon: Wallet, keywords: 'kas anggaran finance budget' },
+      { to: '/tagihan', label: 'Tagihan', icon: ReceiptText, keywords: 'faktur invoice piutang utang pembayaran billing' },
     ],
   },
   {
