@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/regulation"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/geo"
@@ -16,9 +16,9 @@ import (
 )
 
 type rawRecord struct {
-	RTR    string   `json:"rtr"`
-	IDRTR  string   `json:"id_rtr"`
-	IDWlyh string   `json:"idwlyh"`
+	RTR    string `json:"rtr"`
+	IDRTR  string `json:"id_rtr"`
+	IDWlyh string `json:"idwlyh"`
 
 	Namzon string `json:"namzon"`
 	Kodzon string `json:"kodzon"`
@@ -28,11 +28,11 @@ type rawRecord struct {
 	Wadmkc string `json:"wadmkc"`
 	Wadmkd string `json:"wadmkd"`
 
-	KDB []json.RawMessage `json:"kdb"`
-	KLB []json.RawMessage `json:"klb"`
-	KDH []json.RawMessage `json:"kdh"`
-	GSB json.RawMessage `json:"gsb"`
-	Note string   `json:"nothpr"`
+	KDB  []json.RawMessage `json:"kdb"`
+	KLB  []json.RawMessage `json:"klb"`
+	KDH  []json.RawMessage `json:"kdh"`
+	GSB  json.RawMessage   `json:"gsb"`
+	Note string            `json:"nothpr"`
 
 	Lat float64 `json:"_lat"`
 	Lon float64 `json:"_lon"`
@@ -40,38 +40,38 @@ type rawRecord struct {
 
 func Import(ctx context.Context, db *gorm.DB, dir string, selectedFile string) error {
 	files, err := filepath.Glob(filepath.Join(dir, "rdtr_*.json"))
-if err != nil {
-	return fmt.Errorf("find RDTR files: %w", err)
-}
+	if err != nil {
+		return fmt.Errorf("find RDTR files: %w", err)
+	}
 
-if len(files) != 10 {
-	return fmt.Errorf("expected 10 RDTR files, found %d", len(files))
-}
+	if len(files) == 0 {
+		return fmt.Errorf("no rdtr_*.json files in %s", dir)
+	}
 
-if selectedFile != "" {
-	var selectedPath string
+	if selectedFile != "" {
+		var selectedPath string
+
+		for _, path := range files {
+			if filepath.Base(path) == selectedFile {
+				selectedPath = path
+				break
+			}
+		}
+
+		if selectedPath == "" {
+			return fmt.Errorf("RDTR file %q not found", selectedFile)
+		}
+
+		return importFile(ctx, db, selectedPath)
+	}
 
 	for _, path := range files {
-		if filepath.Base(path) == selectedFile {
-			selectedPath = path
-			break
+		if err := importFile(ctx, db, path); err != nil {
+			return fmt.Errorf("import %s: %w", filepath.Base(path), err)
 		}
 	}
 
-	if selectedPath == "" {
-		return fmt.Errorf("RDTR file %q not found", selectedFile)
-	}
-
-	return importFile(ctx, db, selectedPath)
-}
-
-for _, path := range files {
-	if err := importFile(ctx, db, path); err != nil {
-		return fmt.Errorf("import %s: %w", filepath.Base(path), err)
-	}
-}
-
-return nil
+	return nil
 }
 
 func importFile(ctx context.Context, db *gorm.DB, path string) error {
@@ -129,7 +129,7 @@ func importFile(ctx context.Context, db *gorm.DB, path string) error {
 			KDB:            kdb,
 			KLB:            klb,
 			KDH:            kdh,
-			GSB: string(r.GSB),
+			GSB:            string(r.GSB),
 			RegulationNote: r.Note,
 			Point: geo.Point{
 				Lon: r.Lon,
@@ -183,7 +183,7 @@ func parseRawValue(raw json.RawMessage) (float64, error) {
 		}
 
 		if strings.EqualFold(s, "Tidak ada bangunan") {
-    		return 0, nil
+			return 0, nil
 		}
 
 		s = strings.ReplaceAll(s, ",", ".")
