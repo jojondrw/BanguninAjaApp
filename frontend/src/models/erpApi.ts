@@ -134,6 +134,14 @@ export const siteApi = {
     }),
 }
 
+export interface StoredRiskFlag {
+  code: string
+  severity: 'high' | 'medium'
+  message: string
+}
+
+// riskFlags bernilai null untuk lokasi yang dievaluasi sebelum penanda risiko
+// ikut disimpan, atau yang dinilai skor simulasi.
 export interface SavedLocation {
   id: string
   name: string
@@ -148,6 +156,7 @@ export interface SavedLocation {
   floodIndex: number
   earthquakeIndex: number
   note: string
+  riskFlags: StoredRiskFlag[] | null
   savedAt: string
   createdAt: string
   updatedAt: string
