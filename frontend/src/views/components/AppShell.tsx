@@ -44,6 +44,10 @@ export function AppShell({ title, description, actions, children }: AppShellProp
   }, [])
 
   useEffect(() => {
+    document.title = `${title} · BanguninAja`
+  }, [title])
+
+  useEffect(() => {
     const openPalette = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -60,6 +64,14 @@ export function AppShell({ title, description, actions, children }: AppShellProp
 
   return (
     <div className="min-h-screen bg-slate-100 lg:grid lg:h-screen lg:grid-cols-[236px_minmax(0,1fr)] lg:overflow-hidden">
+      <a
+        href="#konten"
+        className="sr-only z-50 rounded-lg bg-white px-3 py-2 text-[13px] font-medium text-slate-900 shadow-panel
+                   focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Lewati ke konten
+      </a>
+
       <aside className="hidden lg:flex lg:min-h-0 lg:flex-col lg:px-3 lg:pt-4 lg:pb-3">
         <BrandName className="h-9 px-2" />
 
@@ -155,7 +167,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
             </div>
           </header>
 
-          <main className="flex-1 px-5 pt-2 pb-10 lg:px-8">
+          <main id="konten" tabIndex={-1} className="flex-1 px-5 pt-2 pb-10 focus:outline-none lg:px-8">
             <div className="mx-auto max-w-[1440px] motion-safe:animate-enter">{children}</div>
           </main>
         </div>
