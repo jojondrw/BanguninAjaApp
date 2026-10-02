@@ -1,14 +1,24 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  toAssetRequest,
+  toEquipmentRequest,
   toMaterialRequest,
   toStockMovementRequest,
   toWarehouseRequest,
+  type Asset,
+  type AssetFilter,
+  type AssetFormValues,
+  type Equipment,
+  type EquipmentFilter,
+  type EquipmentFormValues,
+  type Material,
   type MaterialFilter,
   type MaterialFormValues,
   type MovementFormValues,
   type StockFilter,
   type StockMovementFilter,
+  type Warehouse,
   type WarehouseFilter,
   type WarehouseFormValues,
 } from '../models/inventory'
@@ -18,12 +28,16 @@ const ONE_MINUTE = 60_000
 const TEN_MINUTES = 600_000
 const MAX_PAGE_SIZE = 100
 
+// Kunci ini juga dipakai controllers/useProcurement.ts supaya penerimaan barang
+// menyegarkan stok di halaman Inventaris. Jangan diganti sepihak.
 const INVENTORY_KEY = 'inventory'
 const MATERIALS_KEY = [INVENTORY_KEY, 'materials'] as const
 const LOW_STOCK_KEY = [INVENTORY_KEY, 'low-stock'] as const
 const WAREHOUSES_KEY = [INVENTORY_KEY, 'warehouses'] as const
 const STOCKS_KEY = [INVENTORY_KEY, 'stocks'] as const
 const MOVEMENTS_KEY = [INVENTORY_KEY, 'stock-movements'] as const
+const ASSETS_KEY = ['assets'] as const
+const EQUIPMENT_KEY = ['equipment'] as const
 
 const DATA_QUERY = {
   staleTime: ONE_MINUTE,
@@ -43,8 +57,9 @@ export function useMaterials(filter: MaterialFilter) {
   })
 }
 
-// Dipakai untuk pilihan di formulir mutasi dan untuk menerjemahkan materialId
-// di tabel stok serta mutasi. Batasnya 100, ukuran halaman terbesar backend.
+// Pilihan material di formulir mutasi dan penyaring stok. Batasnya 100, ukuran
+// halaman terbesar backend. Tabel stok dan mutasi tidak bergantung pada daftar
+// ini karena nama material sudah dikirim backend.
 export function useMaterialOptions() {
   return useMaterials({ pageSize: MAX_PAGE_SIZE })
 }
@@ -57,6 +72,13 @@ export function useLowStockMaterials(page: number) {
   })
 }
 
+// Nama material dan gudang ikut tampil di tabel stok, mutasi, dan stok
+// menipis, jadi semua data inventaris disegarkan setelah katalog berubah.
+function useInvalidateInventory() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: [INVENTORY_KEY] })
+}
+
 export function useCreateMaterial() {
   const queryClient = useQueryClient()
 
@@ -66,6 +88,30 @@ export function useCreateMaterial() {
       void queryClient.invalidateQueries({ queryKey: MATERIALS_KEY })
       void queryClient.invalidateQueries({ queryKey: LOW_STOCK_KEY })
     },
+  })
+}
+
+export interface MaterialUpdate {
+  material: Material
+  values: MaterialFormValues
+}
+
+export function useUpdateMaterial() {
+  const invalidateInventory = useInvalidateInventory()
+
+  return useMutation({
+    mutationFn: ({ material, values }: MaterialUpdate) =>
+      inventoryApi.updateMaterial(material.id, toMaterialRequest(values)),
+    onSuccess: invalidateInventory,
+  })
+}
+
+export function useDeleteMaterial() {
+  const invalidateInventory = useInvalidateInventory()
+
+  return useMutation({
+    mutationFn: (material: Material) => inventoryApi.deleteMaterial(material.id),
+    onSuccess: invalidateInventory,
   })
 }
 
@@ -87,6 +133,30 @@ export function useCreateWarehouse() {
   return useMutation({
     mutationFn: (values: WarehouseFormValues) => inventoryApi.createWarehouse(toWarehouseRequest(values)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: WAREHOUSES_KEY }),
+  })
+}
+
+export interface WarehouseUpdate {
+  warehouse: Warehouse
+  values: WarehouseFormValues
+}
+
+export function useUpdateWarehouse() {
+  const invalidateInventory = useInvalidateInventory()
+
+  return useMutation({
+    mutationFn: ({ warehouse, values }: WarehouseUpdate) =>
+      inventoryApi.updateWarehouse(warehouse.id, toWarehouseRequest(values)),
+    onSuccess: invalidateInventory,
+  })
+}
+
+export function useDeleteWarehouse() {
+  const invalidateInventory = useInvalidateInventory()
+
+  return useMutation({
+    mutationFn: (warehouse: Warehouse) => inventoryApi.deleteWarehouse(warehouse.id),
+    onSuccess: invalidateInventory,
   })
 }
 
@@ -141,18 +211,110 @@ export function useUnitsOfMeasure() {
   })
 }
 
-export function useAssets(page: number) {
+export function useAssets(filter: AssetFilter) {
   return useQuery({
-    queryKey: ['assets', page],
-    queryFn: () => assetApi.assets({ page, pageSize: 10 }),
+    queryKey: [...ASSETS_KEY, filter],
+    queryFn: () => assetApi.assets(filter),
     ...PAGED_QUERY,
   })
 }
 
-export function useEquipment(page: number) {
+// Pilihan aset induk di formulir alat. Aset yang sudah dilepas ditolak backend
+// (equipment_asset_disposed), jadi tidak ditawarkan.
+export function useParentAssetOptions() {
   return useQuery({
-    queryKey: ['equipment', page],
-    queryFn: () => assetApi.equipment({ page, pageSize: 10 }),
+    queryKey: [...ASSETS_KEY, { pageSize: MAX_PAGE_SIZE }],
+    queryFn: () => assetApi.assets({ pageSize: MAX_PAGE_SIZE }),
+    select: (page) => page.items.filter((asset) => asset.status !== 'disposed'),
+    ...DATA_QUERY,
+  })
+}
+
+// Menghapus aset melepas tautan alat ke aset itu, jadi daftar alat ikut
+// disegarkan.
+function useInvalidateAssets() {
+  const queryClient = useQueryClient()
+
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ASSETS_KEY })
+    void queryClient.invalidateQueries({ queryKey: EQUIPMENT_KEY })
+  }
+}
+
+export function useCreateAsset() {
+  const invalidateAssets = useInvalidateAssets()
+
+  return useMutation({
+    mutationFn: (values: AssetFormValues) => assetApi.createAsset(toAssetRequest(values)),
+    onSuccess: invalidateAssets,
+  })
+}
+
+export interface AssetUpdate {
+  asset: Asset
+  values: AssetFormValues
+}
+
+export function useUpdateAsset() {
+  const invalidateAssets = useInvalidateAssets()
+
+  return useMutation({
+    mutationFn: ({ asset, values }: AssetUpdate) => assetApi.updateAsset(asset.id, toAssetRequest(values)),
+    onSuccess: invalidateAssets,
+  })
+}
+
+export function useDeleteAsset() {
+  const invalidateAssets = useInvalidateAssets()
+
+  return useMutation({
+    mutationFn: (asset: Asset) => assetApi.deleteAsset(asset.id),
+    onSuccess: invalidateAssets,
+  })
+}
+
+export function useEquipment(filter: EquipmentFilter) {
+  return useQuery({
+    queryKey: [...EQUIPMENT_KEY, filter],
+    queryFn: () => assetApi.equipment(filter),
     ...PAGED_QUERY,
+  })
+}
+
+function useInvalidateEquipment() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: EQUIPMENT_KEY })
+}
+
+export function useCreateEquipment() {
+  const invalidateEquipment = useInvalidateEquipment()
+
+  return useMutation({
+    mutationFn: (values: EquipmentFormValues) => assetApi.createEquipment(toEquipmentRequest(values)),
+    onSuccess: invalidateEquipment,
+  })
+}
+
+export interface EquipmentUpdate {
+  equipment: Equipment
+  values: EquipmentFormValues
+}
+
+export function useUpdateEquipment() {
+  const invalidateEquipment = useInvalidateEquipment()
+
+  return useMutation({
+    mutationFn: ({ equipment, values }: EquipmentUpdate) =>
+      assetApi.updateEquipment(equipment.id, toEquipmentRequest(values)),
+    onSuccess: invalidateEquipment,
+  })
+}
+
+export function useDeleteEquipment() {
+  const invalidateEquipment = useInvalidateEquipment()
+
+  return useMutation({
+    mutationFn: (equipment: Equipment) => assetApi.deleteEquipment(equipment.id),
+    onSuccess: invalidateEquipment,
   })
 }

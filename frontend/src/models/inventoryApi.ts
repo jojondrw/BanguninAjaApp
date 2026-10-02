@@ -1,8 +1,13 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type {
+  Asset,
+  AssetFilter,
   AssetPage,
+  AssetRequest,
   Equipment,
+  EquipmentFilter,
+  EquipmentRequest,
   LowStockMaterial,
   Material,
   MaterialFilter,
@@ -33,11 +38,21 @@ export const inventoryApi = {
   createMaterial: (body: MaterialRequest) =>
     request<Material>('/inventory/materials', { method: 'POST', body }),
 
+  updateMaterial: (id: string, body: MaterialRequest) =>
+    request<Material>(`/inventory/materials/${id}`, { method: 'PUT', body }),
+
+  deleteMaterial: (id: string) => request<void>(`/inventory/materials/${id}`, { method: 'DELETE' }),
+
   warehouses: (filter: WarehouseFilter = {}) =>
     request<Page<Warehouse>>(`/inventory/warehouses${toQueryString({ ...filter })}`),
 
   createWarehouse: (body: WarehouseRequest) =>
     request<Warehouse>('/inventory/warehouses', { method: 'POST', body }),
+
+  updateWarehouse: (id: string, body: WarehouseRequest) =>
+    request<Warehouse>(`/inventory/warehouses/${id}`, { method: 'PUT', body }),
+
+  deleteWarehouse: (id: string) => request<void>(`/inventory/warehouses/${id}`, { method: 'DELETE' }),
 
   stocks: (filter: StockFilter = {}) =>
     request<Page<Stock>>(`/inventory/stocks${toQueryString({ ...filter })}`),
@@ -55,8 +70,21 @@ export const unitOfMeasureApi = {
 }
 
 export const assetApi = {
-  assets: (query: PageQuery = {}) => request<AssetPage>(`/assets${toQueryString({ ...query })}`),
+  assets: (filter: AssetFilter = {}) => request<AssetPage>(`/assets${toQueryString({ ...filter })}`),
 
-  equipment: (query: PageQuery = {}) =>
-    request<Page<Equipment>>(`/equipment${toQueryString({ ...query })}`),
+  createAsset: (body: AssetRequest) => request<Asset>('/assets', { method: 'POST', body }),
+
+  updateAsset: (id: string, body: AssetRequest) => request<Asset>(`/assets/${id}`, { method: 'PUT', body }),
+
+  deleteAsset: (id: string) => request<void>(`/assets/${id}`, { method: 'DELETE' }),
+
+  equipment: (filter: EquipmentFilter = {}) =>
+    request<Page<Equipment>>(`/equipment${toQueryString({ ...filter })}`),
+
+  createEquipment: (body: EquipmentRequest) => request<Equipment>('/equipment', { method: 'POST', body }),
+
+  updateEquipment: (id: string, body: EquipmentRequest) =>
+    request<Equipment>(`/equipment/${id}`, { method: 'PUT', body }),
+
+  deleteEquipment: (id: string) => request<void>(`/equipment/${id}`, { method: 'DELETE' }),
 }
