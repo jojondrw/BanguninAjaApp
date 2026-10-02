@@ -1,13 +1,21 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type {
+  GoodsReceipt,
+  GoodsReceiptDetail,
+  GoodsReceiptFilter,
+  GoodsReceiptRequest,
   Material,
   PurchaseOrder,
   PurchaseOrderDetail,
   PurchaseOrderFilter,
   PurchaseOrderRequest,
+  PurchaseOrderStatusChange,
   PurchaseRequest,
+  PurchaseRequestDetail,
   PurchaseRequestFilter,
+  PurchaseRequestRequest,
+  PurchaseRequestStatusChange,
   UnitOfMeasure,
   Vendor,
   VendorFilter,
@@ -23,8 +31,32 @@ export const procurementApi = {
   createVendor: (body: VendorRequest) =>
     request<Vendor>('/procurement/vendors', { method: 'POST', body }),
 
+  updateVendor: (id: string, body: VendorRequest) =>
+    request<Vendor>(`/procurement/vendors/${id}`, { method: 'PUT', body }),
+
+  deleteVendor: (id: string) =>
+    request<void>(`/procurement/vendors/${id}`, { method: 'DELETE' }),
+
   purchaseRequests: (filter: PurchaseRequestFilter = {}) =>
     request<Page<PurchaseRequest>>(`/procurement/purchase-requests${toQueryString({ ...filter })}`),
+
+  purchaseRequest: (id: string) =>
+    request<PurchaseRequestDetail>(`/procurement/purchase-requests/${id}`),
+
+  createPurchaseRequest: (body: PurchaseRequestRequest) =>
+    request<PurchaseRequestDetail>('/procurement/purchase-requests', { method: 'POST', body }),
+
+  updatePurchaseRequest: (id: string, body: PurchaseRequestRequest) =>
+    request<PurchaseRequestDetail>(`/procurement/purchase-requests/${id}`, { method: 'PUT', body }),
+
+  updatePurchaseRequestStatus: (id: string, status: PurchaseRequestStatusChange) =>
+    request<PurchaseRequestDetail>(`/procurement/purchase-requests/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+    }),
+
+  deletePurchaseRequest: (id: string) =>
+    request<void>(`/procurement/purchase-requests/${id}`, { method: 'DELETE' }),
 
   purchaseOrders: (filter: PurchaseOrderFilter = {}) =>
     request<Page<PurchaseOrder>>(`/procurement/purchase-orders${toQueryString({ ...filter })}`),
@@ -35,11 +67,26 @@ export const procurementApi = {
   createPurchaseOrder: (body: PurchaseOrderRequest) =>
     request<PurchaseOrderDetail>('/procurement/purchase-orders', { method: 'POST', body }),
 
-  updatePurchaseOrderStatus: (id: string, status: 'sent' | 'cancelled') =>
+  updatePurchaseOrder: (id: string, body: PurchaseOrderRequest) =>
+    request<PurchaseOrderDetail>(`/procurement/purchase-orders/${id}`, { method: 'PUT', body }),
+
+  updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatusChange) =>
     request<PurchaseOrderDetail>(`/procurement/purchase-orders/${id}/status`, {
       method: 'PATCH',
       body: { status },
     }),
+
+  deletePurchaseOrder: (id: string) =>
+    request<void>(`/procurement/purchase-orders/${id}`, { method: 'DELETE' }),
+
+  goodsReceipts: (filter: GoodsReceiptFilter = {}) =>
+    request<Page<GoodsReceipt>>(`/procurement/goods-receipts${toQueryString({ ...filter })}`),
+
+  goodsReceipt: (id: string) =>
+    request<GoodsReceiptDetail>(`/procurement/goods-receipts/${id}`),
+
+  recordGoodsReceipt: (body: GoodsReceiptRequest) =>
+    request<GoodsReceiptDetail>('/procurement/goods-receipts', { method: 'POST', body }),
 
   materials: (pageSize: number) =>
     request<Page<Material>>(`/inventory/materials${toQueryString({ pageSize })}`),
