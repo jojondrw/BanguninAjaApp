@@ -20,7 +20,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout>
+    <AuthLayout pageTitle="Masuk">
       <h1 className="text-[28px] leading-9 font-semibold tracking-[-0.025em] text-slate-900">Masuk ke BanguninAja</h1>
       <p className="mt-2 text-[15px] text-slate-500">
         Simpan lokasi incaran, riwayat analisis, dan rencana pembangunanmu.
