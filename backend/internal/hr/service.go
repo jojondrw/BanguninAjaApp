@@ -71,6 +71,7 @@ type Service interface {
 	DeleteAttendance(ctx context.Context, id uuid.UUID) error
 
 	ListPayrolls(ctx context.Context, query PayrollQuery) (pagination.Page[PayrollResponse], error)
+	SummarizePayrolls(ctx context.Context, query PayrollSummaryQuery) (PayrollSummaryResponse, error)
 	GetPayroll(ctx context.Context, id uuid.UUID) (PayrollResponse, error)
 	CreatePayroll(ctx context.Context, request PayrollRequest) (PayrollResponse, error)
 	UpdatePayroll(ctx context.Context, id uuid.UUID, request PayrollRequest) (PayrollResponse, error)
@@ -229,6 +230,7 @@ func (s *service) DeleteAttendance(ctx context.Context, id uuid.UUID) error {
 func (s *service) ListPayrolls(ctx context.Context, query PayrollQuery) (pagination.Page[PayrollResponse], error) {
 	rows, total, err := s.repository.ListPayrolls(ctx, PayrollFilter{
 		EmployeeID: query.EmployeeID,
+		ProjectID:  query.ProjectID,
 		Period:     query.Period,
 		Paid:       query.Paid,
 		Offset:     query.Offset(),
@@ -238,6 +240,17 @@ func (s *service) ListPayrolls(ctx context.Context, query PayrollQuery) (paginat
 		return pagination.Page[PayrollResponse]{}, apperror.Internal(err)
 	}
 	return pagination.New(pagination.Map(rows, newPayrollResponse), query.Query, total), nil
+}
+
+func (s *service) SummarizePayrolls(ctx context.Context, query PayrollSummaryQuery) (PayrollSummaryResponse, error) {
+	totals, err := s.repository.SummarizePayrolls(ctx, PayrollFilter{
+		ProjectID: query.ProjectID,
+		Period:    query.Period,
+	})
+	if err != nil {
+		return PayrollSummaryResponse{}, apperror.Internal(err)
+	}
+	return newPayrollSummaryResponse(totals), nil
 }
 
 func (s *service) GetPayroll(ctx context.Context, id uuid.UUID) (PayrollResponse, error) {

@@ -88,8 +88,23 @@ type PayrollRequest struct {
 type PayrollQuery struct {
 	pagination.Query
 	EmployeeID *uuid.UUID `form:"employeeId,parser=encoding.TextUnmarshaler"`
+	ProjectID  *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
 	Period     string     `form:"period" binding:"omitempty,datetime=2006-01"`
 	Paid       *bool      `form:"paid"`
+}
+
+type PayrollSummaryQuery struct {
+	Period    string     `form:"period" binding:"omitempty,datetime=2006-01"`
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type PayrollSummaryResponse struct {
+	Count        int64 `json:"count"`
+	GrossPay     int64 `json:"grossPay"`
+	NetPay       int64 `json:"netPay"`
+	PaidNetPay   int64 `json:"paidNetPay"`
+	UnpaidNetPay int64 `json:"unpaidNetPay"`
+	UnpaidCount  int64 `json:"unpaidCount"`
 }
 
 type PayrollResponse struct {
@@ -155,5 +170,16 @@ func newPayrollResponse(row PayrollRow) PayrollResponse {
 		Paid:         row.Paid,
 		CreatedAt:    row.CreatedAt,
 		UpdatedAt:    row.UpdatedAt,
+	}
+}
+
+func newPayrollSummaryResponse(totals PayrollTotals) PayrollSummaryResponse {
+	return PayrollSummaryResponse{
+		Count:        totals.Count,
+		GrossPay:     totals.GrossPay,
+		NetPay:       totals.NetPay,
+		PaidNetPay:   totals.PaidNetPay,
+		UnpaidNetPay: totals.UnpaidNetPay,
+		UnpaidCount:  totals.UnpaidCount,
 	}
 }

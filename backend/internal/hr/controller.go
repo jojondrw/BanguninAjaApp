@@ -140,6 +140,16 @@ func (c *Controller) ListPayrolls(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizePayrolls(ctx *gin.Context) {
+	var query PayrollSummaryQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	summary, err := c.service.SummarizePayrolls(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) GetPayroll(ctx *gin.Context) {
 	id, err := httprequest.PathID(ctx, idParam)
 	if err != nil {

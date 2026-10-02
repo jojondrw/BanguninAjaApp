@@ -15,6 +15,12 @@ const (
 		"attendance.check_in_time, attendance.check_out_time, attendance.status, attendance.created_at, attendance.updated_at"
 	payrollColumns = "payroll.id, payroll.employee_id, employee.name AS employee_name, payroll.period, payroll.basic_pay, " +
 		"payroll.allowance, payroll.deduction, payroll.net_pay, payroll.paid, payroll.created_at, payroll.updated_at"
+	payrollTotalsColumns = "COUNT(*) AS count, " +
+		"COALESCE(SUM(payroll.basic_pay + payroll.allowance), 0) AS gross_pay, " +
+		"COALESCE(SUM(payroll.net_pay), 0) AS net_pay, " +
+		"COALESCE(SUM(payroll.net_pay) FILTER (WHERE payroll.paid), 0) AS paid_net_pay, " +
+		"COALESCE(SUM(payroll.net_pay) FILTER (WHERE NOT payroll.paid), 0) AS unpaid_net_pay, " +
+		"COUNT(*) FILTER (WHERE NOT payroll.paid) AS unpaid_count"
 	presentStatus = "present"
 )
 
@@ -40,10 +46,20 @@ type AttendanceFilter struct {
 
 type PayrollFilter struct {
 	EmployeeID *uuid.UUID
+	ProjectID  *uuid.UUID
 	Period     string
 	Paid       *bool
 	Offset     int
 	Limit      int
+}
+
+type PayrollTotals struct {
+	Count        int64
+	GrossPay     int64
+	NetPay       int64
+	PaidNetPay   int64
+	UnpaidNetPay int64
+	UnpaidCount  int64
 }
 
 type EmploymentCount struct {
@@ -95,6 +111,7 @@ type Repository interface {
 	CountPresentDays(ctx context.Context, employeeID uuid.UUID, from, before time.Time) (int64, error)
 
 	ListPayrolls(ctx context.Context, filter PayrollFilter) ([]PayrollRow, int64, error)
+	SummarizePayrolls(ctx context.Context, filter PayrollFilter) (PayrollTotals, error)
 	FindPayrollRow(ctx context.Context, id uuid.UUID) (PayrollRow, error)
 	FindPayroll(ctx context.Context, id uuid.UUID) (Payroll, error)
 	CreatePayroll(ctx context.Context, payroll *Payroll) error
@@ -224,6 +241,12 @@ func (r *gormRepository) ListPayrolls(ctx context.Context, filter PayrollFilter)
 	return rows, total, database.Translate(err)
 }
 
+func (r *gormRepository) SummarizePayrolls(ctx context.Context, filter PayrollFilter) (PayrollTotals, error) {
+	var totals PayrollTotals
+	err := r.payrollRows(ctx).Scopes(filter.apply).Select(payrollTotalsColumns).Scan(&totals).Error
+	return totals, database.Translate(err)
+}
+
 func (r *gormRepository) FindPayrollRow(ctx context.Context, id uuid.UUID) (PayrollRow, error) {
 	var row PayrollRow
 	err := r.payrollRows(ctx).Select(payrollColumns).Where("payroll.id = ?", id).Take(&row).Error
@@ -309,6 +332,9 @@ func (f AttendanceFilter) apply(db *gorm.DB) *gorm.DB {
 func (f PayrollFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.EmployeeID != nil {
 		db = db.Where("payroll.employee_id = ?", *f.EmployeeID)
+	}
+	if f.ProjectID != nil {
+		db = db.Where("employee.project_id = ?", *f.ProjectID)
 	}
 	if f.Period != "" {
 		db = db.Where("payroll.period = ?", f.Period)

@@ -41,6 +41,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	payrolls := routes.Group("/payrolls")
 	payrolls.GET("", m.controller.ListPayrolls)
 	payrolls.POST("", m.controller.CreatePayroll)
+	payrolls.GET("/summary", m.controller.SummarizePayrolls)
 	payrolls.GET("/:id", m.controller.GetPayroll)
 	payrolls.PUT("/:id", m.controller.UpdatePayroll)
 	payrolls.PATCH("/:id/pay", m.controller.PayPayroll)

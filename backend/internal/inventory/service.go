@@ -198,7 +198,7 @@ func (s *service) ListStocks(ctx context.Context, query StockQuery) (pagination.
 }
 
 func (s *service) ListStockMovements(ctx context.Context, query StockMovementQuery) (pagination.Page[StockMovementResponse], error) {
-	movements, total, err := s.repository.ListStockMovements(ctx, StockMovementFilter{
+	rows, total, err := s.repository.ListStockMovements(ctx, StockMovementFilter{
 		MaterialID:  query.MaterialID,
 		WarehouseID: query.WarehouseID,
 		Type:        query.Type,
@@ -210,15 +210,15 @@ func (s *service) ListStockMovements(ctx context.Context, query StockMovementQue
 	if err != nil {
 		return pagination.Page[StockMovementResponse]{}, apperror.Internal(err)
 	}
-	return pagination.New(pagination.Map(movements, newStockMovementResponse), query.Query, total), nil
+	return pagination.New(pagination.Map(rows, newStockMovementResponse), query.Query, total), nil
 }
 
 func (s *service) GetStockMovement(ctx context.Context, id uuid.UUID) (StockMovementResponse, error) {
-	movement, err := s.repository.FindStockMovement(ctx, id)
+	row, err := s.repository.FindStockMovementRow(ctx, id)
 	if err != nil {
 		return StockMovementResponse{}, movementReadErrors.Resolve(err)
 	}
-	return newStockMovementResponse(movement), nil
+	return newStockMovementResponse(row), nil
 }
 
 func (s *service) RecordStockMovement(ctx context.Context, request StockMovementRequest) (StockMovementResponse, error) {
@@ -227,13 +227,19 @@ func (s *service) RecordStockMovement(ctx context.Context, request StockMovement
 		return StockMovementResponse{}, err
 	}
 
+	var recorded StockMovementRow
 	err := s.repository.Transaction(ctx, func(repository Repository) error {
-		return applyMovement(ctx, repository, &movement)
+		if err := applyMovement(ctx, repository, &movement); err != nil {
+			return err
+		}
+		row, err := repository.FindStockMovementRow(ctx, movement.ID)
+		recorded = row
+		return movementReadErrors.Resolve(err)
 	})
 	if err != nil {
 		return StockMovementResponse{}, apperror.From(err)
 	}
-	return newStockMovementResponse(movement), nil
+	return newStockMovementResponse(recorded), nil
 }
 
 func applyMovement(ctx context.Context, repository Repository, movement *StockMovement) error {

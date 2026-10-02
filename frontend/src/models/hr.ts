@@ -33,13 +33,17 @@ export interface EmployeeFilter {
   pageSize?: number
 }
 
+// PUT mengganti seluruh baris, jadi userId dan leftDate yang tidak dikirim
+// akan terhapus. Ubah karyawan selalu meneruskan userId yang sudah ada.
 export interface EmployeeRequest {
   identityNumber: string
   name: string
   position: string
   projectId?: string
+  userId?: string
   employmentType: EmploymentType
   joinedDate: string
+  leftDate?: string
   baseSalary: number
 }
 
@@ -91,10 +95,27 @@ export interface Payroll {
 
 export interface PayrollFilter {
   employeeId?: string
+  projectId?: string
   period?: string
   paid?: 'true' | 'false'
   page?: number
   pageSize?: number
+}
+
+export interface PayrollSummaryFilter {
+  period?: string
+  projectId?: string
+}
+
+// Dijumlah server (GET /hr/payrolls/summary) dari semua slip yang cocok, bukan
+// dari satu halaman daftar.
+export interface PayrollSummary {
+  count: number
+  grossPay: number
+  netPay: number
+  paidNetPay: number
+  unpaidNetPay: number
+  unpaidCount: number
 }
 
 export interface PayrollRequest {
@@ -143,6 +164,7 @@ export interface EmployeeFormValues {
   employmentType: EmploymentType
   projectId: string
   joinedDate: string
+  leftDate: string
   baseSalary: string
 }
 
@@ -153,7 +175,26 @@ export const EMPTY_EMPLOYEE_FORM: EmployeeFormValues = {
   employmentType: 'permanent',
   projectId: '',
   joinedDate: '',
+  leftDate: '',
   baseSalary: '',
+}
+
+// Tanggal dari backend berbentuk RFC 3339, isian tanggal butuh "YYYY-MM-DD".
+export function inputDate(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : ''
+}
+
+export function employeeFormValues(employee: Employee): EmployeeFormValues {
+  return {
+    identityNumber: employee.identityNumber,
+    name: employee.name,
+    position: employee.position,
+    employmentType: employee.employmentType,
+    projectId: employee.projectId ?? '',
+    joinedDate: inputDate(employee.joinedDate),
+    leftDate: inputDate(employee.leftDate),
+    baseSalary: String(employee.baseSalary),
+  }
 }
 
 export interface AttendanceFormValues {
@@ -170,6 +211,15 @@ export const EMPTY_ATTENDANCE_FORM: AttendanceFormValues = {
   checkOutTime: '',
 }
 
+export function attendanceFormValues(attendance: Attendance): AttendanceFormValues {
+  return {
+    employeeId: attendance.employeeId,
+    status: attendance.status,
+    checkInTime: attendance.checkInTime ?? EMPTY_ATTENDANCE_FORM.checkInTime,
+    checkOutTime: attendance.checkOutTime ?? '',
+  }
+}
+
 export interface PayrollFormValues {
   employeeId: string
   allowance: string
@@ -182,20 +232,36 @@ export const EMPTY_PAYROLL_FORM: PayrollFormValues = {
   deduction: '',
 }
 
+export function payrollFormValues(payroll: Payroll): PayrollFormValues {
+  return {
+    employeeId: payroll.employeeId,
+    allowance: payroll.allowance === 0 ? '' : String(payroll.allowance),
+    deduction: payroll.deduction === 0 ? '' : String(payroll.deduction),
+  }
+}
+
 function amount(value: string): number {
   return value === '' ? 0 : Number(value)
 }
 
-export function toEmployeeRequest(values: EmployeeFormValues): EmployeeRequest {
+export function toEmployeeRequest(values: EmployeeFormValues, userId: string | null = null): EmployeeRequest {
   return {
     identityNumber: values.identityNumber.trim(),
     name: values.name.trim(),
     position: values.position.trim(),
     projectId: values.projectId === '' ? undefined : values.projectId,
+    userId: userId ?? undefined,
     employmentType: values.employmentType,
     joinedDate: toApiDate(values.joinedDate),
+    leftDate: values.leftDate === '' ? undefined : toApiDate(values.leftDate),
     baseSalary: amount(values.baseSalary),
   }
+}
+
+// Nonaktifkan dan aktifkan lagi hanya mengganti tanggal keluar. Kolom lain
+// diteruskan apa adanya karena PUT mengganti seluruh baris.
+export function employeeWithLeftDate(employee: Employee, leftDate: string): EmployeeRequest {
+  return toEmployeeRequest({ ...employeeFormValues(employee), leftDate }, employee.userId)
 }
 
 // Jam masuk dan pulang hanya boleh dikirim untuk karyawan yang hadir. Backend

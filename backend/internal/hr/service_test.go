@@ -3,18 +3,29 @@ package hr
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 )
 
 type fakeRepository struct {
 	Repository
-	employee    Employee
-	presentDays int64
-	payroll     Payroll
-	saved       *Payroll
+	employee      Employee
+	presentDays   int64
+	payroll       Payroll
+	saved         *Payroll
+	totals        PayrollTotals
+	totalsFilter  PayrollFilter
+	totalsFailure error
+}
+
+func (f *fakeRepository) SummarizePayrolls(_ context.Context, filter PayrollFilter) (PayrollTotals, error) {
+	f.totalsFilter = filter
+	return f.totals, f.totalsFailure
 }
 
 func (f *fakeRepository) FindEmployee(context.Context, uuid.UUID) (Employee, error) {
@@ -96,6 +107,33 @@ func TestPaidPayrollIsLocked(t *testing.T) {
 	err := NewService(repository).DeletePayroll(context.Background(), uuid.New())
 	if !errors.Is(err, errPayrollPaid) {
 		t.Fatalf("got %v, want errPayrollPaid", err)
+	}
+}
+
+func TestSummarizePayrollsFiltersByPeriodAndProject(t *testing.T) {
+	projectID := uuid.New()
+	repository := &fakeRepository{totals: PayrollTotals{Count: 2, GrossPay: 9500000, NetPay: 9350000, PaidNetPay: 6850000, UnpaidNetPay: 2500000, UnpaidCount: 1}}
+
+	summary, err := NewService(repository).SummarizePayrolls(context.Background(), PayrollSummaryQuery{Period: "2026-09", ProjectID: &projectID})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if summary.UnpaidNetPay != 2500000 || summary.PaidNetPay != 6850000 || summary.GrossPay != 9500000 || summary.UnpaidCount != 1 {
+		t.Fatalf("got %+v", summary)
+	}
+	filter := repository.totalsFilter
+	if filter.Period != "2026-09" || filter.ProjectID == nil || *filter.ProjectID != projectID || filter.Limit != 0 {
+		t.Fatalf("got filter %+v", filter)
+	}
+}
+
+func TestSummarizePayrollsHidesDatabaseFailure(t *testing.T) {
+	repository := &fakeRepository{totalsFailure: errors.New("connection reset")}
+
+	_, err := NewService(repository).SummarizePayrolls(context.Background(), PayrollSummaryQuery{Period: "2026-09"})
+	var failure *apperror.Error
+	if !errors.As(err, &failure) || failure.Status != http.StatusInternalServerError {
+		t.Fatalf("got %v, want an internal error", err)
 	}
 }
 
