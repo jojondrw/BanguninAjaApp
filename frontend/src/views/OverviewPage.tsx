@@ -1,16 +1,23 @@
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useBudgets, useCashFlow, useProjects } from '../controllers/useErp'
-import { monthLabel, rupiahShort, shortDate } from '../shared/format'
+import { rupiahShort, shortDate } from '../shared/format'
+import { todayDate } from '../shared/localDate'
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, type Project } from '../models/project'
 import { AppShell } from './components/AppShell'
 import { CHIP_CLASS } from './components/ListTools'
+import { CashFlowChart } from './components/CashFlowChart'
 import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
+import { AttentionList } from './overview/AttentionList'
+
+const CHART_MONTHS = 12
 
 export function OverviewPage() {
   const projects = useProjects({ pageSize: 100 })
   const budgets = useBudgets()
   const cashFlow = useCashFlow()
+  const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() })
 
   const items = projects.data?.items ?? []
   const ongoing = items.filter((project) => project.status === 'ongoing')
@@ -22,10 +29,7 @@ export function OverviewPage() {
   const absorption = budgetTotal > 0 ? Math.round((realizedTotal / budgetTotal) * 100) : 0
 
   return (
-    <AppShell
-      title="Ringkasan"
-      description="Angka di halaman ini dihitung langsung dari database, bukan contoh."
-    >
+    <AppShell title="Ringkasan" description={`Kondisi seluruh proyek per ${shortDate(todayDate())}`}>
       <KpiRow>
         <Kpi
           label="Proyek berjalan"
@@ -49,20 +53,49 @@ export function OverviewPage() {
         />
       </KpiRow>
 
-      <div className="mt-6 grid gap-6 2xl:grid-cols-[1.4fr_1fr]">
-        <Card title="Proyek" description="Diurutkan sesuai urutan dari server">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <Card
+          title="Arus kas 12 bulan"
+          description="Kas masuk di atas garis nol, kas keluar di bawahnya"
+          action={<CardLink to="/keuangan" label="Buka keuangan" />}
+        >
+          {yearFlow.isPending ? <Loading /> : null}
+          {yearFlow.isError ? <LoadFailed onRetry={() => yearFlow.refetch()} /> : null}
+          {yearFlow.data ? (
+            yearFlow.data.periods.every((period) => period.cashIn === 0 && period.cashOut === 0) ? (
+              <Empty message="Belum ada transaksi kas dalam 12 bulan terakhir." />
+            ) : (
+              <CashFlowChart periods={yearFlow.data.periods} />
+            )
+          ) : null}
+        </Card>
+
+        <Card title="Perlu perhatian" description="Hal yang menunggu tindakan di semua modul">
+          <AttentionList />
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <Card
+          title="Proyek"
+          description="Status, target, dan progres tiap proyek"
+          action={<CardLink to="/proyek" label="Semua proyek" />}
+        >
           {projects.isPending ? <Loading /> : null}
           {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
           {projects.data ? (
             <Table
               rows={items.slice(0, 8)}
-              emptyMessage="Belum ada proyek. Tambahkan lewat API POST /api/projects."
+              emptyMessage="Belum ada proyek. Buat proyek pertama dari halaman Proyek."
               columns={[
                 { header: 'Kode', cell: (row: Project) => row.code },
                 {
                   header: 'Nama',
                   cell: (row: Project) => (
-                    <Link to={`/proyek/${row.id}`} className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline">
+                    <Link
+                      to={`/proyek/${row.id}`}
+                      className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline"
+                    >
                       {row.name}
                     </Link>
                   ),
@@ -79,38 +112,28 @@ export function OverviewPage() {
             />
           ) : null}
         </Card>
-
-        <Card title="Arus kas" description="Dikelompokkan per bulan oleh server">
-          {cashFlow.isPending ? <Loading /> : null}
-          {cashFlow.isError ? <LoadFailed onRetry={() => cashFlow.refetch()} /> : null}
-          {cashFlow.data ? (
-            cashFlow.data.periods.length === 0 ? (
-              <Empty message="Belum ada transaksi kas yang tercatat." />
-            ) : (
-              <Table
-                rows={cashFlow.data.periods.slice(-6)}
-                emptyMessage="Belum ada transaksi kas."
-                columns={[
-                  { header: 'Periode', cell: (row) => monthLabel(row.period) },
-                  { header: 'Masuk', align: 'right', cell: (row) => rupiahShort(row.cashIn) },
-                  { header: 'Keluar', align: 'right', cell: (row) => rupiahShort(row.cashOut) },
-                  {
-                    header: 'Selisih',
-                    align: 'right',
-                    cell: (row) => (
-                      <span className={row.net < 0 ? 'text-red-600' : 'text-green-700'}>
-                        {rupiahShort(row.net)}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            )
-          ) : null}
-        </Card>
       </div>
     </AppShell>
   )
+}
+
+function CardLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-[13px] font-medium text-navy-600 transition-colors
+                 hover:bg-navy-50"
+    >
+      {label}
+      <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={2} />
+    </Link>
+  )
+}
+
+function monthsAgo(count: number): string {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() - count, 1)
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
 }
 
 function serapan(isPending: boolean, isError: boolean, absorption: number): string {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 
 import { BrandName } from './Brand'
 
@@ -8,7 +8,11 @@ const figures = [
   { value: '12', label: 'indeks bahaya' },
 ]
 
-export function AuthLayout({ children }: { children: ReactNode }) {
+export function AuthLayout({ pageTitle, children }: { pageTitle: string; children: ReactNode }) {
+  useEffect(() => {
+    document.title = `${pageTitle} · BanguninAja`
+  }, [pageTitle])
+
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <main className="flex flex-col px-6 py-6 sm:px-10">
