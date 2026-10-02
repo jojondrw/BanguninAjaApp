@@ -2,21 +2,21 @@ import { lazy, Suspense, useState } from 'react'
 
 import {
   useBuildingProfiles,
-  useProjects,
   useSavedLocations,
   useSiteEvaluate,
 } from '../../controllers/useErp'
 import type { SavedLocation, SiteEvaluateResponse } from '../../models/erpApi'
+import { projectOptions } from '../../models/lookupApi'
 import { suggestedProfileCode, type Project } from '../../models/project'
 import { Button, CONTROL_CLASS, ErrorNote, Field } from './Form'
 import { Card, Empty, Kpi, KpiRow, Loading } from './Data'
+import { SearchSelect } from './SearchSelect'
 import type { MapPoint } from './SiteMap'
 
 const SiteMap = lazy(() =>
   import('./SiteMap').then((module) => ({ default: module.SiteMap })),
 )
 
-const PROJECT_OPTION_LIMIT = 100
 const MAX_LATITUDE = 90
 const MAX_LONGITUDE = 180
 const NO_SITES: SavedLocation[] = []
@@ -269,46 +269,19 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
 // Komponen terpisah supaya daftar proyek hanya diambil di /lokasi, bukan di
 // ruang kerja proyek yang proyeknya sudah pasti.
 function ProjectSelect({ value, onChange }: { value: string; onChange: (projectId: string) => void }) {
-  const projects = useProjects({ pageSize: PROJECT_OPTION_LIMIT })
-
   return (
     <div className="md:col-span-2">
-      <label
-        htmlFor="project"
-        className="mb-1.5 block text-sm font-medium text-slate-700"
-      >
-        Proyek (opsional)
-      </label>
-
-      <select
+      <SearchSelect
+        {...projectOptions}
         id="project"
+        label="Proyek (opsional)"
+        placeholder="Cari proyek"
+        hint="Hasil evaluasi dikaitkan ke proyek ini. Saat proyek dipilih, peta hanya menampilkan lokasi milik proyek itu."
+        allowEmpty
+        emptyLabel="Tanpa proyek"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={projects.isLoading}
-        aria-describedby="project-hint"
-        className={SELECT_CLASS}
-      >
-        <option value="">
-          {projects.isLoading ? 'Memuat proyek...' : 'Tanpa proyek'}
-        </option>
-
-        {projects.data?.items.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name} ({project.code})
-          </option>
-        ))}
-      </select>
-
-      <p id="project-hint" className="mt-1.5 text-xs text-slate-500">
-        Hasil evaluasi dikaitkan ke proyek ini. Saat proyek dipilih,
-        peta hanya menampilkan lokasi milik proyek itu.
-      </p>
-
-      {projects.isError ? (
-        <p role="alert" className="mt-1.5 text-xs text-red-600">
-          Gagal mengambil daftar proyek.
-        </p>
-      ) : null}
+        onChange={(projectId) => onChange(projectId)}
+      />
     </div>
   )
 }
