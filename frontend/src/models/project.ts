@@ -22,6 +22,58 @@ export interface ProjectFilter {
   pageSize?: number
 }
 
+export interface ProjectRequest {
+  code: string
+  name: string
+  type: string
+  regionId?: string
+  startDate?: string
+  targetEndDate?: string
+  contractValue: number
+}
+
+// Batas panjang mengikuti tag binding ProjectRequest di backend.
+export const PROJECT_CODE_MAX_LENGTH = 20
+export const PROJECT_NAME_MAX_LENGTH = 160
+export const PROJECT_TYPE_MAX_LENGTH = 40
+
+export const PROJECT_TYPE_SUGGESTIONS = ['Perumahan', 'Apartemen', 'Komersial', 'Rumah Sakit', 'Campuran']
+
+export interface ProjectFormValues {
+  code: string
+  name: string
+  type: string
+  contractValue: string
+  startDate: string
+  targetEndDate: string
+}
+
+export const EMPTY_PROJECT_FORM: ProjectFormValues = {
+  code: '',
+  name: '',
+  type: '',
+  contractValue: '',
+  startDate: '',
+  targetEndDate: '',
+}
+
+// Isian tanggal memberi "YYYY-MM-DD", sedangkan backend membaca time.Time yang
+// butuh format RFC 3339. Tanggal kosong tidak dikirim sama sekali.
+function toApiDate(value: string): string | undefined {
+  return value === '' ? undefined : `${value}T00:00:00Z`
+}
+
+export function toProjectRequest(values: ProjectFormValues): ProjectRequest {
+  return {
+    code: values.code.trim(),
+    name: values.name.trim(),
+    type: values.type.trim(),
+    contractValue: values.contractValue === '' ? 0 : Number(values.contractValue),
+    startDate: toApiDate(values.startDate),
+    targetEndDate: toApiDate(values.targetEndDate),
+  }
+}
+
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   planning: 'Perencanaan',
   ongoing: 'Berjalan',
