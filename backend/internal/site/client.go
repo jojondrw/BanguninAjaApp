@@ -24,6 +24,7 @@ type ScoreResult struct {
 	OverallScore    int              `json:"overall_score"`
 	DimensionScores []DimensionScore `json:"dimension_scores"`
 	RiskFlags       []RiskFlag       `json:"risk_flags"`
+	Region          string           `json:"region,omitempty"`
 }
 
 // errUnknownProfile marks the internal service rejecting the profile code (§1.3).

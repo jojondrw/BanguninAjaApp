@@ -79,42 +79,7 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 		return EvaluateResponse{}, err
 	}
 
-	// 5. Build descriptive context from T9 regulation + T10 news.
-	descriptive := &Descriptive{
-		News: make([]News, 0),
-	}
-
-	regulationData, _ := s.regulationService.GetByPoint(
-		ctx,
-		*request.Latitude,
-		*request.Longitude,
-	)
-
-	if regulationData != nil {
-		descriptive.Regulasi = &Regulasi{
-			KDB:         regulationData.KDB,
-			KLB:         regulationData.KLB,
-			Zona:        regulationData.ZoneName,
-			IsSimulated: regulationData.IsSimulated,
-		}
-
-		// News is contextual only. Do not fetch broad news when
-		// the regulation lookup has no district.
-		if strings.TrimSpace(regulationData.District) != "" {
-			newsData, _ := s.newsService.FetchNews(ctx, news.NewsQuery{
-				District: regulationData.District,
-			})
-
-			for _, item := range newsData {
-				descriptive.News = append(descriptive.News, News{
-					Title:       item.Title,
-					URL:         item.URL,
-					Source:      item.Source,
-					PublishedAt: item.PublishedAt,
-				})
-			}
-		}
-	}
+	descriptive := s.describe(ctx, request, result.Region)
 
 	// 6. Assemble the public response.
 	// Predictive data remains completely separate from descriptive context.
@@ -188,6 +153,69 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 	}
 
 	return saved, nil
+}
+
+func (s *service) describe(ctx context.Context, request EvaluateRequest, scoringRegion string) *Descriptive {
+	regulationData, _ := s.regulationService.GetByPoint(ctx, *request.Latitude, *request.Longitude)
+
+	return &Descriptive{
+		Regulasi: toRegulasi(regulationData),
+		News:     s.fetchNews(ctx, regulationData, scoringRegion),
+	}
+}
+
+func toRegulasi(regulationData *regulation.Response) *Regulasi {
+	if regulationData == nil {
+		return nil
+	}
+
+	return &Regulasi{
+		KDB:         regulationData.KDB,
+		KLB:         regulationData.KLB,
+		Zona:        regulationData.ZoneName,
+		IsSimulated: regulationData.IsSimulated,
+	}
+}
+
+func (s *service) fetchNews(ctx context.Context, regulationData *regulation.Response, scoringRegion string) []News {
+	query, ok := newsQueryFor(regulationData, scoringRegion)
+	if !ok {
+		return []News{}
+	}
+
+	items, _ := s.newsService.FetchNews(ctx, query)
+
+	result := make([]News, 0, len(items))
+	for _, item := range items {
+		result = append(result, News{
+			Title:       item.Title,
+			URL:         item.URL,
+			Source:      item.Source,
+			PublishedAt: item.PublishedAt,
+		})
+	}
+
+	return result
+}
+
+func newsQueryFor(regulationData *regulation.Response, scoringRegion string) (news.NewsQuery, bool) {
+	if district := districtOf(regulationData); district != "" {
+		return news.NewsQuery{District: district}, true
+	}
+
+	if region := strings.TrimSpace(scoringRegion); region != "" {
+		return news.NewsQuery{Region: region}, true
+	}
+
+	return news.NewsQuery{}, false
+}
+
+func districtOf(regulationData *regulation.Response) string {
+	if regulationData == nil {
+		return ""
+	}
+
+	return strings.TrimSpace(regulationData.District)
 }
 
 func nonNilFlags(flags []RiskFlag) []RiskFlag {
