@@ -27,6 +27,24 @@ export function DueDateCell({ record, today }: { record: BillingBalance; today: 
   )
 }
 
+// Referensi beserta dokumen sumbernya dalam satu sel, misalnya
+// "Faktur INV-1 · Kontrak KTR-1" di bawah referensi piutang.
+export function ReferenceCell({ reference, sources }: {
+  reference: string
+  sources: [label: string, value: string | null][]
+}) {
+  const present = sources.filter(([, value]) => value !== null && value !== '')
+
+  return (
+    <span className="flex flex-col">
+      <span className="font-medium text-slate-900">{reference}</span>
+      {present.length > 0 ? (
+        <span className="text-xs text-slate-500">{present.map(([label, value]) => `${label} ${value}`).join(' · ')}</span>
+      ) : null}
+    </span>
+  )
+}
+
 export function BalanceCell({ record }: { record: BillingBalance }) {
   if (record.outstanding === 0) {
     return <span className="text-slate-500">{rupiah(0)}</span>

@@ -4,8 +4,9 @@ import type { Project } from '../../models/project'
 import type { Customer } from '../../models/sales'
 import { rupiah } from '../../shared/format'
 
-// Respons tagihan hanya membawa id pelanggan, vendor, dan proyek. Daftar ini
-// diambil sekali di halaman untuk menampilkan nama dan mengisi pilihan formulir.
+// Piutang dan utang sudah membawa nama tautannya dari backend, tapi faktur
+// hanya membawa id pihak. Daftar ini diambil sekali di halaman untuk nama
+// pihak faktur dan untuk mengisi pilihan formulir serta filter.
 export interface Directory {
   customers: Customer[]
   vendors: Vendor[]
@@ -28,13 +29,6 @@ export function vendorName(directory: Directory, id: string): string {
 
 export function partyName(directory: Directory, partyType: PartyType, id: string): string {
   return partyType === 'customer' ? customerName(directory, id) : vendorName(directory, id)
-}
-
-export function projectName(directory: Directory, id: string | null): string {
-  if (id === null) {
-    return 'Tanpa proyek'
-  }
-  return directory.projects.find((project) => project.id === id)?.name ?? shortId(id)
 }
 
 export function amountHint(value: string, fallback: string): string {

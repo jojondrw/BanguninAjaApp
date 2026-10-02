@@ -306,15 +306,34 @@ Semua di bawah `/api/billing`.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId` |
+| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId`, `recorded` (`false` = belum dicatat sebagai piutang). Sudah berisi `projectName`, `receivableId`, `receivableReference` |
 | GET, PUT, DELETE | `/invoices/:id` | |
 | POST | `/invoices/:id/payments` | Body `{ "amount": 1000000 }` |
-| GET, POST | `/receivables` | Filter `search`, `status`, `customerId` |
+| GET, POST | `/receivables` | Filter `search`, `status`, `customerId`, `projectId`, `contractId`. Body opsional `projectId`, `contractId`, `invoiceId`. Sudah berisi `customerName`, `projectName`, `contractNumber`, `invoiceNumber` |
 | GET, PUT, DELETE | `/receivables/:id` | |
 | POST | `/receivables/:id/payments` | |
-| GET, POST | `/payables` | Filter `search`, `status`, `vendorId` |
+| GET, POST | `/payables` | Filter `search`, `status`, `vendorId`, `projectId`, `purchaseOrderId`. Body opsional `projectId`, `purchaseOrderId`. Sudah berisi `vendorName`, `projectName`, `purchaseOrderNumber` |
 | GET, PUT, DELETE | `/payables/:id` | |
 | POST | `/payables/:id/payments` | |
+
+### Tautan piutang dan utang ke sumbernya
+
+Piutang bisa ditautkan ke proyek, kontrak penjualan, dan faktur. Utang bisa
+ditautkan ke proyek dan pesanan pembelian. Semua tautan opsional dan nama atau
+nomornya ikut di response lewat join, jadi frontend tidak perlu mencari
+sendiri. PUT mengganti seluruh isi, jadi tautan yang tidak dikirim ikut lepas.
+
+Faktur ke pelanggan dan piutang bisa mencatat utang yang sama dua kali. Karena
+itu `receivable.invoice_id` unik: satu faktur paling banyak satu piutang, dan
+faktur menampilkan `receivableId` serta `receivableReference` kalau sudah
+dicatat.
+
+| Kolom | Foreign key | Saat data induk dihapus |
+|---|---|---|
+| `receivable.project_id`, `payable.project_id` | `project` | `SET NULL` |
+| `receivable.contract_id` | `contract` | `SET NULL` |
+| `payable.purchase_order_id` | `purchase_order` | `SET NULL` |
+| `receivable.invoice_id` | `invoice`, unik (`uq_receivable_invoice`) | `RESTRICT`, supaya faktur tidak hilang di bawah piutang yang mencatatnya. Hapus piutangnya dulu |
 
 ### Status jatuh tempo tidak dipercaya dari kolom
 
@@ -338,6 +357,12 @@ Aturan yang sama dipakai untuk cicilan di slice `sales`.
 | Jumlah tagihan tidak boleh diubah di bawah yang sudah dibayar | `amount_below_paid` |
 | Data yang sudah menerima pembayaran tidak bisa dihapus | `invoice_has_payment`, `receivable_has_payment`, `payable_has_payment` |
 | `invoice.partyId` tidak punya foreign key karena bisa menunjuk pelanggan atau vendor, jadi keberadaannya diperiksa repository | `invoice_party_not_found` |
+| Pelanggan piutang, vendor utang, dan proyek yang ditautkan harus ada (422) | `customer_not_found`, `vendor_not_found`, `project_not_found` |
+| Kontrak yang ditautkan harus ada dan milik pelanggan piutang (422) | `contract_not_found`, `contract_customer_mismatch` |
+| Pesanan pembelian yang ditautkan harus ada dan milik vendor utang (422) | `purchase_order_not_found`, `purchase_order_vendor_mismatch` |
+| Faktur yang ditautkan harus ada, ditagihkan ke pelanggan piutang, dan nilai piutang tidak melebihi nilai faktur (422) | `linked_invoice_not_found`, `invoice_customer_mismatch`, `receivable_exceeds_invoice` |
+| Satu faktur hanya satu piutang (409, "Faktur ini sudah dicatat sebagai piutang <referensi>") | `invoice_already_recorded` |
+| Faktur yang sudah dicatat sebagai piutang tidak bisa dihapus (409), dan saat diubah pelanggannya harus tetap sama serta nilainya tidak di bawah nilai piutang (422) | `invoice_has_receivable`, `invoice_receivable_mismatch` |
 
 ## HR
 
