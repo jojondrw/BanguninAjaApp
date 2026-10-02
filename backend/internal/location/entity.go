@@ -16,6 +16,7 @@ type SavedLocation struct {
 	Name              string     `gorm:"type:varchar(160);not null"`
 	RegionID          *uuid.UUID `gorm:"type:uuid;index:idx_saved_location_region"`
 	BuildingProfileID *uuid.UUID `gorm:"type:uuid;index:idx_saved_location_building_profile"`
+	ProjectID         *uuid.UUID `gorm:"type:uuid;index:idx_saved_location_project"`
 	Point             geo.Point  `gorm:"not null"`
 	AreaSqm           float64    `gorm:"type:numeric(14,2);not null;default:0"`
 	LandPricePerSqm   int64      `gorm:"not null;default:0"`
@@ -79,6 +80,7 @@ func Constraints() []string {
 		database.ForeignKey("saved_location", "user_id", "users", database.DeleteCascade),
 		database.ForeignKey("saved_location", "region_id", "region", database.DeleteRestrict),
 		database.ForeignKey("saved_location", "building_profile_id", "building_profile", database.DeleteSetNull),
+		database.ForeignKey("saved_location", "project_id", "project", database.DeleteSetNull),
 		database.ForeignKey("dimension_score", "saved_location_id", "saved_location", database.DeleteCascade),
 		database.ForeignKey("dimension_score", "dimension_id", "dimension", database.DeleteRestrict),
 		database.ForeignKey("comparison", "user_id", "users", database.DeleteCascade),

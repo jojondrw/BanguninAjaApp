@@ -6,16 +6,25 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/geo"
 )
 
 type fakeRepository struct {
 	Repository
 	owned  map[uuid.UUID]bool
 	scores []DimensionScore
+	filter SavedLocationFilter
+	listed []SavedLocation
 }
 
 func (f *fakeRepository) Transaction(_ context.Context, work func(Repository) error) error {
 	return work(f)
+}
+
+func (f *fakeRepository) ListSavedLocations(_ context.Context, filter SavedLocationFilter) ([]SavedLocation, int64, error) {
+	f.filter = filter
+	return f.listed, int64(len(f.listed)), nil
 }
 
 func (f *fakeRepository) CreateSavedLocation(_ context.Context, location *SavedLocation) error {
@@ -80,6 +89,46 @@ func TestCreateSavedLocationLinksDimensionScores(t *testing.T) {
 	}
 	if detail.FloodIndex != 0.123 || detail.Latitude != -6.17 {
 		t.Fatalf("got flood %v latitude %v", detail.FloodIndex, detail.Latitude)
+	}
+}
+
+func TestCreateSavedLocationKeepsProject(t *testing.T) {
+	projectID := uuid.New()
+	request := SavedLocationRequest{
+		Name:      "Lahan Dago",
+		ProjectID: &projectID,
+		Latitude:  pointer(-6.88),
+		Longitude: pointer(107.61),
+	}
+
+	detail, err := NewService(&fakeRepository{}).CreateSavedLocation(context.Background(), uuid.New(), request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if detail.ProjectID == nil || *detail.ProjectID != projectID {
+		t.Fatalf("got project %v, want %v", detail.ProjectID, projectID)
+	}
+}
+
+func TestListSavedLocationsFiltersByProject(t *testing.T) {
+	projectID := uuid.New()
+	repository := &fakeRepository{listed: []SavedLocation{{
+		Name:      "Lahan Dago",
+		ProjectID: &projectID,
+		Point:     geo.Point{Lon: 107.61, Lat: -6.88},
+		Score:     71,
+	}}}
+
+	page, err := NewService(repository).ListSavedLocations(context.Background(), uuid.New(), SavedLocationQuery{ProjectID: &projectID})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repository.filter.ProjectID == nil || *repository.filter.ProjectID != projectID {
+		t.Fatalf("project filter not passed to repository: %+v", repository.filter)
+	}
+	item := page.Items[0]
+	if item.ProjectID == nil || *item.ProjectID != projectID || item.Latitude != -6.88 || item.Longitude != 107.61 {
+		t.Fatalf("unexpected list item: %+v", item)
 	}
 }
 

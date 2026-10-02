@@ -22,7 +22,7 @@ const (
 
 var (
 	errLocationNotFound        = apperror.NotFound("saved_location_not_found", "Lokasi tersimpan tidak ditemukan")
-	errLocationReference       = apperror.Unprocessable("location_reference_not_found", "Wilayah, profil bangunan, atau dimensi tidak ditemukan")
+	errLocationReference       = apperror.Unprocessable("location_reference_not_found", "Wilayah, profil bangunan, proyek, atau dimensi tidak ditemukan")
 	errLocationBounds          = apperror.Unprocessable("location_bounds_invalid", "Batas area peta harus lengkap dan nilai minimum harus lebih kecil dari maksimum")
 	errDimensionScoreDuplicate = apperror.Unprocessable("dimension_score_duplicate", "Satu dimensi hanya boleh dinilai sekali per lokasi")
 
@@ -73,6 +73,7 @@ func (s *service) ListSavedLocations(ctx context.Context, userID uuid.UUID, quer
 		Search:            query.Search,
 		RegionID:          query.RegionID,
 		BuildingProfileID: query.BuildingProfileID,
+		ProjectID:         query.ProjectID,
 		MinScore:          query.MinScore,
 		Bounds:            bounds,
 		Offset:            query.Offset(),
@@ -381,6 +382,7 @@ func applySavedLocationRequest(location *SavedLocation, request SavedLocationReq
 	location.Name = strings.TrimSpace(request.Name)
 	location.RegionID = request.RegionID
 	location.BuildingProfileID = request.BuildingProfileID
+	location.ProjectID = request.ProjectID
 	location.Point = geo.Point{Lon: *request.Longitude, Lat: *request.Latitude}
 	location.AreaSqm = roundTo(request.AreaSqm, areaPrecision)
 	location.LandPricePerSqm = request.LandPricePerSqm
