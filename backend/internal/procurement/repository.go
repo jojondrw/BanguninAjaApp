@@ -13,9 +13,15 @@ import (
 
 const (
 	purchaseRequestColumns = "purchase_request.*, " +
-		"(SELECT COUNT(*) FROM purchase_request_item WHERE purchase_request_item.purchase_request_id = purchase_request.id) AS item_count"
+		"(SELECT COUNT(*) FROM purchase_request_item WHERE purchase_request_item.purchase_request_id = purchase_request.id) AS item_count, " +
+		"(SELECT project.name FROM project WHERE project.id = purchase_request.project_id) AS project_name"
+	purchaseOrderColumns = "purchase_order.*, " +
+		"(SELECT vendor.name FROM vendor WHERE vendor.id = purchase_order.vendor_id) AS vendor_name, " +
+		"(SELECT project.name FROM project WHERE project.id = purchase_order.project_id) AS project_name"
 	goodsReceiptColumns = "goods_receipt.*, " +
-		"(SELECT COUNT(*) FROM goods_receipt_item WHERE goods_receipt_item.goods_receipt_id = goods_receipt.id) AS item_count"
+		"(SELECT COUNT(*) FROM goods_receipt_item WHERE goods_receipt_item.goods_receipt_id = goods_receipt.id) AS item_count, " +
+		"(SELECT warehouse.name FROM warehouse WHERE warehouse.id = goods_receipt.warehouse_id) AS warehouse_name, " +
+		"(SELECT purchase_order.number FROM purchase_order WHERE purchase_order.id = goods_receipt.purchase_order_id) AS purchase_order_number"
 )
 
 type VendorFilter struct {
@@ -60,12 +66,21 @@ type GoodsReceiptFilter struct {
 
 type PurchaseRequestRow struct {
 	PurchaseRequest
-	ItemCount int
+	ItemCount   int
+	ProjectName string
+}
+
+type PurchaseOrderRow struct {
+	PurchaseOrder
+	VendorName  string
+	ProjectName string
 }
 
 type GoodsReceiptRow struct {
 	GoodsReceipt
-	ItemCount int
+	ItemCount           int
+	WarehouseName       string
+	PurchaseOrderNumber string
 }
 
 type ReceivedQuantity struct {
@@ -91,7 +106,7 @@ type Repository interface {
 	ListPurchaseRequestItems(ctx context.Context, requestID uuid.UUID) ([]PurchaseRequestItem, error)
 	ReplacePurchaseRequestItems(ctx context.Context, requestID uuid.UUID, items []PurchaseRequestItem) error
 
-	ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrder, int64, error)
+	ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrderRow, int64, error)
 	FindPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrder, error)
 	LockPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrder, error)
 	CreatePurchaseOrder(ctx context.Context, order *PurchaseOrder) error
@@ -204,13 +219,22 @@ func (r *gormRepository) ReplacePurchaseRequestItems(ctx context.Context, reques
 	return database.Translate(r.db.WithContext(ctx).Create(&items).Error)
 }
 
-func (r *gormRepository) ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrder, int64, error) {
-	return database.FindPage[PurchaseOrder](ctx, r.db, database.Listing{
-		Filter: filter.apply,
-		Order:  "date DESC, number DESC",
-		Offset: filter.Offset,
-		Limit:  filter.Limit,
-	})
+func (r *gormRepository) ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrderRow, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&PurchaseOrder{}).Scopes(filter.apply).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]PurchaseOrderRow, 0, filter.Limit)
+	err := r.db.WithContext(ctx).
+		Model(&PurchaseOrder{}).
+		Scopes(filter.apply).
+		Select(purchaseOrderColumns).
+		Order("purchase_order.date DESC, purchase_order.number DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
 }
 
 func (r *gormRepository) FindPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrder, error) {
@@ -353,22 +377,22 @@ func (f PurchaseRequestFilter) apply(db *gorm.DB) *gorm.DB {
 
 func (f PurchaseOrderFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.Search != "" {
-		db = db.Where("number ILIKE ?", database.ContainsPattern(f.Search))
+		db = db.Where("purchase_order.number ILIKE ?", database.ContainsPattern(f.Search))
 	}
 	if f.VendorID != nil {
-		db = db.Where("vendor_id = ?", *f.VendorID)
+		db = db.Where("purchase_order.vendor_id = ?", *f.VendorID)
 	}
 	if f.ProjectID != nil {
-		db = db.Where("project_id = ?", *f.ProjectID)
+		db = db.Where("purchase_order.project_id = ?", *f.ProjectID)
 	}
 	if f.Status != "" {
-		db = db.Where("status = ?", f.Status)
+		db = db.Where("purchase_order.status = ?", f.Status)
 	}
 	if f.DateFrom != nil {
-		db = db.Where("date >= ?", *f.DateFrom)
+		db = db.Where("purchase_order.date >= ?", *f.DateFrom)
 	}
 	if f.DateTo != nil {
-		db = db.Where("date <= ?", *f.DateTo)
+		db = db.Where("purchase_order.date <= ?", *f.DateTo)
 	}
 	return db
 }

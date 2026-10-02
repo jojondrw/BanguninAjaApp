@@ -276,7 +276,7 @@ func (s *service) ListPurchaseOrders(ctx context.Context, query PurchaseOrderQue
 	if err != nil {
 		return pagination.Page[PurchaseOrderResponse]{}, apperror.Internal(err)
 	}
-	return pagination.New(pagination.Map(orders, newPurchaseOrderResponse), query.Query, total), nil
+	return pagination.New(pagination.Map(orders, newPurchaseOrderRowResponse), query.Query, total), nil
 }
 
 func (s *service) GetPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrderDetailResponse, error) {
