@@ -1,20 +1,24 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  employeeWithLeftDate,
+  inputDate,
   toAttendanceRequest,
   toEmployeeRequest,
   toPayrollRequest,
+  type Attendance,
   type AttendanceFilter,
   type AttendanceFormValues,
+  type Employee,
   type EmployeeFilter,
   type EmployeeFormValues,
   type EmploymentCount,
   type Payroll,
   type PayrollFilter,
   type PayrollFormValues,
+  type PayrollSummaryFilter,
 } from '../models/hr'
 import { hrApi } from '../models/hrApi'
-import type { Page } from '../models/common'
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
@@ -65,6 +69,13 @@ export function useEmployeeHeadcount() {
   })
 }
 
+// Nama, proyek, dan status kerja karyawan ikut tampil di absensi, penggajian,
+// dan hitungan karyawan aktif, jadi semua data SDM disegarkan.
+function useInvalidateHr() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: [HR_KEY] })
+}
+
 export function useCreateEmployee() {
   const queryClient = useQueryClient()
 
@@ -74,6 +85,46 @@ export function useCreateEmployee() {
       void queryClient.invalidateQueries({ queryKey: EMPLOYEES_KEY })
       void queryClient.invalidateQueries({ queryKey: SUMMARY_KEY })
     },
+  })
+}
+
+export interface EmployeeUpdate {
+  employee: Employee
+  values: EmployeeFormValues
+}
+
+export function useUpdateEmployee() {
+  const invalidateHr = useInvalidateHr()
+
+  return useMutation({
+    mutationFn: ({ employee, values }: EmployeeUpdate) =>
+      hrApi.updateEmployee(employee.id, toEmployeeRequest(values, employee.userId)),
+    onSuccess: invalidateHr,
+  })
+}
+
+export interface EmployeeLeftDate {
+  employee: Employee
+  leftDate: string
+}
+
+// Nonaktifkan (isi tanggal keluar) dan aktifkan lagi (kosongkan tanggal keluar).
+export function useSetEmployeeLeftDate() {
+  const invalidateHr = useInvalidateHr()
+
+  return useMutation({
+    mutationFn: ({ employee, leftDate }: EmployeeLeftDate) =>
+      hrApi.updateEmployee(employee.id, employeeWithLeftDate(employee, leftDate)),
+    onSuccess: invalidateHr,
+  })
+}
+
+export function useDeleteEmployee() {
+  const invalidateHr = useInvalidateHr()
+
+  return useMutation({
+    mutationFn: (employee: Employee) => hrApi.deleteEmployee(employee.id),
+    onSuccess: invalidateHr,
   })
 }
 
@@ -96,16 +147,48 @@ export function useAttendanceCount(filter: Omit<AttendanceFilter, 'page' | 'page
   })
 }
 
-export function useCreateAttendance(date: string) {
+// Upah karyawan harian dihitung dari hari hadir, jadi perubahan absensi ikut
+// menyegarkan penggajian.
+function useInvalidateAttendances() {
   const queryClient = useQueryClient()
+
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ATTENDANCES_KEY })
+    void queryClient.invalidateQueries({ queryKey: PAYROLLS_KEY })
+  }
+}
+
+export function useCreateAttendance(date: string) {
+  const invalidateAttendances = useInvalidateAttendances()
 
   return useMutation({
     mutationFn: (values: AttendanceFormValues) =>
       hrApi.createAttendance(toAttendanceRequest(values, date)),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ATTENDANCES_KEY })
-      void queryClient.invalidateQueries({ queryKey: PAYROLLS_KEY })
-    },
+    onSuccess: invalidateAttendances,
+  })
+}
+
+export interface AttendanceUpdate {
+  attendance: Attendance
+  values: AttendanceFormValues
+}
+
+export function useUpdateAttendance() {
+  const invalidateAttendances = useInvalidateAttendances()
+
+  return useMutation({
+    mutationFn: ({ attendance, values }: AttendanceUpdate) =>
+      hrApi.updateAttendance(attendance.id, toAttendanceRequest(values, inputDate(attendance.date))),
+    onSuccess: invalidateAttendances,
+  })
+}
+
+export function useDeleteAttendance() {
+  const invalidateAttendances = useInvalidateAttendances()
+
+  return useMutation({
+    mutationFn: (attendance: Attendance) => hrApi.deleteAttendance(attendance.id),
+    onSuccess: invalidateAttendances,
   })
 }
 
@@ -117,56 +200,64 @@ export function usePayrolls(filter: PayrollFilter) {
   })
 }
 
-export interface PayrollTotals {
-  count: number
-  netPay: number
-  paidNetPay: number
-  unpaidNetPay: number
-  unpaidCount: number
-  isPartial: boolean
-}
-
-function summarizePayrolls(page: Page<Payroll>): PayrollTotals {
-  const unpaid = page.items.filter((payroll) => !payroll.paid)
-  const netPay = page.items.reduce((sum, payroll) => sum + payroll.netPay, 0)
-  const unpaidNetPay = unpaid.reduce((sum, payroll) => sum + payroll.netPay, 0)
-
-  return {
-    count: page.totalItems,
-    netPay,
-    paidNetPay: netPay - unpaidNetPay,
-    unpaidNetPay,
-    unpaidCount: unpaid.length,
-    isPartial: page.totalItems > page.items.length,
-  }
-}
-
-// Backend belum punya ringkasan penggajian, jadi totalnya dijumlah dari satu
-// halaman terbesar yang diizinkan (100 baris). isPartial menandai kalau periode
-// itu punya lebih dari 100 slip.
-export function usePayrollTotals(period: string) {
+// Total periode dijumlah server dari semua slip, jadi tidak terbatas satu
+// halaman daftar.
+export function usePayrollSummary(filter: PayrollSummaryFilter) {
   return useQuery({
-    queryKey: [...PAYROLLS_KEY, 'totals', period],
-    queryFn: () => hrApi.payrolls({ period, pageSize: MAX_PAGE_SIZE }),
-    select: summarizePayrolls,
+    queryKey: [...PAYROLLS_KEY, 'summary', filter],
+    queryFn: () => hrApi.payrollSummary(filter),
     ...DATA_QUERY,
   })
 }
 
-export function useCreatePayroll(period: string) {
+// Dipakai daftar "Perlu perhatian" di Ringkasan: total slip satu periode.
+export function usePayrollTotals(period: string) {
+  return usePayrollSummary({ period })
+}
+
+function useInvalidatePayrolls() {
   const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: PAYROLLS_KEY })
+}
+
+export function useCreatePayroll(period: string) {
+  const invalidatePayrolls = useInvalidatePayrolls()
 
   return useMutation({
     mutationFn: (values: PayrollFormValues) => hrApi.createPayroll(toPayrollRequest(values, period)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PAYROLLS_KEY }),
+    onSuccess: invalidatePayrolls,
+  })
+}
+
+export interface PayrollUpdate {
+  payroll: Payroll
+  values: PayrollFormValues
+}
+
+export function useUpdatePayroll() {
+  const invalidatePayrolls = useInvalidatePayrolls()
+
+  return useMutation({
+    mutationFn: ({ payroll, values }: PayrollUpdate) =>
+      hrApi.updatePayroll(payroll.id, toPayrollRequest(values, payroll.period)),
+    onSuccess: invalidatePayrolls,
   })
 }
 
 export function usePayPayroll() {
-  const queryClient = useQueryClient()
+  const invalidatePayrolls = useInvalidatePayrolls()
 
   return useMutation({
     mutationFn: hrApi.payPayroll,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PAYROLLS_KEY }),
+    onSuccess: invalidatePayrolls,
+  })
+}
+
+export function useDeletePayroll() {
+  const invalidatePayrolls = useInvalidatePayrolls()
+
+  return useMutation({
+    mutationFn: (payroll: Payroll) => hrApi.deletePayroll(payroll.id),
+    onSuccess: invalidatePayrolls,
   })
 }
