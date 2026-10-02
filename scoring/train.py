@@ -26,7 +26,7 @@ from banguninaja_scoring.model import QUANTILE_FEATURES, Model, dimension_values
 
 HERE = Path(__file__).resolve().parent
 SEED_FILE = HERE.parent / "backend" / "cmd" / "seed" / "data" / "scoring.json"
-WEIGHT_FLOOR = 5
+WEIGHT_FLOOR = 10
 LEARNED_SHARE = 100 - WEIGHT_FLOOR * len(config.DIMENSIONS)
 
 log = logging.getLogger("train")
@@ -117,16 +117,23 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--per-region", type=int, default=3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--reuse-points", action="store_true", help="refit from model/training_points.csv")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
-    extractor = FeatureExtractor()
-    points = sample_points(args.per_region, args.seed)
-    log.info("sampled %d candidate points", len(points))
-    frame = extract_all(extractor, points)
-    frame = frame[frame["pop_2km"].notna() & frame["hazard_multi"].notna() & (frame["pop_5km"] > 0)].reset_index(drop=True)
-    log.info("%d usable points after dropping water/no-data", len(frame))
-    frame.to_csv(HERE / "model" / "training_points.csv", index=False)
+    points_file = HERE / "model" / "training_points.csv"
+    if args.reuse_points:
+        frame = pd.read_csv(points_file)
+        land_source = "ZNT local"
+    else:
+        extractor = FeatureExtractor()
+        land_source = "ZNT local" if extractor.land.local_available else "none"
+        points = sample_points(args.per_region, args.seed)
+        log.info("sampled %d candidate points", len(points))
+        frame = extract_all(extractor, points)
+        frame = frame[frame["pop_2km"].notna() & frame["hazard_multi"].notna() & (frame["pop_5km"] > 0)].reset_index(drop=True)
+        log.info("%d usable points after dropping water/no-data", len(frame))
+        frame.to_csv(points_file, index=False)
 
     model = Model(quantiles={k: np.asarray(v) for k, v in build_quantiles(frame).items()}, weights={}, meta={})
     weights, fits = {}, {}
@@ -138,8 +145,9 @@ def main():
         "meta": {
             "trained_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "points": int(len(frame)),
-            "land_price_source": "ZNT local" if extractor.land.local_available else "ZNT live",
-            "weight_floor_percent": WEIGHT_FLOOR,
+            "land_price_source": land_source,
+            "weighting": f"each dimension gets {WEIGHT_FLOOR}% fixed plus a learned share of {LEARNED_SHARE}% "
+            "(shrinkage toward equal weights, because the target shares population with demografi_sosial)",
             "fits": fits,
         },
         "quantiles": {k: list(map(float, v)) for k, v in model.quantiles.items()},

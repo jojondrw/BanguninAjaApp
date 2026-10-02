@@ -1,21 +1,82 @@
 {
   "dimensions": [
-    {"code": "fisik_lingkungan", "name": "Fisik & Lingkungan", "description": "Risiko bencana gabungan (InaRISK) dan kemiringan lahan", "sortOrder": 1},
-    {"code": "infrastruktur", "name": "Infrastruktur & Aksesibilitas", "description": "Jarak ke jalan, simpul transit, dan fasilitas kesehatan", "sortOrder": 2},
-    {"code": "demografi_sosial", "name": "Demografi & Sosial", "description": "Jumlah penduduk di sekitar lokasi (WorldPop)", "sortOrder": 3},
-    {"code": "pasar_kompetisi", "name": "Pasar & Kompetisi", "description": "Kepadatan pesaing sejenis dan aktivitas komersial sekitar", "sortOrder": 4},
-    {"code": "finansial_proyek", "name": "Finansial Proyek", "description": "Harga tanah (ZNT) dan indeks kemahalan konstruksi", "sortOrder": 5}
+    {
+      "code": "fisik_lingkungan",
+      "name": "Fisik & Lingkungan",
+      "description": "Risiko bencana gabungan (InaRISK) dan kemiringan lahan",
+      "sortOrder": 1
+    },
+    {
+      "code": "infrastruktur",
+      "name": "Infrastruktur & Aksesibilitas",
+      "description": "Jarak ke jalan, simpul transit, dan fasilitas kesehatan",
+      "sortOrder": 2
+    },
+    {
+      "code": "demografi_sosial",
+      "name": "Demografi & Sosial",
+      "description": "Jumlah penduduk di sekitar lokasi (WorldPop)",
+      "sortOrder": 3
+    },
+    {
+      "code": "pasar_kompetisi",
+      "name": "Pasar & Kompetisi",
+      "description": "Kepadatan pesaing sejenis dan aktivitas komersial sekitar",
+      "sortOrder": 4
+    },
+    {
+      "code": "finansial_proyek",
+      "name": "Finansial Proyek",
+      "description": "Harga tanah (ZNT) dan indeks kemahalan konstruksi",
+      "sortOrder": 5
+    }
   ],
   "profiles": [
-    {"code": "housing", "name": "Perumahan"},
-    {"code": "hospital", "name": "Rumah Sakit"},
-    {"code": "mall", "name": "Pusat Perbelanjaan"},
-    {"code": "entertainment", "name": "Tempat Hiburan"}
+    {
+      "code": "housing",
+      "name": "Perumahan"
+    },
+    {
+      "code": "hospital",
+      "name": "Rumah Sakit"
+    },
+    {
+      "code": "mall",
+      "name": "Pusat Perbelanjaan"
+    },
+    {
+      "code": "entertainment",
+      "name": "Tempat Hiburan"
+    }
   ],
   "weights": {
-    "housing": {"fisik_lingkungan": 20, "infrastruktur": 20, "demografi_sosial": 20, "pasar_kompetisi": 20, "finansial_proyek": 20},
-    "hospital": {"fisik_lingkungan": 20, "infrastruktur": 20, "demografi_sosial": 20, "pasar_kompetisi": 20, "finansial_proyek": 20},
-    "mall": {"fisik_lingkungan": 20, "infrastruktur": 20, "demografi_sosial": 20, "pasar_kompetisi": 20, "finansial_proyek": 20},
-    "entertainment": {"fisik_lingkungan": 20, "infrastruktur": 20, "demografi_sosial": 20, "pasar_kompetisi": 20, "finansial_proyek": 20}
+    "housing": {
+      "fisik_lingkungan": 10,
+      "infrastruktur": 10,
+      "demografi_sosial": 53,
+      "pasar_kompetisi": 10,
+      "finansial_proyek": 17
+    },
+    "hospital": {
+      "fisik_lingkungan": 10,
+      "infrastruktur": 10,
+      "demografi_sosial": 42,
+      "pasar_kompetisi": 23,
+      "finansial_proyek": 15
+    },
+    "mall": {
+      "fisik_lingkungan": 10,
+      "infrastruktur": 10,
+      "demografi_sosial": 43,
+      "pasar_kompetisi": 23,
+      "finansial_proyek": 14
+    },
+    "entertainment": {
+      "fisik_lingkungan": 10,
+      "infrastruktur": 13,
+      "demografi_sosial": 51,
+      "pasar_kompetisi": 15,
+      "finansial_proyek": 11
+    }
   }
 }
