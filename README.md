@@ -50,6 +50,17 @@ docker compose exec backend go run ./cmd/migrate
 Dijalankan sekali di awal, dan diulang setiap ada entity baru. Aman dijalankan
 berkali-kali.
 
+### 3b. Isi data RDTR (opsional)
+
+Berkas `rdtr_*.json` tidak ada di repo ini — ada di folder `data/raw/rdtr` repo
+data BanguninAja (atau Google Drive tim). Pasang foldernya ke container:
+
+```bash
+docker compose run --rm -v "/path/ke/BanguninAja/data/raw/rdtr:/rdtr" backend go run ./cmd/import-rdtr -dir /rdtr
+```
+
+Tanpa langkah ini, nilai regulasi tetap muncul tapi ditandai simulasi.
+
 ### 4. Nyalakan tampilannya
 
 ```bash
