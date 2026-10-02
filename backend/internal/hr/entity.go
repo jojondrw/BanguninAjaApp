@@ -30,8 +30,8 @@ type Attendance struct {
 	entity.Base
 	EmployeeID   uuid.UUID `gorm:"type:uuid;not null;index:idx_attendance_employee"`
 	Date         time.Time `gorm:"type:date;not null;index:idx_attendance_date"`
-	CheckInTime  *string   `gorm:"type:time"`
-	CheckOutTime *string   `gorm:"type:time"`
+	CheckInTime  *string   `gorm:"type:time without time zone"`
+	CheckOutTime *string   `gorm:"type:time without time zone"`
 	Status       string    `gorm:"type:varchar(20);not null;index:idx_attendance_status"`
 }
 
@@ -56,6 +56,24 @@ func (Payroll) TableName() string {
 
 func Entities() []any {
 	return []any{&Employee{}, &Attendance{}, &Payroll{}}
+}
+
+func Repairs() []string {
+	return []string{
+		`DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'attendance'
+      AND column_name = 'check_in_time' AND data_type <> 'time without time zone'
+  ) THEN
+    ALTER TABLE attendance DROP CONSTRAINT IF EXISTS chk_attendance_jam;
+    ALTER TABLE attendance
+      ALTER COLUMN check_in_time TYPE time without time zone USING check_in_time::time without time zone,
+      ALTER COLUMN check_out_time TYPE time without time zone USING check_out_time::time without time zone;
+  END IF;
+END $$`,
+	}
 }
 
 func Indexes() []string {

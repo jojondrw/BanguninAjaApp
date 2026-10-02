@@ -4,6 +4,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { useSession, useSessionRestore } from './controllers/useAuth'
 import { FinancialPage } from './views/FinancialPage'
+import { HrPage } from './views/HrPage'
+import { InventoryPage } from './views/InventoryPage'
 import { LocationPage } from './views/LocationPage'
 import { LoginPage } from './views/LoginPage'
 import { OverviewPage } from './views/OverviewPage'
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
             <Route path="/penjualan" element={<RequireSession><SalesPage /></RequireSession>} />
             <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
+            <Route path="/sdm" element={<RequireSession><HrPage /></RequireSession>} />
+            <Route path="/inventaris" element={<RequireSession><InventoryPage /></RequireSession>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SessionGate>
