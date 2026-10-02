@@ -13,8 +13,8 @@ import (
 const fullWeight = 100
 
 type scoringSeed struct {
-	Dimensions []dimensionSeed            `json:"dimensions"`
-	Profiles   []profileSeed              `json:"profiles"`
+	Dimensions []dimensionSeed           `json:"dimensions"`
+	Profiles   []profileSeed             `json:"profiles"`
 	Weights    map[string]map[string]int `json:"weights"`
 }
 
