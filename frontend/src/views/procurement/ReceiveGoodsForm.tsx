@@ -135,8 +135,8 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
     <form onSubmit={submit} className="space-y-5">
       <p className="text-sm text-slate-600">
         Isi jumlah yang benar-benar datang. Setelah disimpan, status pesanan berubah sendiri menjadi Diterima sebagian
-        atau Selesai, dan penerimaan tidak bisa diubah maupun dihapus. Stok gudang belum bertambah otomatis: catat stok
-        masuk dari rincian penerimaan sesudahnya.
+        atau Selesai, stok gudang penerima bertambah otomatis sebesar jumlah yang diterima baik, dan penerimaan tidak
+        bisa diubah maupun dihapus. Barang yang ditolak tidak masuk stok.
       </p>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -207,6 +207,8 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
           const id = `receipt-${detail.id}-line-${item.id}`
           const unit = codeOf(unitItems, item.unitOfMeasureId)
           const isComplete = item.remainingQuantity <= 0
+          const material = materialItems.find((candidate) => candidate.id === item.materialId)
+          const stockUnitId = material?.unitOfMeasureId ?? item.unitOfMeasureId
 
           return (
             <fieldset key={item.id} className="rounded-xl bg-white p-4 shadow-hairline">
@@ -268,6 +270,12 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
                   </>
                 )}
               </div>
+              {!isComplete && stockUnitId !== item.unitOfMeasureId ? (
+                <p className="mt-3 text-xs text-amber-800">
+                  Satuan stok material ini {codeOf(unitItems, stockUnitId)}, beda dengan satuan pesanan ({unit}). Baris
+                  ini tidak menambah stok otomatis: catat manual dari rincian penerimaan setelah jumlahnya dikonversi.
+                </p>
+              ) : null}
             </fieldset>
           )
         })}

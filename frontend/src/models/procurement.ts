@@ -158,15 +158,38 @@ export interface GoodsReceipt {
   createdAt: string
 }
 
+// Diisi backend per baris penerimaan:
+// - posted: stok masuk otomatis saat penerimaan disimpan (stockMovementId terisi)
+// - skipped: tidak dicatat otomatis, alasannya di unpostedReason
+// - legacy: penerimaan dicatat sebelum stok bertambah otomatis
+// - none: tidak ada jumlah yang diterima baik
+export type GoodsReceiptStockStatus = 'posted' | 'skipped' | 'legacy' | 'none'
+
 export interface GoodsReceiptItem {
   id: string
   purchaseOrderItemId: string
+  materialId: string
+  materialName: string
+  unitOfMeasureId: string
+  stockUnitOfMeasureId: string
   acceptedQuantity: number
   rejectedQuantity: number
+  stockStatus: GoodsReceiptStockStatus
+  stockPosted: boolean
+  stockMovementId: string | null
+  unpostedReason: string
+}
+
+export interface GoodsReceiptUnpostedLine {
+  lineId: string
+  materialId: string
+  materialName: string
+  reason: string
 }
 
 export interface GoodsReceiptDetail extends GoodsReceipt {
   items: GoodsReceiptItem[]
+  unpostedLines: GoodsReceiptUnpostedLine[]
 }
 
 // dateFrom dan dateTo dibaca backend dengan format "YYYY-MM-DD".
@@ -560,65 +583,88 @@ export function toGoodsReceiptRequest(
   }
 }
 
-export type ReceiptStockState = 'recorded' | 'pending' | 'unit_mismatch' | 'none'
+// - posted: masuk stok otomatis oleh backend
+// - recorded: sudah ada mutasi masuk manual dengan referensi nomor penerimaan
+// - pending: penerimaan lama dengan satuan sama, bisa dicatat sekaligus
+// - convert: satuan pesanan beda dengan satuan stok, jumlahnya dikonversi dulu
+// - none: tidak ada yang diterima baik
+export type ReceiptStockState = 'posted' | 'recorded' | 'pending' | 'convert' | 'none'
 
 export interface ReceiptStockLine {
   receiptItemId: string
   materialId: string
+  materialName: string
   unitOfMeasureId: string
+  stockUnitOfMeasureId: string
   acceptedQuantity: number
   rejectedQuantity: number
   state: ReceiptStockState
+  reason: string
 }
 
-// Penerimaan belum menambah stok sendiri (lihat slice-bisnis.md). Stok masuk
-// dicatat sebagai mutasi "in" ke gudang penerimaan dengan referensi nomor
-// penerimaan, jadi baris yang sudah punya mutasi itu dianggap sudah masuk stok.
-// Stok dihitung dalam satuan material, jadi baris yang satuannya berbeda harus
-// dikonversi manual di Persediaan.
-export function receiptStockLines(
-  receipt: GoodsReceiptDetail,
-  orderItems: PurchaseOrderItem[],
-  materials: Material[],
-  movements: StockMovement[],
-): ReceiptStockLine[] {
-  const recorded = movements.filter((movement) => movement.reference === receipt.number)
+// Mutasi manual hanya perlu dicari untuk baris yang tidak dicatat otomatis:
+// penerimaan lama dan baris yang dilewati karena satuannya beda.
+export function receiptNeedsMovementCheck(receipt: GoodsReceiptDetail): boolean {
+  return receipt.items.some((item) => item.stockStatus === 'legacy' || item.stockStatus === 'skipped')
+}
 
-  return receipt.items.map((item) => {
-    const orderItem = orderItems.find((candidate) => candidate.id === item.purchaseOrderItemId)
-    const materialId = orderItem?.materialId ?? ''
-    const unitOfMeasureId = orderItem?.unitOfMeasureId ?? ''
-    const material = materials.find((candidate) => candidate.id === materialId)
+function stockStateOf(item: GoodsReceiptItem, hasManualMovement: boolean): ReceiptStockState {
+  if (item.stockStatus === 'posted') return 'posted'
+  if (item.stockStatus === 'none' || item.acceptedQuantity <= 0) return 'none'
+  if (hasManualMovement) return 'recorded'
+  if (item.stockStatus === 'skipped' || item.unitOfMeasureId !== item.stockUnitOfMeasureId) return 'convert'
+  return 'pending'
+}
 
-    let state: ReceiptStockState = 'pending'
-    if (item.acceptedQuantity <= 0) {
-      state = 'none'
-    } else if (recorded.some((movement) => movement.materialId === materialId)) {
-      state = 'recorded'
-    } else if (material && material.unitOfMeasureId !== unitOfMeasureId) {
-      state = 'unit_mismatch'
-    }
+// Mutasi manual dikenali dari referensi nomor penerimaan dan materialnya. Satu
+// material hanya muncul sekali dalam satu pesanan, jadi pasangan itu unik.
+export function receiptStockLines(receipt: GoodsReceiptDetail, movements: StockMovement[]): ReceiptStockLine[] {
+  const manual = movements.filter((movement) => movement.reference === receipt.number)
 
-    return {
-      receiptItemId: item.id,
-      materialId,
-      unitOfMeasureId,
-      acceptedQuantity: item.acceptedQuantity,
-      rejectedQuantity: item.rejectedQuantity,
-      state,
-    }
-  })
+  return receipt.items.map((item) => ({
+    receiptItemId: item.id,
+    materialId: item.materialId,
+    materialName: item.materialName,
+    unitOfMeasureId: item.unitOfMeasureId,
+    stockUnitOfMeasureId: item.stockUnitOfMeasureId,
+    acceptedQuantity: item.acceptedQuantity,
+    rejectedQuantity: item.rejectedQuantity,
+    state: stockStateOf(
+      item,
+      item.stockStatus !== 'posted' && manual.some((movement) => movement.materialId === item.materialId),
+    ),
+    reason: item.unpostedReason,
+  }))
+}
+
+// Kalimat stok untuk pesan sukses setelah penerimaan disimpan.
+export function receiptStockNotice(receipt: GoodsReceiptDetail): string {
+  const posted = receipt.items.filter((item) => item.stockPosted).length
+  const unposted = receipt.unpostedLines.length
+
+  if (unposted > 0) {
+    const names = receipt.unpostedLines.map((line) => line.materialName).join(', ')
+    return `Stok gudang bertambah otomatis untuk ${posted} material. ${unposted} baris (${names}) satuannya beda dengan satuan stok, jadi catat manual dari rincian penerimaan.`
+  }
+  if (posted > 0) {
+    return 'Stok gudang bertambah otomatis sebesar jumlah yang diterima baik.'
+  }
+  return 'Tidak ada barang yang diterima baik, jadi stok gudang tidak berubah.'
+}
+
+export function receiptStockRequest(receipt: GoodsReceipt, line: ReceiptStockLine, quantity: number): StockMovementRequest {
+  return {
+    date: receipt.date,
+    type: 'in',
+    materialId: line.materialId,
+    quantity,
+    targetWarehouseId: receipt.warehouseId,
+    reference: receipt.number,
+  }
 }
 
 export function receiptStockRequests(receipt: GoodsReceipt, lines: ReceiptStockLine[]): StockMovementRequest[] {
   return lines
-    .filter((line) => line.state === 'pending' && line.materialId !== '')
-    .map((line) => ({
-      date: receipt.date,
-      type: 'in',
-      materialId: line.materialId,
-      quantity: line.acceptedQuantity,
-      targetWarehouseId: receipt.warehouseId,
-      reference: receipt.number,
-    }))
+    .filter((line) => line.state === 'pending')
+    .map((line) => receiptStockRequest(receipt, line, line.acceptedQuantity))
 }
