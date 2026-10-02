@@ -95,7 +95,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
         <nav className="mt-5 flex flex-1 flex-col gap-5 overflow-y-auto" aria-label="Menu utama">
           {MENU.map((group) => (
             <div key={group.label}>
-              <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-slate-400">{group.label}</p>
+              <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-slate-500">{group.label}</p>
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
                   <li key={item.to}>
