@@ -32,7 +32,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout>
+    <AuthLayout pageTitle="Daftar">
       <h1 className="text-[28px] leading-9 font-semibold tracking-[-0.025em] text-slate-900">Buat akun</h1>
       <p className="mt-2 text-[15px] text-slate-500">Cukup tiga isian, tidak sampai satu menit.</p>
 

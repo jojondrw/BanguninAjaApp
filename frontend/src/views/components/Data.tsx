@@ -3,16 +3,20 @@ import type { ReactNode } from 'react'
 
 import { Button, ErrorNote } from './Form'
 
-export function Card({ title, description, children }: {
+export function Card({ title, description, action, children }: {
   title: string
   description?: string
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
     <section className="rounded-2xl bg-white shadow-hairline">
-      <div className="px-5 pt-4 pb-3">
-        <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
-        {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
+      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
+          {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
+        </div>
+        {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
       </div>
       <div className="px-5 pb-5">{children}</div>
     </section>
