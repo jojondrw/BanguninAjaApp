@@ -14,14 +14,16 @@ import {
 } from '../../models/accounting'
 import type { Budget } from '../../models/finance'
 import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { FilterSelect, FormPanel, FormToggle, Pager, SelectField, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { amountHint } from './financeTabs'
-import { ConfirmDelete, Notice, ProjectOptions, RowActions } from './parts'
+import { ConfirmDelete, Notice, RowActions } from './parts'
 
 const PAGE_SIZE = 10
 const OPTION_LIMIT = 100
@@ -78,15 +80,15 @@ function BudgetForm({ budget, projects, thisYear, onUpdated }: {
           </p>
         ) : null}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <SelectField
+          <SearchSelect
+            {...projectOptions}
             id="budget-project"
             label="Proyek"
+            placeholder="Cari nama atau kode proyek"
             required
             value={values.projectId}
-            onChange={update('projectId')}
-          >
-            <ProjectOptions projects={projects} placeholder="Pilih proyek" />
-          </SelectField>
+            onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
+          />
           <Field
             id="budget-year"
             label="Tahun anggaran"
@@ -205,18 +207,20 @@ export function BudgetsTab() {
       description="Satu anggaran per proyek per tahun. Realisasi adalah kas keluar proyek di tahun yang sama, dihitung server."
     >
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="budget-filter-project"
           label="Saring menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          disabled={projects.isPending}
-          onChange={(event) => {
-            setProjectId(event.target.value)
+          onChange={(value) => {
+            setProjectId(value)
             setPage(1)
           }}
-        >
-          <ProjectOptions projects={projectItems} placeholder="Semua proyek" />
-        </FilterSelect>
+        />
         <ToolbarInput
           id="budget-filter-year"
           label="Saring menurut tahun"

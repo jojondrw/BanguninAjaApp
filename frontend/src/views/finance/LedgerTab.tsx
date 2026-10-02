@@ -5,20 +5,22 @@ import { useLedger } from '../../controllers/useFinance'
 import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
   NORMAL_BALANCE,
-  allAccountGroups,
   isDateRangeValid,
   ledgerRows,
   type LedgerPage,
 } from '../../models/accounting'
 import { ACCOUNT_TYPE_LABEL } from '../../models/master'
+import { accountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { Card, Empty, Loading, Table } from '../components/Data'
 import { Button, ErrorNote } from '../components/Form'
-import { FilterSelect, Pager, Toolbar } from '../components/RecordControls'
+import { Pager, Toolbar } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { ACCOUNT_PARAM, balanceText, journalLink, useSearchParam } from './financeTabs'
-import { AccountOptions, DateRangeFilter } from './parts'
+import { DateRangeFilter } from './parts'
 
+const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
 
 function inputDate(value: string): string {
@@ -97,21 +99,19 @@ export function LedgerTab() {
       }
     >
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...ALL_ACCOUNTS}
           id="ledger-account"
           label="Akun buku besar"
+          placeholder="Cari kode atau nama akun"
+          compact
+          className="w-64"
           value={accountId}
-          disabled={accounts.isPending}
-          onChange={(event) => {
-            setAccountId(event.target.value)
+          onChange={(value) => {
+            setAccountId(value)
             setPage(1)
           }}
-        >
-          <AccountOptions
-            groups={allAccountGroups(accountItems)}
-            placeholder={accounts.isPending ? 'Memuat akun...' : 'Pilih akun'}
-          />
-        </FilterSelect>
+        />
         <DateRangeFilter
           idPrefix="ledger"
           dateFrom={range.dateFrom}

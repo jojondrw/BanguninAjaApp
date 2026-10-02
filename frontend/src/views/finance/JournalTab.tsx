@@ -5,22 +5,24 @@ import { useJournalEntries, useJournalEntry } from '../../controllers/useFinance
 import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
   JOURNAL_NOTE_MAX_LENGTH,
-  allAccountGroups,
   isDateRangeValid,
   journalDetailRows,
   journalTotals,
 } from '../../models/accounting'
 import type { Account } from '../../models/master'
+import { accountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { ErrorNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { Chip, FilterSelect, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { Chip, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { JOURNAL_PARAM, ledgerLink, useSearchParam } from './financeTabs'
 import { JournalForm } from './JournalForm'
-import { AccountOptions, DateRangeFilter, Notice } from './parts'
+import { DateRangeFilter, Notice } from './parts'
 
+const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
 const LINK_CLASS = 'text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline'
 
@@ -166,15 +168,17 @@ export function JournalTab() {
             value={search}
             onChange={(event) => filterChanged(setSearch)(event.target.value)}
           />
-          <FilterSelect
+          <SearchSelect
+            {...ALL_ACCOUNTS}
             id="journal-filter-account"
             label="Saring menurut akun"
+            compact
+            allowEmpty
+            emptyLabel="Semua akun"
+            className="w-56"
             value={accountId}
-            disabled={accounts.isPending}
-            onChange={(event) => filterChanged(setAccountId)(event.target.value)}
-          >
-            <AccountOptions groups={allAccountGroups(accountItems)} placeholder="Semua akun" />
-          </FilterSelect>
+            onChange={(value) => filterChanged(setAccountId)(value)}
+          />
           <DateRangeFilter
             idPrefix="journal-filter"
             dateFrom={range.dateFrom}
