@@ -199,4 +199,17 @@ def score(model: Model, f: dict, profile: str) -> dict:
         ],
         "risk_flags": risk_flags(f),
         "region": f.get("region") or None,
+        "facts": facts(f),
+    }
+
+
+def facts(f: dict) -> dict:
+    def index(value):
+        return None if value is None else round(min(max(float(value), 0.0), 1.0), 3)
+
+    price = f.get("land_price")
+    return {
+        "flood_index": index(f.get("hazard_banjir")),
+        "earthquake_index": index(f.get("hazard_gempabumi")),
+        "land_price_per_sqm": int(round(price)) if price else None,
     }

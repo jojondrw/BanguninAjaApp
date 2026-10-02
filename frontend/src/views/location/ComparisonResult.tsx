@@ -114,11 +114,13 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
 
             <ComparisonGrid locations={details.locations} table={table} names={names} onRemove={onRemove} />
 
-            <p className="mt-3 text-xs leading-5 text-slate-500">
-              Penanda risiko dihitung dari indeks banjir dan gempa yang tersimpan, serta skor Fisik &amp; Lingkungan:
-              di bawah {PHYSICAL_RISK_BELOW.high} berarti risiko tinggi, di bawah {PHYSICAL_RISK_BELOW.medium} berarti
-              sedang. Risk flag rinci dari hasil evaluasi, misalnya rawan longsor, belum ikut tersimpan bersama lokasi.
-            </p>
+            {table.hasEstimatedRisk ? (
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Sebagian lokasi dievaluasi sebelum penanda risiko ikut disimpan. Untuk lokasi itu penanda risiko
+                diperkirakan dari skor Fisik &amp; Lingkungan: di bawah {PHYSICAL_RISK_BELOW.high} berarti risiko tinggi,
+                di bawah {PHYSICAL_RISK_BELOW.medium} berarti sedang. Evaluasi ulang lokasinya untuk penanda yang lengkap.
+              </p>
+            ) : null}
 
             <SaveComparisonForm selectedIds={selectedIds} opened={opened} isChanged={isChanged} onSaved={onSaved} />
           </>

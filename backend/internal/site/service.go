@@ -2,6 +2,7 @@ package site
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -144,6 +145,9 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 		},
 		Scores: scores,
 	}
+	if err := applyFacts(&saved.Location, result); err != nil {
+		return SavedRecord{}, apperror.Internal(err)
+	}
 
 	err = s.repository.Transaction(ctx, func(repository Repository) error {
 		return repository.CreateSavedLocation(ctx, &saved)
@@ -224,4 +228,30 @@ func nonNilFlags(flags []RiskFlag) []RiskFlag {
 	}
 
 	return flags
+}
+
+func applyFacts(saved *location.SavedLocation, result ScoreResult) error {
+	if result.Facts == nil {
+		return nil
+	}
+	if result.Facts.FloodIndex != nil {
+		saved.FloodIndex = *result.Facts.FloodIndex
+	}
+	if result.Facts.EarthquakeIndex != nil {
+		saved.EarthquakeIndex = *result.Facts.EarthquakeIndex
+	}
+	if result.Facts.LandPricePerSqm != nil {
+		saved.LandPricePerSqm = *result.Facts.LandPricePerSqm
+	}
+	flags := result.RiskFlags
+	if flags == nil {
+		flags = []RiskFlag{}
+	}
+	encoded, err := json.Marshal(flags)
+	if err != nil {
+		return err
+	}
+	text := string(encoded)
+	saved.RiskFlags = &text
+	return nil
 }

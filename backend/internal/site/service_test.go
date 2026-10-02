@@ -199,3 +199,43 @@ func TestEvaluateSkipsNewsWithoutDistrictOrRegion(t *testing.T) {
 		t.Fatalf("expected an empty non-nil news list, got %+v", response.Descriptive.News)
 	}
 }
+
+type factScoreClient struct{}
+
+func (factScoreClient) Score(ctx context.Context, input ScoreInput) (ScoreResult, error) {
+	result, err := stubScoreClient{}.Score(ctx, input)
+	result.RiskFlags = []RiskFlag{{Code: "rawan_banjir", Severity: "high", Message: "Indeks bahaya banjir tinggi (0,78)."}}
+	result.Facts = &ScoreFacts{
+		FloodIndex:      pointer(0.784),
+		EarthquakeIndex: pointer(0.77),
+		LandPricePerSqm: pointer(int64(17490000)),
+	}
+	return result, err
+}
+
+func TestEvaluateStoresScoringFactsAndRiskFlags(t *testing.T) {
+	repository := &fakeRepository{}
+	evaluator := NewService(repository, factScoreClient{}, fakeRegulation{}, &fakeNews{})
+
+	if _, err := evaluator.Evaluate(context.Background(), uuid.New(), evaluateRequest(nil)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	saved := repository.saved.Location
+	if saved.FloodIndex != 0.784 || saved.EarthquakeIndex != 0.77 || saved.LandPricePerSqm != 17490000 {
+		t.Fatalf("facts not stored: %+v", saved)
+	}
+	if saved.RiskFlags == nil || *saved.RiskFlags != `[{"code":"rawan_banjir","severity":"high","message":"Indeks bahaya banjir tinggi (0,78)."}]` {
+		t.Fatalf("risk flags not stored: %v", saved.RiskFlags)
+	}
+}
+
+func TestEvaluateWithStubLeavesRiskFlagsUnknown(t *testing.T) {
+	repository := &fakeRepository{}
+
+	if _, err := newTestService(repository).Evaluate(context.Background(), uuid.New(), evaluateRequest(nil)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repository.saved.Location.RiskFlags != nil {
+		t.Fatalf("stub score must not claim known risk flags, got %v", *repository.saved.Location.RiskFlags)
+	}
+}

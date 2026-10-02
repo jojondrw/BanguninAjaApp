@@ -24,6 +24,7 @@ type SavedLocation struct {
 	FloodIndex        float64    `gorm:"type:numeric(4,3);not null;default:0"`
 	EarthquakeIndex   float64    `gorm:"type:numeric(4,3);not null;default:0"`
 	Note              string     `gorm:"type:text"`
+	RiskFlags         *string    `gorm:"type:jsonb"`
 	SavedAt           time.Time  `gorm:"not null;default:now()"`
 }
 
