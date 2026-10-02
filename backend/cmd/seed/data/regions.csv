@@ -1,0 +1,532 @@
+code,name,type,parent_code
+11,Aceh,province,
+12,Sumatera Utara,province,
+13,Sumatera Barat,province,
+14,Riau,province,
+15,Jambi,province,
+16,Sumatera Selatan,province,
+17,Bengkulu,province,
+18,Lampung,province,
+19,Bangka Belitung,province,
+21,Kepulauan Riau,province,
+31,Jakarta Raya,province,
+32,Jawa Barat,province,
+33,Jawa Tengah,province,
+34,Yogyakarta,province,
+35,Jawa Timur,province,
+36,Banten,province,
+51,Bali,province,
+52,Nusa Tenggara Barat,province,
+53,Nusa Tenggara Timur,province,
+61,Kalimantan Barat,province,
+62,Kalimantan Tengah,province,
+63,Kalimantan Selatan,province,
+64,Kalimantan Timur,province,
+65,Kalimantan Utara,province,
+71,Sulawesi Utara,province,
+72,Sulawesi Tengah,province,
+73,Sulawesi Selatan,province,
+74,Sulawesi Tenggara,province,
+75,Gorontalo,province,
+76,Sulawesi Barat,province,
+81,Maluku,province,
+82,Maluku Utara,province,
+91,Papua Barat,province,
+94,Papua,province,
+1101,Simeulue,regency,11
+1102,Aceh Singkil,regency,11
+1103,Aceh Selatan,regency,11
+1104,Aceh Tenggara,regency,11
+1105,Aceh Timur,regency,11
+1106,Aceh Tengah,regency,11
+1107,Aceh Barat,regency,11
+1108,Aceh Besar,regency,11
+1109,Pidie,regency,11
+1110,Bireuen,regency,11
+1111,Aceh Utara,regency,11
+1112,Aceh Barat Daya,regency,11
+1113,Gayo Lues,regency,11
+1114,Aceh Tamiang,regency,11
+1115,Nagan Raya,regency,11
+1116,Aceh Jaya,regency,11
+1117,Bener Meriah,regency,11
+1118,Pidie Jaya,regency,11
+1171,Banda Aceh,city,11
+1172,Sabang,city,11
+1173,Langsa,city,11
+1174,Lhokseumawe,city,11
+1175,Subulussalam,city,11
+1201,Nias,regency,12
+1202,Mandailing Natal,regency,12
+1203,Tapanuli Selatan,regency,12
+1204,Tapanuli Tengah,regency,12
+1205,Tapanuli Utara,regency,12
+1206,Toba Samosir,regency,12
+1207,Labuhanbatu,regency,12
+1208,Asahan,regency,12
+1209,Simalungun,regency,12
+1210,Dairi,regency,12
+1211,Karo,regency,12
+1212,Deli Serdang,regency,12
+1213,Langkat,regency,12
+1214,Nias Selatan,regency,12
+1215,Humbang Hasundutan,regency,12
+1216,Pakpak Barat,regency,12
+1217,Samosir,regency,12
+1218,Serdang Bedagai,regency,12
+1219,Batu Bara,regency,12
+1220,Padang Lawas Utara,regency,12
+1221,Padang Lawas,regency,12
+1222,Labuhanbatu Selatan,regency,12
+1223,Labuhanbatu Utara,regency,12
+1224,Nias Utara,regency,12
+1225,Nias Barat,regency,12
+1271,Sibolga,city,12
+1272,Kota Tanjungbalai,city,12
+1273,Pematangsiantar,city,12
+1274,Tebingtinggi,city,12
+1275,Kota Medan,city,12
+1276,Kota Binjai,city,12
+1277,Padangsidimpuan,city,12
+1278,Gunungsitoli,city,12
+1301,Kepulauan Mentawai,regency,13
+1302,Pesisir Selatan,regency,13
+1303,Solok,regency,13
+1304,Sijunjung,regency,13
+1305,Tanah Datar,regency,13
+1306,Padang Pariaman,regency,13
+1307,Agam,regency,13
+1308,Lima Puluh Kota,regency,13
+1309,Pasaman,regency,13
+1310,Solok Selatan,regency,13
+1311,Dharmasraya,regency,13
+1312,Pasaman Barat,regency,13
+1371,Padang,city,13
+1372,Kota Solok,city,13
+1373,Sawahlunto,city,13
+1374,Padang Panjang,city,13
+1375,Bukittinggi,city,13
+1376,Payakumbuh,city,13
+1377,Pariaman,city,13
+1401,Kuantan Singingi,regency,14
+1402,Indragiri Hulu,regency,14
+1403,Indragiri Hilir,regency,14
+1404,Pelalawan,regency,14
+1405,Siak,regency,14
+1406,Kampar,regency,14
+1407,Rokan Hulu,regency,14
+1408,Bengkalis,regency,14
+1409,Rokan Hilir,regency,14
+1410,Kepulauan Meranti,regency,14
+1471,Pekanbaru,city,14
+1473,Dumai,city,14
+1501,Kerinci,regency,15
+1502,Merangin,regency,15
+1503,Sarolangun,regency,15
+1504,Batang Hari,regency,15
+1505,Muaro Jambi,regency,15
+1506,Tanjung Jabung T,regency,15
+1507,Tanjung Jabung B,regency,15
+1508,Tebo,regency,15
+1509,Bungo,regency,15
+1571,Jambi,city,15
+1572,Sungai Penuh,city,15
+1601,Ogan Komering Ulu,regency,16
+1602,Ogan Komering Ilir,regency,16
+1603,Muara Enim,regency,16
+1604,Lahat,regency,16
+1605,Musi Rawas,regency,16
+1606,Musi Banyuasin,regency,16
+1607,Banyu Asin,regency,16
+1608,Ogan Komering Ulu Selatan,regency,16
+1609,Ogan Komering Ulu Timur,regency,16
+1610,Ogan Ilir,regency,16
+1611,Empat Lawang,regency,16
+1671,Palembang,city,16
+1672,Prabumulih,city,16
+1673,Pagar Alam,city,16
+1674,Lubuklinggau,city,16
+1701,Bengkulu Selatan,regency,17
+1702,Rejang Lebong,regency,17
+1703,Bengkulu Utara,regency,17
+1704,Kaur,regency,17
+1705,Seluma,regency,17
+1706,Mukomuko,regency,17
+1707,Lebong,regency,17
+1708,Kepahiang,regency,17
+1709,Bengkulu Tengah,regency,17
+1771,Bengkulu,city,17
+1801,Lampung Barat,regency,18
+1802,Tanggamus,regency,18
+1803,Lampung Selatan,regency,18
+1804,Lampung Timur,regency,18
+1805,Lampung Tengah,regency,18
+1806,Lampung Utara,regency,18
+1807,Way Kanan,regency,18
+1808,Tulangbawang,regency,18
+1809,Pesawaran,regency,18
+1810,Pringsewu,regency,18
+1811,Mesuji,regency,18
+1812,Tulang Bawang Barat,regency,18
+1871,Bandar Lampung,city,18
+1872,Metro,city,18
+1901,Bangka,regency,19
+1902,Belitung,regency,19
+1903,Bangka Barat,regency,19
+1904,Bangka Tengah,regency,19
+1905,Bangka Selatan,regency,19
+1906,Belitung Timur,regency,19
+1971,Pangkalpinang,city,19
+2101,Karimun,regency,21
+2102,Bintan,regency,21
+2103,Natuna,regency,21
+2104,Lingga,regency,21
+2105,Kepulauan Anambas,regency,21
+2171,Batam,city,21
+2172,Tanjungpinang,city,21
+3101,Kepulauan Seribu,regency,31
+3171,Jakarta Selatan,city,31
+3172,Jakarta Timur,city,31
+3173,Jakarta Pusat,city,31
+3174,Jakarta Barat,city,31
+3175,Jakarta Utara,city,31
+3201,Bogor,regency,32
+3202,Sukabumi,regency,32
+3203,Cianjur,regency,32
+3204,Bandung,regency,32
+3205,Garut,regency,32
+3206,Tasikmalaya,regency,32
+3207,Ciamis,regency,32
+3208,Kuningan,regency,32
+3209,Cirebon,regency,32
+3210,Majalengka,regency,32
+3211,Sumedang,regency,32
+3212,Indramayu,regency,32
+3213,Subang,regency,32
+3214,Purwakarta,regency,32
+3215,Karawang,regency,32
+3216,Bekasi,regency,32
+3217,Bandung Barat,regency,32
+3271,Kota Bogor,city,32
+3272,Kota Sukabumi,city,32
+3273,Kota Bandung,city,32
+3274,Kota Cirebon,city,32
+3275,Kota Bekasi,city,32
+3276,Depok,city,32
+3277,Cimahi,city,32
+3278,Kota Tasikmalaya,city,32
+3279,Banjar,city,32
+3301,Cilacap,regency,33
+3302,Banyumas,regency,33
+3303,Purbalingga,regency,33
+3304,Banjarnegara,regency,33
+3305,Kebumen,regency,33
+3306,Purworejo,regency,33
+3307,Wonosobo,regency,33
+3308,Magelang,regency,33
+3309,Boyolali,regency,33
+3310,Klaten,regency,33
+3311,Sukoharjo,regency,33
+3312,Wonogiri,regency,33
+3313,Karanganyar,regency,33
+3314,Sragen,regency,33
+3315,Grobogan,regency,33
+3316,Blora,regency,33
+3317,Rembang,regency,33
+3318,Pati,regency,33
+3319,Kudus,regency,33
+3320,Jepara,regency,33
+3321,Demak,regency,33
+3322,Semarang,regency,33
+3323,Temanggung,regency,33
+3324,Kendal,regency,33
+3325,Batang,regency,33
+3326,Pekalongan,regency,33
+3327,Pemalang,regency,33
+3328,Tegal,regency,33
+3329,Brebes,regency,33
+3371,Kota Magelang,city,33
+3372,Surakarta,city,33
+3373,Salatiga,city,33
+3374,Kota Semarang,city,33
+3375,Kota Pekalongan,city,33
+3376,Kota Tegal,city,33
+3401,Kulon Progo,regency,34
+3402,Bantul,regency,34
+3403,Gunung Kidul,regency,34
+3404,Sleman,regency,34
+3471,Kota Yogyakarta,city,34
+3501,Pacitan,regency,35
+3502,Ponorogo,regency,35
+3503,Trenggalek,regency,35
+3504,Tulungagung,regency,35
+3505,Blitar,regency,35
+3506,Kediri,regency,35
+3507,Malang,regency,35
+3508,Lumajang,regency,35
+3509,Jember,regency,35
+3510,Banyuwangi,regency,35
+3511,Bondowoso,regency,35
+3512,Situbondo,regency,35
+3513,Probolinggo,regency,35
+3514,Pasuruan,regency,35
+3515,Sidoarjo,regency,35
+3516,Mojokerto,regency,35
+3517,Jombang,regency,35
+3518,Nganjuk,regency,35
+3519,Madiun,regency,35
+3520,Magetan,regency,35
+3521,Ngawi,regency,35
+3522,Bojonegoro,regency,35
+3523,Tuban,regency,35
+3524,Lamongan,regency,35
+3525,Gresik,regency,35
+3526,Bangkalan,regency,35
+3527,Sampang,regency,35
+3528,Pamekasan,regency,35
+3529,Sumenep,regency,35
+3571,Kota Kediri,city,35
+3572,Kota Blitar,city,35
+3573,Kota Malang,city,35
+3574,Kota Probolinggo,city,35
+3575,Kota Pasuruan,city,35
+3576,Kota Mojokerto,city,35
+3577,Kota Madiun,city,35
+3578,Surabaya,city,35
+3579,Batu,city,35
+3601,Pandeglang,regency,36
+3602,Lebak,regency,36
+3603,Tangerang,regency,36
+3604,Serang,regency,36
+3671,Kota Tangerang,city,36
+3672,Cilegon,city,36
+3673,Kota Serang,city,36
+3674,Tangerang Selatan,city,36
+5101,Jembrana,regency,51
+5102,Tabanan,regency,51
+5103,Badung,regency,51
+5104,Gianyar,regency,51
+5105,Klungkung,regency,51
+5106,Bangli,regency,51
+5107,Karangasem,regency,51
+5108,Buleleng,regency,51
+5171,Denpasar,city,51
+5201,Lombok Barat,regency,52
+5202,Lombok Tengah,regency,52
+5203,Lombok Timur,regency,52
+5204,Sumbawa,regency,52
+5205,Dompu,regency,52
+5206,Bima,regency,52
+5207,Sumbawa Barat,regency,52
+5208,Lombok Utara,regency,52
+5271,Mataram,city,52
+5272,Kota Bima,city,52
+5301,Sumba Barat,regency,53
+5302,Sumba Timur,regency,53
+5303,Kupang,regency,53
+5304,Timor Tengah Selatan,regency,53
+5305,Timor Tengah Utara,regency,53
+5306,Belu,regency,53
+5307,Alor,regency,53
+5308,Lembata,regency,53
+5309,Flores Timur,regency,53
+5310,Sikka,regency,53
+5311,Ende,regency,53
+5312,Ngada,regency,53
+5313,Manggarai,regency,53
+5314,Rote Ndao,regency,53
+5315,Manggarai Barat,regency,53
+5316,Sumba Tengah,regency,53
+5317,Sumba Barat Daya,regency,53
+5318,Nagekeo,regency,53
+5319,Manggarai Timur,regency,53
+5320,Sabu Raijua,regency,53
+5371,Kota Kupang,city,53
+6101,Sambas,regency,61
+6102,Bengkayang,regency,61
+6103,Landak,regency,61
+6104,Pontianak,regency,61
+6105,Sanggau,regency,61
+6106,Ketapang,regency,61
+6107,Sintang,regency,61
+6108,Kapuas Hulu,regency,61
+6109,Sekadau,regency,61
+6110,Melawi,regency,61
+6111,Kayong Utara,regency,61
+6112,Kubu Raya,regency,61
+6171,Kota Pontianak,city,61
+6172,Singkawang,city,61
+6201,Kotawaringin Barat,regency,62
+6202,Kotawaringin Timur,regency,62
+6203,Kapuas,regency,62
+6204,Barito Selatan,regency,62
+6205,Barito Utara,regency,62
+6206,Sukamara,regency,62
+6207,Lamandau,regency,62
+6208,Seruyan,regency,62
+6209,Katingan,regency,62
+6210,Pulang Pisau,regency,62
+6211,Gunung Mas,regency,62
+6212,Barito Timur,regency,62
+6213,Murung Raya,regency,62
+6271,Palangka Raya,city,62
+6301,Tanah Laut,regency,63
+6302,Kota Baru,regency,63
+6303,Banjar,regency,63
+6304,Barito Kuala,regency,63
+6305,Tapin,regency,63
+6306,Hulu Sungai Selatan,regency,63
+6307,Hulu Sungai Tengah,regency,63
+6308,Hulu Sungai Utara,regency,63
+6309,Tabalong,regency,63
+6310,Tanah Bumbu,regency,63
+6311,Balangan,regency,63
+6371,Banjarmasin,city,63
+6372,Banjar Baru,city,63
+6401,Paser,regency,64
+6402,Kutai Barat,regency,64
+6403,Kutai Kartanegara,regency,64
+6404,Kutai Timur,regency,64
+6405,Berau,regency,64
+6409,Penajam Paser Utara,regency,64
+6471,Balikpapan,city,64
+6472,Samarinda,city,64
+6474,Bontang,city,64
+7101,Bolaang Mongondow,regency,71
+7102,Minahasa,regency,71
+7103,Kepulauan Sangihe,regency,71
+7104,Kepulauan Talaud,regency,71
+7105,Minahasa Selatan,regency,71
+7106,Minahasa Utara,regency,71
+7107,Bolaang Mongondow Utara,regency,71
+7108,Siau Tagulandang Biaro,regency,71
+7109,Minahasa Tenggara,regency,71
+7110,Bolaang Mongondow Selatan,regency,71
+7111,Bolaang Mongondow Timur,regency,71
+7171,Manado,city,71
+7172,Bitung,city,71
+7173,Tomohon,city,71
+7174,Kotamobagu,city,71
+7201,Banggai Kepulauan,regency,72
+7202,Banggai,regency,72
+7203,Morowali,regency,72
+7204,Poso,regency,72
+7205,Donggala,regency,72
+7206,Toli-Toli,regency,72
+7207,Buol,regency,72
+7208,Parigi Moutong,regency,72
+7209,Tojo Una-Una,regency,72
+7210,Sigi,regency,72
+7271,Palu,city,72
+7301,Kepulauan Selayar,regency,73
+7302,Bulukumba,regency,73
+7303,Bantaeng,regency,73
+7304,Jeneponto,regency,73
+7305,Takalar,regency,73
+7306,Gowa,regency,73
+7307,Sinjai,regency,73
+7308,Maros,regency,73
+7309,Pangkajene Dan Kepulauan,regency,73
+7310,Barru,regency,73
+7311,Bone,regency,73
+7312,Soppeng,regency,73
+7313,Wajo,regency,73
+7314,Sidenreng Rappang,regency,73
+7315,Pinrang,regency,73
+7316,Enrekang,regency,73
+7317,Luwu,regency,73
+7318,Tana Toraja,regency,73
+7322,Luwu Utara,regency,73
+7325,Luwu Timur,regency,73
+7326,Toraja Utara,regency,73
+7371,Makassar,city,73
+7372,Parepare,city,73
+7373,Palopo,city,73
+7401,Buton,regency,74
+7402,Muna,regency,74
+7403,Konawe,regency,74
+7404,Kolaka,regency,74
+7405,Konawe Selatan,regency,74
+7406,Bombana,regency,74
+7407,Wakatobi,regency,74
+7408,Kolaka Utara,regency,74
+7409,Buton Utara,regency,74
+7410,Konawe Utara,regency,74
+7471,Kendari,city,74
+7472,Bau-Bau,city,74
+7501,Boalemo,regency,75
+7502,Gorontalo,regency,75
+7503,Pohuwato,regency,75
+7504,Bone Bolango,regency,75
+7505,Gorontalo Utara,regency,75
+7571,Kota Gorontalo,city,75
+7601,Majene,regency,76
+7602,Polewali Mandar,regency,76
+7603,Mamasa,regency,76
+7604,Mamuju,regency,76
+7605,Mamuju Utara,regency,76
+8101,Maluku Tenggara Barat,regency,81
+8102,Maluku Tenggara,regency,81
+8103,Maluku Tengah,regency,81
+8104,Buru,regency,81
+8105,Kepulauan Aru,regency,81
+8106,Seram Bagian Barat,regency,81
+8107,Seram Bagian Timur,regency,81
+8108,Maluku Barat Daya,regency,81
+8109,Buru Selatan,regency,81
+8171,Ambon,city,81
+8172,Tual,city,81
+8201,Halmahera Barat,regency,82
+8202,Halmahera Tengah,regency,82
+8203,Kepulauan Sula,regency,82
+8204,Halmahera Selatan,regency,82
+8205,Halmahera Utara,regency,82
+8206,Halmahera Timur,regency,82
+8207,Pulau Morotai,regency,82
+8271,Ternate,city,82
+8272,Tidore Kepulauan,city,82
+9101,Fakfak,regency,91
+9102,Kaimana,regency,91
+9103,Teluk Wondama,regency,91
+9104,Teluk Bintuni,regency,91
+9105,Manokwari,regency,91
+9106,Sorong Selatan,regency,91
+9107,Sorong,regency,91
+9108,Raja Ampat,regency,91
+9109,Tambrauw,regency,91
+9110,Maybrat,regency,91
+9171,Kota Sorong,city,91
+9401,Merauke,regency,94
+9402,Jayawijaya,regency,94
+9403,Jayapura,regency,94
+9404,Nabire,regency,94
+9408,Kepulauan Yapen,regency,94
+9409,Biak Numfor,regency,94
+9410,Paniai,regency,94
+9411,Puncak Jaya,regency,94
+9412,Mimika,regency,94
+9413,Boven Digoel,regency,94
+9414,Mappi,regency,94
+9415,Asmat,regency,94
+9416,Yahukimo,regency,94
+9417,Pegunungan Bintang,regency,94
+9418,Tolikara,regency,94
+9419,Sarmi,regency,94
+9420,Keerom,regency,94
+9426,Waropen,regency,94
+9427,Supiori,regency,94
+9428,Mamberamo Raya,regency,94
+9429,Nduga,regency,94
+9430,Lanny Jaya,regency,94
+9431,Mamberamo Tengah,regency,94
+9432,Yalimo,regency,94
+9433,Puncak,regency,94
+9434,Dogiyai,regency,94
+9435,Intan Jaya,regency,94
+9436,Deiyai,regency,94
+9471,Kota Jayapura,city,94
+6501,Bulungan,regency,65
+6502,Malinau,regency,65
+6503,Nunukan,regency,65
+6504,Tana Tidung,regency,65
+6571,Tarakan,city,65

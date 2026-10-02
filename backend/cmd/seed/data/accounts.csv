@@ -1,0 +1,27 @@
+code,name,type,parent_code
+1000,Aset,asset,
+1100,Kas dan Setara Kas,asset,1000
+1110,Kas,asset,1100
+1120,Bank,asset,1100
+1200,Piutang Usaha,asset,1000
+1300,Persediaan Material,asset,1000
+1400,Persediaan Unit Properti,asset,1000
+1500,Tanah untuk Pengembangan,asset,1000
+1600,Aset Tetap,asset,1000
+2000,Liabilitas,liability,
+2100,Utang Usaha,liability,2000
+2200,Uang Muka Pelanggan,liability,2000
+2300,Utang Bank,liability,2000
+3000,Ekuitas,equity,
+3100,Modal Disetor,equity,3000
+3200,Laba Ditahan,equity,3000
+4000,Pendapatan,revenue,
+4100,Penjualan Unit,revenue,4000
+4200,Pendapatan Sewa,revenue,4000
+5000,Beban,expense,
+5100,Beban Konstruksi,expense,5000
+5200,Beban Pembelian Lahan,expense,5000
+5300,Beban Perizinan,expense,5000
+5400,Beban Pemasaran,expense,5000
+5500,Beban Gaji,expense,5000
+5600,Beban Operasional Kantor,expense,5000
