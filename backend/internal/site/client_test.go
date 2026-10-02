@@ -3,7 +3,10 @@ package site
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestStubScoreClientProducesFiveScoredDimensions(t *testing.T) {
@@ -73,5 +76,52 @@ func TestNewScoreClientFallsBackToStubWhenUnconfigured(t *testing.T) {
 
 	if _, ok := client.(stubScoreClient); !ok {
 		t.Fatalf("expected stubScoreClient when no base URL configured, got %T", client)
+	}
+}
+
+const realScore = 12
+
+func scoreWithResponse(t *testing.T, body string) ScoreResult {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+
+	result, err := NewScoreClient(server.URL, time.Second).Score(context.Background(), ScoreInput{
+		Latitude:            -6.914744,
+		Longitude:           107.609810,
+		BuildingProfileCode: "housing",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.OverallScore != realScore {
+		t.Fatalf("got score %d, want %d from the real service", result.OverallScore, realScore)
+	}
+
+	return result
+}
+
+func TestHTTPScoreClientDecodesRegion(t *testing.T) {
+	result := scoreWithResponse(t, `{"overall_score":12,"dimension_scores":[],"risk_flags":[],"region":"Kota Bandung"}`)
+
+	if result.Region != "Kota Bandung" {
+		t.Fatalf("got region %q, want %q", result.Region, "Kota Bandung")
+	}
+}
+
+func TestHTTPScoreClientAcceptsNullOrMissingRegion(t *testing.T) {
+	bodies := []string{
+		`{"overall_score":12,"dimension_scores":[],"risk_flags":[],"region":null}`,
+		`{"overall_score":12,"dimension_scores":[],"risk_flags":[]}`,
+	}
+
+	for _, body := range bodies {
+		if result := scoreWithResponse(t, body); result.Region != "" {
+			t.Fatalf("got region %q, want empty for %s", result.Region, body)
+		}
 	}
 }

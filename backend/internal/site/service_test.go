@@ -45,16 +45,31 @@ func (f *fakeRepository) CreateSavedLocation(_ context.Context, saved *SavedReco
 	return nil
 }
 
-type fakeRegulation struct{}
-
-func (fakeRegulation) GetByPoint(context.Context, float64, float64) (*regulation.Response, error) {
-	return nil, nil
+type fakeRegulation struct {
+	response *regulation.Response
 }
 
-type fakeNews struct{}
+func (f fakeRegulation) GetByPoint(context.Context, float64, float64) (*regulation.Response, error) {
+	return f.response, nil
+}
 
-func (fakeNews) FetchNews(context.Context, news.NewsQuery) ([]news.NewsResponse, error) {
-	return nil, nil
+type fakeNews struct {
+	queries []news.NewsQuery
+}
+
+func (f *fakeNews) FetchNews(_ context.Context, query news.NewsQuery) ([]news.NewsResponse, error) {
+	f.queries = append(f.queries, query)
+	return []news.NewsResponse{{Title: "Berita " + query.Region + query.District}}, nil
+}
+
+type regionScoreClient struct {
+	region string
+}
+
+func (c regionScoreClient) Score(ctx context.Context, input ScoreInput) (ScoreResult, error) {
+	result, err := stubScoreClient{}.Score(ctx, input)
+	result.Region = c.region
+	return result, err
 }
 
 func pointer[T any](value T) *T {
@@ -62,7 +77,25 @@ func pointer[T any](value T) *T {
 }
 
 func newTestService(repository *fakeRepository) Service {
-	return NewService(repository, stubScoreClient{}, fakeRegulation{}, fakeNews{})
+	return NewService(repository, stubScoreClient{}, fakeRegulation{}, &fakeNews{})
+}
+
+func evaluateWithNews(t *testing.T, scores ScoreClient, regulationData *regulation.Response) (EvaluateResponse, *fakeNews) {
+	t.Helper()
+
+	newsService := &fakeNews{}
+	evaluator := NewService(&fakeRepository{}, scores, fakeRegulation{response: regulationData}, newsService)
+
+	response, err := evaluator.Evaluate(context.Background(), uuid.New(), evaluateRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	return response, newsService
+}
+
+func simulatedRegulation() *regulation.Response {
+	return &regulation.Response{ZoneName: "Kawasan Budidaya", IsSimulated: true}
 }
 
 func evaluateRequest(projectID *uuid.UUID) EvaluateRequest {
@@ -115,5 +148,54 @@ func TestEvaluateRejectsUnknownProject(t *testing.T) {
 	}
 	if repository.saved != nil {
 		t.Fatal("nothing should be saved for an unknown project")
+	}
+}
+
+func TestEvaluateQueriesNewsByRegulationDistrict(t *testing.T) {
+	regulationData := &regulation.Response{ZoneName: "Perumahan", District: " Coblong "}
+
+	response, newsService := evaluateWithNews(t, regionScoreClient{region: "Kota Bandung"}, regulationData)
+
+	want := news.NewsQuery{District: "Coblong"}
+	if len(newsService.queries) != 1 || newsService.queries[0] != want {
+		t.Fatalf("got news queries %+v, want [%+v]", newsService.queries, want)
+	}
+	if len(response.Descriptive.News) != 1 {
+		t.Fatalf("got %d news items, want 1", len(response.Descriptive.News))
+	}
+}
+
+func TestEvaluateFallsBackToScoringRegionForNews(t *testing.T) {
+	response, newsService := evaluateWithNews(t, regionScoreClient{region: "Kota Bandung"}, simulatedRegulation())
+
+	want := news.NewsQuery{Region: "Kota Bandung"}
+	if len(newsService.queries) != 1 || newsService.queries[0] != want {
+		t.Fatalf("got news queries %+v, want [%+v]", newsService.queries, want)
+	}
+	if len(response.Descriptive.News) != 1 {
+		t.Fatalf("got %d news items, want 1", len(response.Descriptive.News))
+	}
+	if response.Descriptive.Regulasi == nil || !response.Descriptive.Regulasi.IsSimulated {
+		t.Fatal("simulated regulation should still be returned")
+	}
+}
+
+func TestEvaluateFallsBackToScoringRegionWhenRegulationMissing(t *testing.T) {
+	_, newsService := evaluateWithNews(t, regionScoreClient{region: "Kota Bandung"}, nil)
+
+	want := news.NewsQuery{Region: "Kota Bandung"}
+	if len(newsService.queries) != 1 || newsService.queries[0] != want {
+		t.Fatalf("got news queries %+v, want [%+v]", newsService.queries, want)
+	}
+}
+
+func TestEvaluateSkipsNewsWithoutDistrictOrRegion(t *testing.T) {
+	response, newsService := evaluateWithNews(t, stubScoreClient{}, simulatedRegulation())
+
+	if len(newsService.queries) != 0 {
+		t.Fatalf("expected no news call, got %+v", newsService.queries)
+	}
+	if response.Descriptive.News == nil || len(response.Descriptive.News) != 0 {
+		t.Fatalf("expected an empty non-nil news list, got %+v", response.Descriptive.News)
 	}
 }

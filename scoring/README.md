@@ -4,6 +4,17 @@ Layanan Python (FastAPI) yang menghitung skor kelayakan lokasi dari data GIS
 nyata. Dipanggil oleh slice `site` di backend Go lewat `POST /score`; tidak
 diakses langsung oleh frontend.
 
+## Kontrak `POST /score`
+
+```text
+in:  latitude, longitude, building_profile_code
+out: overall_score, dimension_scores[{dimension_code, value, explanation}], risk_flags[{code, severity, message}],
+     region   (nama kab/kota GADM NAME_2, mis. "Kota Bandung"; null kalau titik di luar wilayah GADM)
+```
+
+`region` hanya informasi deskriptif: backend memakainya sebagai kata kunci berita
+kalau data RDTR tidak punya kecamatan. Nilainya tidak pernah ikut dihitung dalam skor.
+
 ## Menjalankan
 
 ```bash
