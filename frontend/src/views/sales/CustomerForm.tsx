@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useCreateCustomer, useUpdateCustomer } from '../../controllers/useSales'
+import { useConvertLead, useCreateCustomer, useUpdateCustomer } from '../../controllers/useSales'
 import {
   CUSTOMER_ADDRESS_MAX_LENGTH,
   CUSTOMER_CONTACT_MAX_LENGTH,
@@ -18,10 +18,11 @@ import { FormPanel } from '../components/RecordControls'
 
 // Satu formulir untuk tiga keperluan: pelanggan baru, ubah pelanggan, dan
 // pelanggan baru yang diisi dari data prospek.
-export function CustomerForm({ customer, initial, title, onSaved, onCancel }: {
+export function CustomerForm({ customer, initial, title, convertLeadId, onSaved, onCancel }: {
   customer: Customer | null
   initial?: CustomerFormValues
   title: string
+  convertLeadId?: string
   onSaved?: (saved: Customer) => void
   onCancel?: () => void
 }) {
@@ -30,7 +31,8 @@ export function CustomerForm({ customer, initial, title, onSaved, onCancel }: {
   )
   const createCustomer = useCreateCustomer()
   const updateCustomer = useUpdateCustomer()
-  const saving = customer ? updateCustomer : createCustomer
+  const convertLead = useConvertLead()
+  const saving = customer ? updateCustomer : convertLeadId ? convertLead : createCustomer
   const isPrefilled = customer !== null || initial !== undefined
 
   const update = (key: keyof CustomerFormValues) => (event: ChangeEvent<HTMLInputElement>) =>
@@ -40,6 +42,10 @@ export function CustomerForm({ customer, initial, title, onSaved, onCancel }: {
     event.preventDefault()
     if (customer) {
       updateCustomer.mutate({ id: customer.id, values }, { onSuccess: (saved) => onSaved?.(saved) })
+      return
+    }
+    if (convertLeadId) {
+      convertLead.mutate({ leadId: convertLeadId, values }, { onSuccess: (result) => onSaved?.(result.customer) })
       return
     }
     createCustomer.mutate(values, {

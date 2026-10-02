@@ -73,8 +73,14 @@ export interface Lead {
   source: string
   stage: LeadStage
   lastContactedAt: string | null
+  customerId: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface LeadConversion {
+  lead: Lead
+  customer: Customer
 }
 
 export interface LeadFilter {
