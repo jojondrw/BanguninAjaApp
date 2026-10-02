@@ -1,6 +1,6 @@
 # PROJECT HANDOFF — BanguninAja
 
-**Last updated:** 2026-10-02 · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
+**Last updated:** 2026-10-03 · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
 
 > Written to be handed to a teammate **and their own AI agent**. It states decisions and current state; the repo plus this doc should be enough for an agent to derive concrete tasks.
 
@@ -8,72 +8,79 @@
 
 ## TL;DR
 
-- **The core feature is now real.** `POST /api/site/evaluate` scores a site from actual GIS data (InaRISK hazards, DEM, WorldPop, roads/transit, POI, ZNT land value, construction cost index) through the Python service in `scoring/`. The stub only kicks in if that service isn't running.
-- **A fresh database is usable**: `go run ./cmd/seed` loads regions, units, a chart of accounts, and the scoring tables.
-- **`/lokasi` has a map**: click to pick a point, see saved sites as markers, link each evaluation to a project.
-- Verified end to end on 2026-10-02 (register → login → create project → evaluate on the map → score + risk flags + regulation, saved under the project).
-- Left: payment simulation and polish (§5).
+- **Site intelligence is real end to end.** `POST /api/site/evaluate` scores a point from actual GIS data through the Python service in `scoring/`. The data is a 267 MB bundle (not the 18 GB raw data), so the service can be hosted.
+- **Every ERP module has a screen**: projects (workspace with phases, permits, RAB, status), finance (budgets, cash, journal, ledger), billing (invoices, receivables, payables), sales (units, leads, customers, contracts, installments), procurement (requests, POs, goods receipts, vendors), inventory, HR.
+- **GIS extras**: compare 2–4 candidate sites side by side; map layers for hazard (multi, flood, earthquake, landslide), population density, and ZNT land price, rendered from the same bundle.
+- **UI** refreshed in an Apple-like style (SF Pro / Inter, segmented controls, command palette Ctrl/⌘ K). See `docs/requirements/frontend/aturan-ui.md`.
+- **CI** runs Go, React, and Python checks on every PR.
+- Left: on-chain payment simulation (Derick's), plus the backend gaps in §5.
 
 ---
 
-## 1. Current State (`main`, 2026-10-02)
+## 1. Current State (`main`, 2026-10-03)
 
 ### Backend (Go / Gin / GORM / PostGIS)
 | Area | Status |
 |---|---|
-| Auth | ✅ |
-| 13 business slices (CRUD, services, tests) | ✅ |
-| `regulation` + `cmd/import-rdtr` | ✅ real RDTR for 11 imported cities, simulated (`is_simulated`) elsewhere |
-| `news` (Google News RSS) | ✅ by RDTR district, or the regency/city from the scoring service elsewhere |
-| `site` → `POST /api/site/evaluate` | ✅ predictive + descriptive in one response; saves `project_id` |
-| `cmd/seed` | ✅ 531 regions, 14 units, 26 accounts, 5 dimensions, 4 profiles, trained weights |
-| `saved_location.project_id`, `GET /api/locations/saved?projectId=` | ✅ |
-| On-chain payment simulation | ❌ not started |
+| Auth, 13 business slices, `regulation`, `news` | ✅ |
+| `site` → `POST /api/site/evaluate` | ✅ predictive + descriptive; stores score, dimension scores, flood/earthquake index, ZNT price and the real risk flags (`saved_location.risk_flags`, jsonb) |
+| `site` → `GET /api/site/tiles/:layer/:z/:x/:y` | ✅ auth-protected proxy to the scoring service's map tiles |
+| `cmd/seed`, `cmd/migrate`, `cmd/import-rdtr` | ✅ |
+| Row locking on update/delete (billing, project) | ✅ fixed lost-update races found this round |
+| On-chain payment simulation | ❌ not started (Derick) |
 
 ### Scoring service (`scoring/`, Python / FastAPI)
-✅ `POST /score` from real data, trained on 1,489 sites. See `scoring/README.md` for how it works, how to run it, and the honest caveat about the learned weights.
+- `POST /score` → overall score, 5 dimension scores, risk flags, region, and `facts` (flood index, earthquake index, ZNT price).
+- `GET /tiles/{bahaya|banjir|gempabumi|longsor|penduduk|harga_tanah}/{z}/{x}/{y}.png` → XYZ tiles from the bundle (min zoom 7, land price 10).
+- Reads the **data bundle** (`BUNDLE_DIR`), built once by `build_bundle.py`. Trained on 1,489 sites. See `scoring/README.md`.
 
 ### Frontend (React / Vite / Tailwind / MapLibre)
-| Route | Page | Status |
-|---|---|---|
-| `/` | Overview (cross-project KPIs) | ✅ |
-| `/proyek` | Projects list + create form | ✅ |
-| `/keuangan` | Financial | ✅ |
-| `/lokasi` | Site evaluation with map, project selector, score, risk flags, regulation, news | ✅ |
+| Route | Page |
+|---|---|
+| `/` | Overview: KPIs, 12-month cash-flow chart, "Perlu perhatian" (overdue installments, pending requests, low stock, unpaid payroll), projects |
+| `/proyek`, `/proyek/:id` | Projects list + workspace (status transitions, edit/delete, phases, permits, RAB, site analysis, finance tabs) |
+| `/lokasi` | Evaluasi (map + layers + score + regulation + news) and Bandingkan (compare 2–4 saved sites, saved comparisons) |
+| `/keuangan` | Ringkasan, Anggaran, Kas, Jurnal, Buku besar |
+| `/tagihan` | Faktur, Piutang, Utang with payment recording |
+| `/penjualan` | Unit, Prospek, Pelanggan, Kontrak (+ installment payments) |
+| `/pengadaan` | Pesanan pembelian, Penerimaan barang, Vendor, Permintaan pembelian |
+| `/inventaris` | Stok dan mutasi, Material dan gudang, Aset dan alat (full CRUD) |
+| `/sdm` | Employees, attendance, payroll (edit/delete, SQL payroll summary) |
+
+Pages are lazy-loaded per route; a route-level error boundary keeps one broken page from blanking the app.
 
 ### Who built what (git authors)
-- **Jonathan Andrew Saleh** — auth, DB schema, Docker, ERP frontend shell + Overview/Financial
+- **Jonathan Andrew Saleh** — auth, DB schema, Docker, ERP frontend shell + Overview/Financial (first version)
 - **nathanaelmosesES (Moses)** — service/controller layer for all 13 slices
-- **AnthonyBudiarto** — regulation, news, `site/evaluate`, Location page *(which teammate owns this account is still unconfirmed)*
-- **draxmit (Derick)** — seed data, scoring service + training, map + project link, RDTR importer fix
+- **AnthonyBudiarto (Ian)** — regulation, news, `site/evaluate`, Location page
+- **draxmit (Derick)** — seed data, scoring service + training + data bundle, map + layers, project workspace, all ERP screens added in October, UI refresh, CI
 
 ---
 
 ## 2. Data Status
 
-5 of 6 layers are nationally complete, shared via Google Drive (`AOL SWE`). Regulasi/Zonasi is real for 11 RDTR cities and simulated elsewhere — its source (`gistaru.atrbpn.go.id`) has been unreachable since mid-September, so it is **never part of the score**, only shown as descriptive context.
+5 of 6 layers are nationally complete. Raw data is on Google Drive (`AOL SWE`); the scoring service only needs **`scoring-bundle.zip`** (239 MB) from the same Drive — not committed to GitHub because the repo is public and the bundle contains GADM-derived boundaries (licence forbids redistribution) and ATR/BPN ZNT data.
 
-Data preprocessing done for the seed: GADM coded Kalimantan Utara as 64 (Kaltim's code) → fixed to 65 with BPS codes for its 5 regencies; "Danau Limboto" (a lake listed as a regency) dropped. ZNT values above Rp500 jt/m² (the int32-overflow artifact) are ignored by the scoring service.
+Regulasi/Zonasi is real for 11 RDTR cities and simulated elsewhere (source unreachable since mid-September), so it is **never scored**, only shown as context.
+
+Preprocessing: Kalimantan Utara recoded to 65 with BPS regency codes; "Danau Limboto" dropped; ZNT values above Rp500 jt/m² (int32 overflow artifact) ignored.
 
 ---
 
 ## 3. Scoring Design (frozen, implemented)
 
-- **Predictive** = weighted sum of 5 dimensions (0–100 each, percentile against a national sample). Weights learned per building profile by non-negative regression on `log1p(pop_5km / (same_profile_facilities_5km + 1))`, then shrunk halfway toward equal weights (each dimension ≥ 10%) because that target shares population with the demography dimension. Current weights are in `backend/cmd/seed/data/scoring.json`.
-- **Descriptive** = regulation + news, shown beside the score, never scored.
-- Risk flags (high/medium) for flood, earthquake, landslide, tsunami, liquefaction, volcano, steep slope, and out-of-coverage points.
+- **Predictive** = weighted sum of 5 dimensions (0–100 each, percentile against a national sample). Weights learned per building profile by non-negative regression on `log1p(pop_5km / (same_profile_facilities_5km + 1))`, shrunk halfway toward equal weights (each dimension ≥ 10%). Weights are in `backend/cmd/seed/data/scoring.json`.
+- **Descriptive** = regulation + news, beside the score, never scored.
+- Risk flags (high/medium): flood, earthquake, landslide, tsunami, liquefaction, volcano, steep slope, out of coverage.
 
 ```text
-POST /api/site/evaluate   (auth required)
+POST /api/site/evaluate   (auth)
   in:  project_id?, latitude, longitude, building_profile_id, name
-  out: saved_location_id,
-       predictive:  { overall_score, dimension_scores[{dimension_code, value, explanation}], risk_flags[{code, severity, message}] },
-       descriptive: { regulasi: {zona, kdb, klb, is_simulated}, news: [{title, url, source, published_at}] }
+  out: saved_location_id, predictive {overall_score, dimension_scores[], risk_flags[]}, descriptive {regulasi, news[]}
 
-POST /score   (internal, scoring/ service)
+POST /score   (internal scoring service)
   in:  latitude, longitude, building_profile_code   (housing | hospital | mall | entertainment)
-  out: overall_score, dimension_scores[], risk_flags[], region (GADM regency/city or null — used only for the news query)
-dimension_code ∈ fisik_lingkungan | infrastruktur | demografi_sosial | pasar_kompetisi | finansial_proyek
+  out: overall_score, dimension_scores[], risk_flags[], region, facts {flood_index, earthquake_index, land_price_per_sqm}
 ```
 
 ---
@@ -83,42 +90,41 @@ dimension_code ∈ fisik_lingkungan | infrastruktur | demografi_sosial | pasar_k
 ```bash
 cp .env.example .env                                    # set JWT_ACCESS_SECRET
 docker compose up -d
-docker compose exec backend go run ./cmd/migrate
+docker compose exec backend go run ./cmd/migrate        # run again after every pull
 docker compose exec backend go run ./cmd/seed
-docker compose run --rm -v "/path/to/BanguninAja/data/raw/rdtr:/rdtr" backend go run ./cmd/import-rdtr -dir /rdtr   # optional
-# scoring service (needs the GIS data, ~18 GB, from the Drive):
-cd scoring && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
-DATA_DIR=/path/to/BanguninAja/data/raw .venv/Scripts/uvicorn banguninaja_scoring.app:app --port 8090
-# in .env: SCORE_SERVICE_URL=http://host.docker.internal:8090  SCORE_SERVICE_TIMEOUT=15s
+# scoring: unzip scoring-bundle.zip (Drive) into scoring/bundle, then either
+docker compose --profile scoring up -d scoring          # SCORE_SERVICE_URL=http://scoring:8090
+# or locally: cd scoring && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
+#             BUNDLE_DIR=bundle .venv/Scripts/uvicorn banguninaja_scoring.app:app --port 8090
+# in .env: SCORE_SERVICE_TIMEOUT=15s
 cd frontend && npm install && npm run dev
 ```
 
 Gotchas seen on Derick's laptop:
-- A Windows PostgreSQL service on port 5432 collides with the compose database. Stop it or remap the compose port.
-- Some networks cut Go's TLS 1.3 handshake (`go mod download` → `EOF` while `curl` works). Workaround used: a local module mirror (`GOPROXY=file://...`) built from `go.sum`.
+- A Windows PostgreSQL service on 5432 collides with the compose database — stop it or remap the port.
+- Some networks cut Go's TLS 1.3 handshake (`go mod download` → `EOF`). Workaround: a local module mirror (`GOPROXY=file://...`).
 - Another app on `[::1]:5173` hijacked `localhost:5173`; use `127.0.0.1` and add it to `CORS_ALLOWED_ORIGINS`.
+
+**Demo check**: fresh clone → migrate + seed → register → create a project → evaluate a point on the map → the explanations must **not** end with "(data simulasi)" (that means the stub answered).
 
 ---
 
 ## 5. What's Left
 
-| # | Task | Why | Priority |
+| # | Task | Notes | Priority |
 |---|---|---|---|
-| B1 | `finance` budget query calls `make_date(bigint, …)` → every `GET /api/finance/budgets` returns 500; Overview's "Serapan anggaran" card always fails | Visible on the dashboard | ✅ fixed (#8) |
-| B2 | Two concurrent `/auth/refresh` calls (React StrictMode, or parallel 401 retries) — the second presents a just-rotated token and logs the user out on reload | Users get bounced to the login page | ✅ fixed (#8) |
-| N1 | News is only fetched when the regulation lookup returns a district, and simulated regulation has none — so the news panel is empty almost everywhere | Descriptive panel looks broken in the demo | ✅ done (#10) — falls back to the regency/city from the scoring service |
-| N2 | `/proyek` has no "create project" form (projects can only be created via the API) | Demo needs a project to link sites to | ✅ done (#9) |
-| N3 | On-chain payment simulation (billing: QR request → buyer pays from own wallet on testnet → verify via block-explorer API) | Independent, Derick's | P2 |
-| N4 | Per-project workspace (Overview / Site / Financial as tabs inside one project) | Polish | P3 |
-| N5 | The scoring service needs the ~18 GB dataset next to it, so it only runs on a machine that has the Drive data | Deployment beyond a laptop | P3 |
-
-**Demo check**: on a fresh clone, migrate + seed → register → create a project → evaluate a point on the map → the explanations must **not** end with "(data simulasi)" (that means the stub answered, i.e. the scoring service isn't reachable).
+| N3 | On-chain payment simulation | Derick's. Plugs into `/tagihan` (billing). Billing has no per-payment history table yet (only a running paid total) — the simulation will likely need one | P1 |
+| G1 | Receiving goods doesn't move stock | `/pengadaan` offers a manual "Catat stok masuk" per receipt; automatic posting would be a backend change in procurement | P3 |
+| G2 | Cash transactions don't post journal entries | Cash and the ledger are separate books; the UI says so | P3 |
+| G3 | Receivables/payables have no project, contract, or PO link; an invoice and a receivable can record the same debt twice | Billing data model | P3 |
+| G4 | Leads aren't linked to the customer created from them | Sales data model | P3 |
+| G5 | Dropdowns (materials, warehouses, parent assets, active employees) and some name lookups in procurement/billing tables still load at most 100 records | Stock tables already get names from the backend (#34); the rest needs searchable selects or joins | P3 |
 
 ---
 
 ## 6. Don't Touch
 
-- `auth/*` and the login/session frontend (except bug B2).
+- `auth/*` and the login/session frontend.
 - The `site` slice's stub fallback — it keeps the demo alive if the scoring service is down.
 - `scoring/train.py`'s refusal to bulk-query the live ATR/BPN server.
 - The RDTR scraper's throttling in `BanguninAja/scripts/ambil_rdtr.py`.
@@ -127,6 +133,5 @@ Gotchas seen on Derick's laptop:
 
 ## 7. Open Questions
 
-- **Who is `AnthonyBudiarto`?** Confirm which teammate owns this git account.
 - New deadline (the 2026-09-27 target has passed).
-- Sales / Procurement / HR / Inventory screens: backend exists, no frontend — cut or later?
+- Has `scoring-bundle.zip` been uploaded to the Drive for the team?
