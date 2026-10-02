@@ -252,45 +252,47 @@ export function EmployeesSection({ projects, projectName, today }: {
                 header: 'Aksi',
                 align: 'right',
                 cell: (row) => {
-                  const isBusy = asking?.id === row.id
+                  const isDeactivating = isAsking(row, 'deactivate')
+                  const isDeleting = isAsking(row, 'delete')
                   const isSavingLeftDate =
                     setEmployeeLeftDate.isPending && setEmployeeLeftDate.variables.employee.id === row.id
+                  const canDeactivate = row.leftDate === null && !isDeleting
+                  const canReactivate = row.leftDate !== null && !isDeleting
 
                   return (
                     <ActionGroup>
-                      {isBusy ? null : (
+                      {isDeactivating || isDeleting ? null : (
                         <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
                       )}
-                      {row.leftDate === null ? (
-                        isAsking(row, 'delete') ? null : (
-                          <ConfirmAction
-                            label="Nonaktifkan"
-                            srLabel={row.name}
-                            confirmLabel="Simpan tanggal keluar"
-                            pendingLabel="Menyimpan"
-                            tone="primary"
-                            isAsking={isAsking(row, 'deactivate')}
-                            isPending={isSavingLeftDate}
-                            onAsk={() => ask(row, 'deactivate')}
-                            onCancel={() => setAsking(null)}
-                            onConfirm={() => deactivate(row)}
-                          >
-                            <label htmlFor={`employee-left-${row.id}`} className="text-xs text-slate-700">
-                              Hari kerja terakhir
-                            </label>
-                            <input
-                              id={`employee-left-${row.id}`}
-                              type="date"
-                              required
-                              autoFocus
-                              min={inputDate(row.joinedDate)}
-                              value={leftDate}
-                              onChange={(event) => setLeftDate(event.target.value)}
-                              className={`${CONTROL_CLASS} h-7 px-2 text-xs`}
-                            />
-                          </ConfirmAction>
-                        )
-                      ) : isBusy ? null : (
+                      {canDeactivate ? (
+                        <ConfirmAction
+                          label="Nonaktifkan"
+                          srLabel={row.name}
+                          confirmLabel="Simpan tanggal keluar"
+                          pendingLabel="Menyimpan"
+                          tone="primary"
+                          isAsking={isDeactivating}
+                          isPending={isSavingLeftDate}
+                          onAsk={() => ask(row, 'deactivate')}
+                          onCancel={() => setAsking(null)}
+                          onConfirm={() => deactivate(row)}
+                        >
+                          <label htmlFor={`employee-left-${row.id}`} className="text-xs text-slate-700">
+                            Hari kerja terakhir
+                          </label>
+                          <input
+                            id={`employee-left-${row.id}`}
+                            type="date"
+                            required
+                            autoFocus
+                            min={inputDate(row.joinedDate)}
+                            value={leftDate}
+                            onChange={(event) => setLeftDate(event.target.value)}
+                            className={`${CONTROL_CLASS} h-7 px-2 text-xs`}
+                          />
+                        </ConfirmAction>
+                      ) : null}
+                      {canReactivate ? (
                         <TextAction
                           label="Aktifkan lagi"
                           srLabel={row.name}
@@ -298,8 +300,8 @@ export function EmployeesSection({ projects, projectName, today }: {
                           pendingLabel="Menyimpan"
                           onClick={() => reactivate(row)}
                         />
-                      )}
-                      {isAsking(row, 'deactivate') ? null : (
+                      ) : null}
+                      {isDeactivating ? null : (
                         <ConfirmAction
                           label="Hapus"
                           srLabel={row.name}
