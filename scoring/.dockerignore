@@ -1,0 +1,6 @@
+.venv
+__pycache__
+.pytest_cache
+tests
+bundle
+model/training_points.csv

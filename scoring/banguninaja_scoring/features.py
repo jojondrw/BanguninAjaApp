@@ -4,8 +4,7 @@ from . import config
 from .layers import (
     ConstructionCost,
     Elevation,
-    LandValue,
-    LineLayer,
+    LandPrice,
     Population,
     Raster,
     load_pois,
@@ -17,27 +16,26 @@ log = logging.getLogger(__name__)
 
 class FeatureExtractor:
     def __init__(self):
-        raw = config.data_path
-        log.info("loading GIS layers from %s", config.DATA_DIR)
-        self.hazard_multi = Raster(raw("inarisk_wcs", "inarisk_multi_indonesia.tif"))
-        self.hazards = {
-            name: Raster(raw("inarisk_wcs", f"inarisk_{name}_indonesia.tif")) for name in config.HAZARDS
-        }
-        self.elevation = Elevation(raw("dem_copernicus30m_indonesia_2026.tif"))
-        self.population = Population(raw("worldpop_idn_2020.tif"))
-        self.roads = LineLayer(raw("jaringan_transportasi_indonesia_2026.gpkg"), "jalan")
-        self.transit = load_transit(raw("jaringan_transportasi_indonesia_2026.gpkg"))
-        self.pois = load_pois(raw("poi_kompetitor_indonesia_2026.gpkg"))
-        self.cost = ConstructionCost(raw("gadm41_indonesia.gpkg"), raw("bps_ikk_indonesia_2025.csv"))
-        self.land = LandValue(raw("znt_atrbpn_indonesia.gpkg"))
-        log.info("GIS layers ready (ZNT local=%s)", self.land.local_available)
+        bundle = config.bundle_path
+        log.info("loading data bundle from %s", config.BUNDLE_DIR)
+        hazard_scale = 1 / config.HAZARD_SCALE
+        self.hazard_multi = Raster(bundle("hazard_multi.tif"), scale=hazard_scale)
+        self.hazards = {name: Raster(bundle(f"hazard_{name}.tif"), scale=hazard_scale) for name in config.HAZARDS}
+        self.elevation = Elevation(bundle("dem.tif"))
+        self.population = Population(bundle("population.tif"))
+        self.roads = Raster(bundle("road_distance.tif"))
+        self.land = LandPrice(bundle("land_price.tif"))
+        self.transit = load_transit(bundle("transit.gpkg"))
+        self.pois = load_pois(bundle("poi.gpkg"))
+        self.cost = ConstructionCost(bundle("regions.gpkg"), bundle("ikk.csv"))
+        log.info("data bundle ready")
 
-    def extract(self, lon: float, lat: float, with_land_price: bool = True) -> dict:
+    def extract(self, lon: float, lat: float) -> dict:
         features = {"lon": lon, "lat": lat}
         features.update(self._physical(lon, lat))
         features.update(self._access(lon, lat))
         features.update(self._people_and_market(lon, lat))
-        features.update(self._finance(lon, lat, with_land_price))
+        features.update(self._finance(lon, lat))
         return features
 
     def _physical(self, lon: float, lat: float) -> dict:
@@ -50,7 +48,7 @@ class FeatureExtractor:
 
     def _access(self, lon: float, lat: float) -> dict:
         return {
-            "road_dist_m": self.roads.nearest_m(lon, lat),
+            "road_dist_m": self.roads.value_at(lon, lat),
             "transit_dist_m": self.transit.nearest_m(lon, lat),
             "hospital_dist_m": self.pois.hospitals.nearest_m(lon, lat),
         }
@@ -66,13 +64,7 @@ class FeatureExtractor:
             result[f"competitors_5km_{profile}"] = index.count_within(lon, lat, config.TARGET_RADIUS_M)
         return result
 
-    def _finance(self, lon: float, lat: float, with_land_price: bool) -> dict:
+    def _finance(self, lon: float, lat: float) -> dict:
         ikk, region = self.cost.lookup(lon, lat)
-        result = {"ikk": ikk, "region": region, "land_price": None, "land_source": None}
-        if not with_land_price:
-            return result
-        try:
-            result["land_price"], result["land_source"] = self.land.price_at(lon, lat)
-        except Exception as error:
-            log.warning("land value lookup failed at %.5f,%.5f: %s", lat, lon, error)
-        return result
+        price = self.land.price_at(lon, lat)
+        return {"ikk": ikk, "region": region, "land_price": price, "land_source": "ZNT" if price else None}

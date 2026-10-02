@@ -15,39 +15,61 @@ out: overall_score, dimension_scores[{dimension_code, value, explanation}], risk
 `region` hanya informasi deskriptif: backend memakainya sebagai kata kunci berita
 kalau data RDTR tidak punya kecamatan. Nilainya tidak pernah ikut dihitung dalam skor.
 
+## Data bundle
+
+Layanan membaca **bundle data ringkas** (267 MB, zip 239 MB), bukan 18 GB data mentah.
+
+Cara cepat: unduh `scoring-bundle.zip` dari Google Drive "AOL SWE", ekstrak ke
+`scoring/` sehingga isinya ada di `scoring/bundle/` (folder hasil ekstrak bernama
+`scoring-bundle`, ganti namanya jadi `bundle`). Bundle tidak di-commit dan tidak
+diunggah ke GitHub: isinya turunan GADM (lisensi melarang redistribusi tanpa izin)
+dan data ZNT ATR/BPN, sedangkan repo ini publik.
+
+Membangun ulang dari data mentah (`data/raw` repo BanguninAja). Langkah `roads`
+(±20 menit) dan `land` (±40 menit) paling lama; jalankan di proses terpisah dengan
+`--only` supaya paralel:
+
+```bash
+DATA_DIR="/path/ke/BanguninAja/data/raw" .venv/Scripts/python build_bundle.py --out bundle
+.venv/Scripts/python build_bundle.py --out bundle --only roads land   # sebagian langkah saja
+```
+
+| Berkas bundle | Dari data mentah | Dipakai untuk |
+|---|---|---|
+| `hazard_{multi,banjir,gempabumi,longsor,tsunami,likuefaksi,gunungapi}.tif` | InaRISK WCS 250 m, disimpan uint8 (indeks × 250) | Dimensi fisik + risk flag |
+| `dem.tif` | Copernicus DEM | Kemiringan lahan |
+| `population.tif` | WorldPop 90 m dijumlahkan 3×3 (~275 m, total penduduk tetap) | Dimensi demografi |
+| `road_distance.tif` | Jaringan jalan (2 GB) → jarak ke jalan terdekat, grid 0,001° (~111 m), maks 7 km | Infrastruktur |
+| `land_price.tif` | ZNT (7,6 GB) → Rp/m² per sel 0,001°, 0 = tanpa zona | Finansial |
+| `poi.gpkg`, `transit.gpkg` | POI OSM, simpul transit | Pesaing, fasilitas harian, RS, transit |
+| `regions.gpkg`, `ikk.csv` | GADM kab/kota (disederhanakan), IKK BPS | Indeks kemahalan konstruksi, nama wilayah |
+
+Tidak ada lagi query live ke server ATR/BPN saat runtime.
+
 ## Menjalankan
+
+Lokal:
 
 ```bash
 cd scoring
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt        # Linux/macOS: .venv/bin/pip
-DATA_DIR="/path/ke/BanguninAja/data/raw" .venv/Scripts/uvicorn banguninaja_scoring.app:app --port 8090
+BUNDLE_DIR=bundle .venv/Scripts/uvicorn banguninaja_scoring.app:app --port 8090
 ```
+
+Docker (dari root repo): `docker compose --profile scoring up -d scoring` — bundle
+dibaca dari `scoring/bundle` (atau `SCORING_BUNDLE_DIR` di `.env`).
 
 Lalu di `.env` backend:
 
 ```
-SCORE_SERVICE_URL=http://host.docker.internal:8090
+SCORE_SERVICE_URL=http://scoring:8090              # kalau scoring jalan via compose
+SCORE_SERVICE_URL=http://host.docker.internal:8090 # kalau scoring jalan di host
 SCORE_SERVICE_TIMEOUT=15s
 ```
 
-`host.docker.internal` dipakai karena backend jalan di Docker sedangkan layanan
-ini jalan di host. Kalau `SCORE_SERVICE_URL` kosong atau layanan mati, backend
-diam-diam memakai skor stub — cek penjelasan dimensi: stub selalu diakhiri
-"(data simulasi)", skor asli tidak.
-
-`DATA_DIR` adalah folder `data/raw` repo data BanguninAja (atau Google Drive
-"AOL SWE"). Berkas yang dibaca:
-
-| Berkas | Dipakai untuk |
-|---|---|
-| `inarisk_wcs/inarisk_{multi,banjir,gempabumi,longsor,tsunami,likuefaksi,gunungapi}_indonesia.tif` | Dimensi fisik + risk flag |
-| `dem_copernicus30m_indonesia_2026.tif` | Kemiringan lahan |
-| `worldpop_idn_2020.tif` | Dimensi demografi |
-| `jaringan_transportasi_indonesia_2026.gpkg` | Jarak jalan & simpul transit |
-| `poi_kompetitor_indonesia_2026.gpkg` | Pesaing sejenis, fasilitas harian, rumah sakit |
-| `znt_atrbpn_indonesia.gpkg` | Harga tanah (kalau tidak ada: query live ke ATR/BPN per permintaan) |
-| `gadm41_indonesia.gpkg`, `bps_ikk_indonesia_2025.csv` | Indeks kemahalan konstruksi per kab/kota |
+Kalau `SCORE_SERVICE_URL` kosong atau layanan mati, backend diam-diam memakai skor
+stub — cek penjelasan dimensi: stub selalu diakhiri "(data simulasi)", skor asli tidak.
 
 ## Cara menghitung
 
@@ -75,14 +97,14 @@ tetap selalu muncul sebagai risk flag terpisah, apa pun bobotnya.
 ## Melatih ulang
 
 ```bash
-DATA_DIR=... .venv/Scripts/python train.py              # sampel baru + ekstraksi (~4 menit)
+BUNDLE_DIR=bundle .venv/Scripts/python train.py         # sampel baru + ekstraksi dari bundle
 .venv/Scripts/python train.py --reuse-points            # pakai ulang model/training_points.csv
 ```
 
 Menulis `model/model.json` dan menyalin bobot ke `backend/cmd/seed/data/scoring.json`;
 jalankan ulang `go run ./cmd/seed` supaya tabel `weight` ikut terbarui. Training
-tidak pernah memakai query ZNT live (dulu scraping massal pernah menjatuhkan
-server ATR/BPN) — tanpa berkas ZNT lokal, harga tanah dilewati.
+dan layanan memakai bundle yang sama, jadi persentil di model konsisten dengan
+nilai yang dibaca saat runtime.
 
 ## Test
 

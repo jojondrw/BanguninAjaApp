@@ -33,6 +33,15 @@ services:
       database:
         condition: service_healthy
 
+  scoring:
+    build:
+      context: ./scoring
+    profiles: ["scoring"]
+    ports:
+      - "8090:8090"
+    volumes:
+      - ${SCORING_BUNDLE_DIR:-./scoring/bundle}:/bundle:ro
+
 volumes:
   postgres_data:
   go_modules:
