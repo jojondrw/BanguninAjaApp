@@ -291,3 +291,230 @@ export interface BudgetItem {
 export interface BudgetItemPage extends Page<BudgetItem> {
   grandTotal: number
 }
+
+// Perpindahan status yang diterima backend, disalin dari projectTransitions di
+// internal/project/service.go. Selesai dan Batal adalah status akhir.
+export const PROJECT_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
+  planning: ['ongoing', 'cancelled'],
+  ongoing: ['on_hold', 'completed', 'cancelled'],
+  on_hold: ['ongoing', 'cancelled'],
+  completed: [],
+  cancelled: [],
+}
+
+export const PROJECT_STATUS_DESCRIPTION: Record<ProjectStatus, string> = {
+  planning: 'Proyek masih disiapkan. Tahap, izin, dan RAB disusun sebelum pekerjaan dimulai.',
+  ongoing: 'Pekerjaan lapangan sedang berjalan. Progres diperbarui lewat tahap proyek.',
+  on_hold: 'Pekerjaan dihentikan sementara dan bisa dilanjutkan lagi.',
+  completed: 'Semua tahap sudah 100% dan proyek ditutup. Tahap dan RAB tidak bisa diubah lagi.',
+  cancelled: 'Proyek dihentikan permanen. Tahap dan RAB tidak bisa diubah lagi.',
+}
+
+// Perpindahan yang tidak bisa dibalik (misalnya Perencanaan ke Berjalan, atau
+// ke status akhir) perlu konfirmasi kedua sebelum dikirim.
+export function isReversibleTransition(from: ProjectStatus, to: ProjectStatus): boolean {
+  return PROJECT_TRANSITIONS[to].includes(from)
+}
+
+export function transitionLabel(from: ProjectStatus, to: ProjectStatus): string {
+  switch (to) {
+    case 'ongoing':
+      return from === 'on_hold' ? 'Lanjutkan pengerjaan' : 'Mulai pengerjaan'
+    case 'on_hold':
+      return 'Tunda proyek'
+    case 'completed':
+      return 'Tandai selesai'
+    case 'cancelled':
+      return 'Batalkan proyek'
+    default:
+      return `Ubah ke ${PROJECT_STATUS_LABEL[to]}`
+  }
+}
+
+// State navigasi setelah proyek dihapus, supaya /proyek bisa memberi tahu
+// proyek mana yang baru saja hilang dari daftar.
+export interface DeletedProjectState {
+  deletedProject: string
+}
+
+export function deletedProjectName(state: unknown): string | null {
+  if (typeof state === 'object' && state !== null && 'deletedProject' in state) {
+    const name = (state as DeletedProjectState).deletedProject
+    return typeof name === 'string' ? name : null
+  }
+  return null
+}
+
+// Kebalikan toApiDate: tanggal dari backend ("2026-11-01T00:00:00Z") menjadi
+// nilai isian bertipe date.
+export function fromApiDate(value: string | null): string {
+  return value ? value.slice(0, 10) : ''
+}
+
+export function projectFormValues(project: Project): ProjectFormValues {
+  return {
+    code: project.code,
+    name: project.name,
+    type: project.type,
+    contractValue: String(project.contractValue),
+    startDate: fromApiDate(project.startDate),
+    targetEndDate: fromApiDate(project.targetEndDate),
+  }
+}
+
+// PUT /projects/:id menimpa semua kolom, termasuk wilayah. Wilayah yang tidak
+// dikirim berarti dikosongkan, jadi wilayah lama selalu ikut dikirim.
+export function toProjectUpdateRequest(values: ProjectFormValues, regionId: string): ProjectRequest {
+  return { ...toProjectRequest(values), regionId: regionId === '' ? undefined : regionId }
+}
+
+export type RegionType = 'province' | 'city' | 'regency' | 'district'
+
+export interface Region {
+  id: string
+  code: string
+  name: string
+  type: RegionType
+  parentId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export const REGION_TYPE_LABEL: Record<RegionType, string> = {
+  province: 'Provinsi',
+  city: 'Kota',
+  regency: 'Kabupaten',
+  district: 'Kecamatan',
+}
+
+export const REGION_SEARCH_MIN_LENGTH = 2
+
+export function regionLabel(region: Region): string {
+  return `${region.name} (${REGION_TYPE_LABEL[region.type] ?? region.type})`
+}
+
+export const PROGRESS_MAX = 100
+
+export interface PhaseEditValues extends PhaseFormValues {
+  sortOrder: string
+}
+
+export function phaseEditValues(phase: ProjectPhase): PhaseEditValues {
+  return {
+    name: phase.name,
+    sortOrder: String(phase.sortOrder),
+    startDate: fromApiDate(phase.startDate),
+    targetEndDate: fromApiDate(phase.targetEndDate),
+    progress: String(phase.progress),
+  }
+}
+
+export function toPhaseEditRequest(values: PhaseEditValues): PhaseRequest {
+  return toPhaseRequest(values, Number(values.sortOrder))
+}
+
+// Progres tahap wajib bilangan bulat 0 sampai 100 (binding min=0,max=100).
+export function isValidProgress(value: string): boolean {
+  const progress = Number(value)
+  return value !== '' && Number.isInteger(progress) && progress >= 0 && progress <= PROGRESS_MAX
+}
+
+export function permitFormValues(permit: Permit): PermitFormValues {
+  return {
+    type: permit.type,
+    number: permit.number,
+    status: permit.status,
+    issuedDate: fromApiDate(permit.issuedDate),
+    validUntil: fromApiDate(permit.validUntil),
+  }
+}
+
+export interface PermitIssueValues {
+  number: string
+  issuedDate: string
+  validUntil: string
+}
+
+export function permitIssueValues(permit: Permit, today: string): PermitIssueValues {
+  return {
+    number: permit.number,
+    issuedDate: fromApiDate(permit.issuedDate) || today,
+    validUntil: fromApiDate(permit.validUntil),
+  }
+}
+
+// Menandai izin terbit tetap lewat PUT penuh, jadi jenis izin ikut dikirim.
+export function issuedPermitValues(permit: Permit, values: PermitIssueValues): PermitFormValues {
+  return { ...permitFormValues(permit), ...values, status: 'issued' }
+}
+
+export interface BudgetItemFilter {
+  search?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface BudgetItemRequest {
+  code: string
+  description: string
+  volume: number
+  unitOfMeasureId: string
+  unitPrice: number
+}
+
+export interface BudgetItemFormValues {
+  code: string
+  description: string
+  volume: string
+  unitOfMeasureId: string
+  unitPrice: string
+}
+
+export const EMPTY_BUDGET_ITEM_FORM: BudgetItemFormValues = {
+  code: '',
+  description: '',
+  volume: '',
+  unitOfMeasureId: '',
+  unitPrice: '',
+}
+
+// Batas panjang mengikuti tag binding BudgetItemRequest di backend.
+export const BUDGET_ITEM_CODE_MAX_LENGTH = 20
+export const BUDGET_ITEM_DESCRIPTION_MAX_LENGTH = 200
+
+const VOLUME_PRECISION = 100
+
+export function budgetItemFormValues(item: BudgetItem): BudgetItemFormValues {
+  return {
+    code: item.code,
+    description: item.description,
+    volume: String(item.volume),
+    unitOfMeasureId: item.unitOfMeasureId,
+    unitPrice: String(item.unitPrice),
+  }
+}
+
+export function toBudgetItemRequest(values: BudgetItemFormValues): BudgetItemRequest {
+  return {
+    code: values.code.trim(),
+    description: values.description.trim(),
+    volume: values.volume === '' ? 0 : Number(values.volume),
+    unitOfMeasureId: values.unitOfMeasureId,
+    unitPrice: values.unitPrice === '' ? 0 : Number(values.unitPrice),
+  }
+}
+
+// Sama dengan hitungan server: volume dibulatkan dua desimal, lalu jumlah
+// adalah volume kali harga satuan dibulatkan ke rupiah terdekat.
+export function budgetItemTotal(values: BudgetItemFormValues): number | null {
+  const volume = Number(values.volume)
+  const unitPrice = Number(values.unitPrice)
+  if (values.volume === '' || values.unitPrice === '' || !Number.isFinite(volume) || !Number.isFinite(unitPrice)) {
+    return null
+  }
+  return Math.round((Math.round(volume * VOLUME_PRECISION) / VOLUME_PRECISION) * unitPrice)
+}
+
+export function budgetShare(total: number, grandTotal: number): number {
+  return grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0
+}

@@ -104,7 +104,7 @@ func (s *service) GetInvoice(ctx context.Context, id uuid.UUID) (InvoiceResponse
 }
 
 func (s *service) CreateInvoice(ctx context.Context, request InvoiceRequest) (InvoiceResponse, error) {
-	if err := s.ensureParty(ctx, request.PartyType, request.PartyID); err != nil {
+	if err := ensureParty(ctx, s.repository, request.PartyType, request.PartyID); err != nil {
 		return InvoiceResponse{}, err
 	}
 
@@ -118,34 +118,44 @@ func (s *service) CreateInvoice(ctx context.Context, request InvoiceRequest) (In
 }
 
 func (s *service) UpdateInvoice(ctx context.Context, id uuid.UUID, request InvoiceRequest) (InvoiceResponse, error) {
-	invoice, err := s.repository.FindInvoice(ctx, id)
-	if err != nil {
-		return InvoiceResponse{}, invoiceReadErrors.Resolve(err)
-	}
-	if request.Amount < invoice.PaidAmount {
-		return InvoiceResponse{}, errAmountBelowPaid
-	}
-	if err := s.ensureParty(ctx, request.PartyType, request.PartyID); err != nil {
-		return InvoiceResponse{}, err
-	}
-
 	today := s.today()
-	applyInvoiceRequest(&invoice, request, today)
-	if err := s.repository.SaveInvoice(ctx, &invoice); err != nil {
-		return InvoiceResponse{}, invoiceWriteErrors.Resolve(err)
+	var invoice Invoice
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		var err error
+		invoice, err = repository.LockInvoice(ctx, id)
+		if err != nil {
+			return invoiceReadErrors.Resolve(err)
+		}
+		if request.Amount < invoice.PaidAmount {
+			return errAmountBelowPaid
+		}
+		if err := ensureParty(ctx, repository, request.PartyType, request.PartyID); err != nil {
+			return err
+		}
+		applyInvoiceRequest(&invoice, request, today)
+		return invoiceWriteErrors.Resolve(repository.SaveInvoice(ctx, &invoice))
+	})
+	if err != nil {
+		return InvoiceResponse{}, apperror.From(err)
 	}
 	return newInvoiceResponse(invoice, today), nil
 }
 
 func (s *service) DeleteInvoice(ctx context.Context, id uuid.UUID) error {
-	invoice, err := s.repository.FindInvoice(ctx, id)
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		invoice, err := repository.LockInvoice(ctx, id)
+		if err != nil {
+			return invoiceReadErrors.Resolve(err)
+		}
+		if invoice.PaidAmount > 0 {
+			return errInvoiceHasPayment
+		}
+		return invoiceReadErrors.Resolve(repository.DeleteInvoice(ctx, id))
+	})
 	if err != nil {
-		return invoiceReadErrors.Resolve(err)
+		return apperror.From(err)
 	}
-	if invoice.PaidAmount > 0 {
-		return errInvoiceHasPayment
-	}
-	return invoiceReadErrors.Resolve(s.repository.DeleteInvoice(ctx, id))
+	return nil
 }
 
 func (s *service) PayInvoice(ctx context.Context, id uuid.UUID, request PaymentRequest) (InvoiceResponse, error) {
@@ -199,31 +209,41 @@ func (s *service) CreateReceivable(ctx context.Context, request ReceivableReques
 }
 
 func (s *service) UpdateReceivable(ctx context.Context, id uuid.UUID, request ReceivableRequest) (ReceivableResponse, error) {
-	receivable, err := s.repository.FindReceivable(ctx, id)
-	if err != nil {
-		return ReceivableResponse{}, receivableReadErrors.Resolve(err)
-	}
-	if request.Amount < receivable.PaidAmount {
-		return ReceivableResponse{}, errAmountBelowPaid
-	}
-
 	today := s.today()
-	applyReceivableRequest(&receivable, request, today)
-	if err := s.repository.SaveReceivable(ctx, &receivable); err != nil {
-		return ReceivableResponse{}, receivableWriteErrors.Resolve(err)
+	var receivable Receivable
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		var err error
+		receivable, err = repository.LockReceivable(ctx, id)
+		if err != nil {
+			return receivableReadErrors.Resolve(err)
+		}
+		if request.Amount < receivable.PaidAmount {
+			return errAmountBelowPaid
+		}
+		applyReceivableRequest(&receivable, request, today)
+		return receivableWriteErrors.Resolve(repository.SaveReceivable(ctx, &receivable))
+	})
+	if err != nil {
+		return ReceivableResponse{}, apperror.From(err)
 	}
 	return newReceivableResponse(receivable, today), nil
 }
 
 func (s *service) DeleteReceivable(ctx context.Context, id uuid.UUID) error {
-	receivable, err := s.repository.FindReceivable(ctx, id)
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		receivable, err := repository.LockReceivable(ctx, id)
+		if err != nil {
+			return receivableReadErrors.Resolve(err)
+		}
+		if receivable.PaidAmount > 0 {
+			return errReceivableHasPayment
+		}
+		return receivableReadErrors.Resolve(repository.DeleteReceivable(ctx, id))
+	})
 	if err != nil {
-		return receivableReadErrors.Resolve(err)
+		return apperror.From(err)
 	}
-	if receivable.PaidAmount > 0 {
-		return errReceivableHasPayment
-	}
-	return receivableReadErrors.Resolve(s.repository.DeleteReceivable(ctx, id))
+	return nil
 }
 
 func (s *service) PayReceivable(ctx context.Context, id uuid.UUID, request PaymentRequest) (ReceivableResponse, error) {
@@ -277,31 +297,41 @@ func (s *service) CreatePayable(ctx context.Context, request PayableRequest) (Pa
 }
 
 func (s *service) UpdatePayable(ctx context.Context, id uuid.UUID, request PayableRequest) (PayableResponse, error) {
-	payable, err := s.repository.FindPayable(ctx, id)
-	if err != nil {
-		return PayableResponse{}, payableReadErrors.Resolve(err)
-	}
-	if request.Amount < payable.PaidAmount {
-		return PayableResponse{}, errAmountBelowPaid
-	}
-
 	today := s.today()
-	applyPayableRequest(&payable, request, today)
-	if err := s.repository.SavePayable(ctx, &payable); err != nil {
-		return PayableResponse{}, payableWriteErrors.Resolve(err)
+	var payable Payable
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		var err error
+		payable, err = repository.LockPayable(ctx, id)
+		if err != nil {
+			return payableReadErrors.Resolve(err)
+		}
+		if request.Amount < payable.PaidAmount {
+			return errAmountBelowPaid
+		}
+		applyPayableRequest(&payable, request, today)
+		return payableWriteErrors.Resolve(repository.SavePayable(ctx, &payable))
+	})
+	if err != nil {
+		return PayableResponse{}, apperror.From(err)
 	}
 	return newPayableResponse(payable, today), nil
 }
 
 func (s *service) DeletePayable(ctx context.Context, id uuid.UUID) error {
-	payable, err := s.repository.FindPayable(ctx, id)
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		payable, err := repository.LockPayable(ctx, id)
+		if err != nil {
+			return payableReadErrors.Resolve(err)
+		}
+		if payable.PaidAmount > 0 {
+			return errPayableHasPayment
+		}
+		return payableReadErrors.Resolve(repository.DeletePayable(ctx, id))
+	})
 	if err != nil {
-		return payableReadErrors.Resolve(err)
+		return apperror.From(err)
 	}
-	if payable.PaidAmount > 0 {
-		return errPayableHasPayment
-	}
-	return payableReadErrors.Resolve(s.repository.DeletePayable(ctx, id))
+	return nil
 }
 
 func (s *service) PayPayable(ctx context.Context, id uuid.UUID, request PaymentRequest) (PayableResponse, error) {
@@ -318,8 +348,8 @@ func (s *service) PayPayable(ctx context.Context, id uuid.UUID, request PaymentR
 	return newPayableResponse(payable, today), nil
 }
 
-func (s *service) ensureParty(ctx context.Context, partyType string, partyID uuid.UUID) error {
-	exists, err := s.repository.PartyExists(ctx, partyType, partyID)
+func ensureParty(ctx context.Context, repository Repository, partyType string, partyID uuid.UUID) error {
+	exists, err := repository.PartyExists(ctx, partyType, partyID)
 	if err != nil {
 		return apperror.Internal(err)
 	}

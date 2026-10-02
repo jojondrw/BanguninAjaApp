@@ -10,6 +10,7 @@ import { RegisterPage } from './views/RegisterPage'
 
 // Halaman dimuat saat dibuka supaya muatan awal kecil. Masuk dan Daftar
 // tetap ikut paket utama karena itu layar pertama yang dilihat.
+const BillingPage = lazy(() => import('./views/BillingPage').then((module) => ({ default: module.BillingPage })))
 const FinancialPage = lazy(() => import('./views/FinancialPage').then((module) => ({ default: module.FinancialPage })))
 const HrPage = lazy(() => import('./views/HrPage').then((module) => ({ default: module.HrPage })))
 const InventoryPage = lazy(() => import('./views/InventoryPage').then((module) => ({ default: module.InventoryPage })))
@@ -40,6 +41,7 @@ export default function App() {
                 <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
                 <Route path="/proyek/:id" element={<RequireSession><ProjectWorkspacePage /></RequireSession>} />
                 <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
+              <Route path="/tagihan" element={<RequireSession><BillingPage /></RequireSession>} />
                 <Route path="/lokasi" element={<RequireSession><LocationPage /></RequireSession>} />
                 <Route path="/penjualan" element={<RequireSession><SalesPage /></RequireSession>} />
                 <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
