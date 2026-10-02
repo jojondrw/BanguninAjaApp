@@ -125,8 +125,8 @@ Semua di bawah `/api/inventory`.
 | GET, PUT, DELETE | `/materials/:id` | |
 | GET, POST | `/warehouses` | Filter `search`, `projectId` |
 | GET, PUT, DELETE | `/warehouses/:id` | |
-| GET | `/stocks` | Filter `materialId`, `warehouseId`. Sudah berisi kode dan nama material serta gudang |
-| GET, POST | `/stock-movements` | Filter `materialId`, `warehouseId`, `type`, `dateFrom`, `dateTo` dengan format `YYYY-MM-DD` |
+| GET | `/stocks` | Filter `materialId`, `warehouseId`. Sudah berisi kode dan nama material, kode satuan, serta gudang |
+| GET, POST | `/stock-movements` | Filter `materialId`, `warehouseId`, `type`, `dateFrom`, `dateTo` dengan format `YYYY-MM-DD`. Sudah berisi kode dan nama material, kode satuan, serta kode dan nama gudang asal dan tujuan |
 | GET | `/stock-movements/:id` | |
 
 ### Stok hanya berubah lewat mutasi
@@ -350,7 +350,8 @@ Semua di bawah `/api/hr`.
 | GET, PUT, DELETE | `/employees/:id` | |
 | GET, POST | `/attendances` | Filter `employeeId`, `projectId`, `status`, `dateFrom`, `dateTo`. Sudah berisi nama karyawan |
 | GET, PUT, DELETE | `/attendances/:id` | Jam ditulis `HH:MM` |
-| GET, POST | `/payrolls` | Filter `employeeId`, `period` (`YYYY-MM`), `paid` |
+| GET, POST | `/payrolls` | Filter `employeeId`, `projectId` (proyek karyawan), `period` (`YYYY-MM`), `paid` |
+| GET | `/payrolls/summary` | Filter `period`, `projectId`. `count`, `grossPay` (gaji pokok ditambah tunjangan), `netPay`, `paidNetPay`, `unpaidNetPay`, `unpaidCount` dijumlah dengan SQL dari semua slip yang cocok |
 | GET, PUT, DELETE | `/payrolls/:id` | |
 | PATCH | `/payrolls/:id/pay` | Menandai sudah dibayar |
 
