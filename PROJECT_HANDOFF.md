@@ -12,7 +12,7 @@
 - **A fresh database is usable**: `go run ./cmd/seed` loads regions, units, a chart of accounts, and the scoring tables.
 - **`/lokasi` has a map**: click to pick a point, see saved sites as markers, link each evaluation to a project.
 - Verified end to end on 2026-10-02 (register → login → create project → evaluate on the map → score + risk flags + regulation, saved under the project).
-- Left: two small bug fixes in flight (§5), news is empty outside the 11 RDTR cities, payment simulation, polish.
+- Left: merge PR #10 (news outside RDTR cities) after a browser check, payment simulation, polish (§5).
 
 ---
 
@@ -36,8 +36,8 @@
 ### Frontend (React / Vite / Tailwind / MapLibre)
 | Route | Page | Status |
 |---|---|---|
-| `/` | Overview (cross-project KPIs) | ✅ — budget card blocked by bug B1 (§5) |
-| `/proyek` | Projects list | ✅ — no "create project" form yet |
+| `/` | Overview (cross-project KPIs) | ✅ |
+| `/proyek` | Projects list + create form | ✅ |
 | `/keuangan` | Financial | ✅ |
 | `/lokasi` | Site evaluation with map, project selector, score, risk flags, regulation, news | ✅ |
 
@@ -104,10 +104,10 @@ Gotchas seen on Derick's laptop:
 
 | # | Task | Why | Priority |
 |---|---|---|---|
-| B1 | `finance` budget query calls `make_date(bigint, …)` → every `GET /api/finance/budgets` returns 500; Overview's "Serapan anggaran" card always fails | Visible on the dashboard | **P0 — fix in flight** (`fix/budget-query-and-session-refresh`) |
-| B2 | Two concurrent `/auth/refresh` calls (React StrictMode, or parallel 401 retries) — the second presents a just-rotated token and logs the user out on reload | Users get bounced to the login page | **P0 — fix in flight** (same branch) |
-| N1 | News is only fetched when the regulation lookup returns a district, and simulated regulation has none — so the news panel is empty almost everywhere | Descriptive panel looks broken in the demo | P1 |
-| N2 | `/proyek` has no "create project" form (projects can only be created via the API) | Demo needs a project to link sites to | P1 |
+| B1 | `finance` budget query calls `make_date(bigint, …)` → every `GET /api/finance/budgets` returns 500; Overview's "Serapan anggaran" card always fails | Visible on the dashboard | ✅ fixed (#8) |
+| B2 | Two concurrent `/auth/refresh` calls (React StrictMode, or parallel 401 retries) — the second presents a just-rotated token and logs the user out on reload | Users get bounced to the login page | ✅ fixed (#8) |
+| N1 | News is only fetched when the regulation lookup returns a district, and simulated regulation has none — so the news panel is empty almost everywhere | Descriptive panel looks broken in the demo | PR #10 open — needs a browser check, then merge |
+| N2 | `/proyek` has no "create project" form (projects can only be created via the API) | Demo needs a project to link sites to | ✅ done (#9) |
 | N3 | On-chain payment simulation (billing: QR request → buyer pays from own wallet on testnet → verify via block-explorer API) | Independent, Derick's | P2 |
 | N4 | Per-project workspace (Overview / Site / Financial as tabs inside one project) | Polish | P3 |
 | N5 | The scoring service needs the ~18 GB dataset next to it, so it only runs on a machine that has the Drive data | Deployment beyond a laptop | P3 |
