@@ -6,10 +6,13 @@ import { toProjectRequest, type ProjectFilter, type ProjectFormValues } from '..
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
-const PROJECTS_KEY = 'projects'
-const SAVED_LOCATIONS_KEY = 'saved-locations'
+export const PROJECTS_KEY = 'projects'
+export const SAVED_LOCATIONS_KEY = 'saved-locations'
+export const BUDGETS_KEY = 'budgets'
+export const CASH_FLOW_KEY = 'cash-flow'
+export const CASH_TRANSACTIONS_KEY = 'cash-transactions'
 
-const DATA_QUERY = {
+export const DATA_QUERY = {
   staleTime: ONE_MINUTE,
   retry: 0,
 }
@@ -35,7 +38,7 @@ export function useCreateProject() {
 
 export function useBudgets(projectId?: string) {
   return useQuery({
-    queryKey: ['budgets', projectId ?? 'all'],
+    queryKey: [BUDGETS_KEY, projectId ?? 'all'],
     queryFn: () => financeApi.budgets(projectId),
     ...DATA_QUERY,
   })
@@ -43,7 +46,7 @@ export function useBudgets(projectId?: string) {
 
 export function useCashFlow(filter: CashFlowFilter = {}) {
   return useQuery({
-    queryKey: ['cash-flow', filter],
+    queryKey: [CASH_FLOW_KEY, filter],
     queryFn: () => financeApi.cashFlow(filter),
     ...DATA_QUERY,
   })
@@ -51,8 +54,8 @@ export function useCashFlow(filter: CashFlowFilter = {}) {
 
 export function useCashTransactions(pageSize = 10) {
   return useQuery({
-    queryKey: ['cash-transactions', pageSize],
-    queryFn: () => financeApi.cashTransactions(pageSize),
+    queryKey: [CASH_TRANSACTIONS_KEY, pageSize],
+    queryFn: () => financeApi.cashTransactions({ pageSize }),
     ...DATA_QUERY,
   })
 }
