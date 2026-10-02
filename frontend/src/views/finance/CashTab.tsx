@@ -1,3 +1,4 @@
+import { BookOpen } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import { useProjects } from '../../controllers/useErp'
@@ -32,8 +33,18 @@ import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { FilterChips, RowAction } from '../components/ListTools'
 import { Chip, FilterSelect, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
-import { amountHint } from './financeTabs'
-import { AccountOptions, ConfirmDelete, DateRangeFilter, Notice, ProjectOptions, RowActions, SignedAmount } from './parts'
+import { CashFocusPanel } from './CashFocusPanel'
+import { CASH_PARAM, amountHint, journalLink, useSearchParam } from './financeTabs'
+import {
+  AccountOptions,
+  ConfirmDelete,
+  DateRangeFilter,
+  Notice,
+  ProjectOptions,
+  RowActions,
+  RowLink,
+  SignedAmount,
+} from './parts'
 
 const PAGE_SIZE = 20
 const OPTION_LIMIT = 100
@@ -73,7 +84,7 @@ function CashForm({ transaction, projects, accounts, isLoadingAccounts, onUpdate
     if (transaction) {
       updateTransaction.mutate(
         { id: transaction.id, values },
-        { onSuccess: (saved) => onUpdated?.(`Transaksi ${transactionName(saved)} diperbarui.`) },
+        { onSuccess: (saved) => onUpdated?.(`Transaksi ${transactionName(saved)} dan jurnal otomatisnya diperbarui.`) },
       )
       return
     }
@@ -150,7 +161,9 @@ function CashForm({ transaction, projects, accounts, isLoadingAccounts, onUpdate
 
         {mutation.isError ? <ErrorNote message={errorMessage(mutation.error)} /> : null}
         {recordTransaction.isSuccess ? (
-          <SuccessNote message={`Transaksi ${transactionName(recordTransaction.data)} tercatat.`} />
+          <SuccessNote
+            message={`Transaksi ${transactionName(recordTransaction.data)} tercatat beserta jurnal otomatisnya.`}
+          />
         ) : null}
       </form>
     </FormPanel>
@@ -167,6 +180,7 @@ export function CashTab() {
   const [editing, setEditing] = useState<CashTransaction | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useSearchParam(CASH_PARAM)
   const projects = useProjects({ pageSize: OPTION_LIMIT })
   const accounts = useAccounts()
   const deleteTransaction = useDeleteCashTransaction()
@@ -205,9 +219,12 @@ export function CashTab() {
     setNotice(null)
     deleteTransaction.mutate(transaction.id, {
       onSuccess: () => {
-        setNotice(`Transaksi ${transactionName(transaction)} dihapus.`)
+        setNotice(`Transaksi ${transactionName(transaction)} dan jurnal otomatisnya dihapus.`)
         if (editing?.id === transaction.id) {
           setEditing(null)
+        }
+        if (focusedId === transaction.id) {
+          setFocusedId('')
         }
         if (transactions.data?.items.length === 1 && page > 1) {
           setPage(page - 1)
@@ -222,7 +239,7 @@ export function CashTab() {
   return (
     <Card
       title="Transaksi kas"
-      description="Kas masuk bertanda +, kas keluar bertanda −. Transaksi kas tidak membuat jurnal otomatis; catat jurnalnya di tab Jurnal bila perlu."
+      description="Kas masuk bertanda +, kas keluar bertanda −. Setiap transaksi otomatis dicatat sebagai jurnal (kas masuk mendebit Kas, kas keluar mengkredit Kas), dan jurnal itu ikut berubah atau terhapus bersama transaksinya."
     >
       <div className="mb-3">
         <FilterChips filters={TYPE_FILTERS} active={type} onChange={filterChanged(setType)} label="Saring menurut jenis kas" />
@@ -266,6 +283,16 @@ export function CashTab() {
         />
       </Toolbar>
 
+      {focusedId !== '' ? (
+        <CashFocusPanel
+          id={focusedId}
+          accounts={accountItems}
+          projectName={projectName}
+          isEditing={editing?.id === focusedId}
+          onEdit={startEdit}
+          onClose={() => setFocusedId('')}
+        />
+      ) : null}
       {isCreating ? (
         <CashForm
           transaction={null}
@@ -327,13 +354,29 @@ export function CashTab() {
               },
               { header: 'Jumlah', align: 'right', cell: (row) => <SignedAmount type={row.type} amount={row.amount} /> },
               {
+                header: 'Jurnal',
+                cell: (row) =>
+                  row.journalEntryId ? (
+                    <RowLink
+                      to={journalLink(row.journalEntryId)}
+                      label="Lihat jurnal"
+                      icon={BookOpen}
+                      description={`Lihat jurnal otomatis ${transactionName(row)}`}
+                    />
+                  ) : (
+                    <span className="text-xs text-slate-500" title="Simpan ulang transaksi ini untuk membuat jurnalnya">
+                      Belum ada
+                    </span>
+                  ),
+              },
+              {
                 header: 'Aksi',
                 align: 'right',
                 cell: (row) => (
                   <RowActions>
                     <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
                     <ConfirmDelete
-                      subject={`transaksi ${transactionName(row)}`}
+                      subject={`transaksi ${transactionName(row)} beserta jurnalnya`}
                       isConfirming={confirmingId === row.id}
                       isPending={deleteTransaction.isPending && deleteTransaction.variables === row.id}
                       onAsk={() => setConfirmingId(row.id)}

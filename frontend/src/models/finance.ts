@@ -19,6 +19,9 @@ export interface CashTransaction {
   projectId: string | null
   amount: number
   note: string
+  // Jurnal otomatis milik transaksi ini. null hanya untuk transaksi lama yang
+  // belum diisi ulang oleh cmd/migrate.
+  journalEntryId: string | null
   createdAt: string
   updatedAt: string
 }

@@ -27,6 +27,8 @@ export const accountingApi = {
   cashTransactions: (filter: CashListFilter = {}) =>
     request<Page<CashTransaction>>(`/finance/cash-transactions${toQueryString({ ...filter })}`),
 
+  cashTransaction: (id: string) => request<CashTransaction>(`/finance/cash-transactions/${id}`),
+
   createCashTransaction: (body: CashTransactionRequest) =>
     request<CashTransaction>('/finance/cash-transactions', { method: 'POST', body }),
 

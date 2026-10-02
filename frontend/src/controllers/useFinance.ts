@@ -15,8 +15,8 @@ import {
 import { accountingApi } from '../models/accountingApi'
 import { BUDGETS_KEY, CASH_FLOW_KEY, CASH_TRANSACTIONS_KEY, DATA_QUERY } from './useErp'
 
-const JOURNAL_KEY = 'journal-entries'
-const LEDGER_KEY = 'ledger'
+export const JOURNAL_KEY = 'journal-entries'
+export const LEDGER_KEY = 'ledger'
 
 // Daftar yang dipaginasi tetap menampilkan halaman lama selama halaman baru
 // dimuat, supaya tabel tidak berkedip kosong setiap pindah halaman.
@@ -72,8 +72,19 @@ export function useCashTransactionList(filter: CashListFilter, enabled = true) {
   })
 }
 
+// Satu transaksi kas, misalnya yang dibuka dari tautan di rincian jurnal.
+export function useCashTransaction(id: string) {
+  return useQuery({
+    queryKey: [CASH_TRANSACTIONS_KEY, 'detail', id],
+    queryFn: () => accountingApi.cashTransaction(id),
+    enabled: id !== '',
+    ...DATA_QUERY,
+  })
+}
+
 // Transaksi kas mengubah arus kas, saldo, dan realisasi anggaran (kas keluar
-// proyek di tahun anggaran), jadi ketiganya diambil ulang.
+// proyek di tahun anggaran). Backend juga menulis ulang jurnal otomatisnya,
+// jadi daftar jurnal dan buku besar ikut diambil ulang.
 function useRefreshCash() {
   const queryClient = useQueryClient()
 
@@ -82,6 +93,8 @@ function useRefreshCash() {
       queryClient.invalidateQueries({ queryKey: [CASH_TRANSACTIONS_KEY] }),
       queryClient.invalidateQueries({ queryKey: [CASH_FLOW_KEY] }),
       queryClient.invalidateQueries({ queryKey: [BUDGETS_KEY] }),
+      queryClient.invalidateQueries({ queryKey: [JOURNAL_KEY] }),
+      queryClient.invalidateQueries({ queryKey: [LEDGER_KEY] }),
     ])
 }
 

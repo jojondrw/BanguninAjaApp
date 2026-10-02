@@ -2,6 +2,8 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import { useCreateJournalEntry } from '../../controllers/useFinance'
 import {
+  CASH_JOURNAL_NUMBER_PREFIX,
+  CASH_JOURNAL_SOURCE,
   JOURNAL_MIN_LINES,
   JOURNAL_NOTE_MAX_LENGTH,
   JOURNAL_NUMBER_MAX_LENGTH,
@@ -11,6 +13,7 @@ import {
   emptyJournalLine,
   journalBalance,
   postableAccountGroups,
+  reservedJournalReason,
   type JournalBalance,
   type JournalEntryDetail,
   type JournalFormValues,
@@ -139,6 +142,7 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
   const createEntry = useCreateJournalEntry()
   const groups = postableAccountGroups(accounts)
   const balance = journalBalance(values.lines)
+  const reservedReason = reservedJournalReason(values)
 
   const update = (key: 'number' | 'date' | 'note' | 'source') => (event: ChangeEvent<HTMLInputElement>) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
@@ -158,7 +162,7 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!balance.isBalanced) {
+    if (!balance.isBalanced || reservedReason !== null) {
       return
     }
     createEntry.mutate(values, {
@@ -179,7 +183,7 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
             placeholder="JU-2026-001"
             autoComplete="off"
             maxLength={JOURNAL_NUMBER_MAX_LENGTH}
-            hint={`Unik, maksimal ${JOURNAL_NUMBER_MAX_LENGTH} karakter`}
+            hint={`Unik, maksimal ${JOURNAL_NUMBER_MAX_LENGTH} karakter, tidak berawalan ${CASH_JOURNAL_NUMBER_PREFIX}`}
             required
             value={values.number}
             onChange={update('number')}
@@ -191,7 +195,7 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
             placeholder="Manual"
             autoComplete="off"
             maxLength={JOURNAL_SOURCE_MAX_LENGTH}
-            hint="Misalnya Manual, Penyesuaian, atau nomor bukti"
+            hint={`Misalnya Manual, Penyesuaian, atau nomor bukti. "${CASH_JOURNAL_SOURCE}" khusus jurnal otomatis`}
             value={values.source}
             onChange={update('source')}
           />
@@ -226,10 +230,12 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
 
         <BalancePanel balance={balance} />
 
+        {reservedReason !== null ? <ErrorNote message={reservedReason} /> : null}
+
         <SubmitButton
           isPending={createEntry.isPending}
           pendingLabel="Menyimpan jurnal"
-          isBlocked={!balance.isBalanced}
+          isBlocked={!balance.isBalanced || reservedReason !== null}
           describedBy={BALANCE_STATUS_ID}
         >
           Simpan jurnal

@@ -30,6 +30,7 @@ import {
   DATA_QUERY,
   PROJECTS_KEY,
 } from './useErp'
+import { JOURNAL_KEY, LEDGER_KEY } from './useFinance'
 
 const MASTER_KEY = 'master'
 const PROJECT_TRANSACTION_LIMIT = 50
@@ -116,7 +117,8 @@ export function useProjectCashTransactions(projectId: string) {
 }
 
 // Transaksi kas mengubah realisasi anggaran, arus kas, dan saldo, baik di
-// ruang kerja proyek maupun di halaman Keuangan dan Ringkasan.
+// ruang kerja proyek maupun di halaman Keuangan dan Ringkasan. Backend juga
+// membuat jurnal otomatisnya, jadi jurnal dan buku besar ikut diambil ulang.
 export function useCreateCashTransaction(projectId: string) {
   const queryClient = useQueryClient()
 
@@ -128,6 +130,8 @@ export function useCreateCashTransaction(projectId: string) {
         queryClient.invalidateQueries({ queryKey: [CASH_TRANSACTIONS_KEY] }),
         queryClient.invalidateQueries({ queryKey: [CASH_FLOW_KEY] }),
         queryClient.invalidateQueries({ queryKey: [BUDGETS_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [JOURNAL_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [LEDGER_KEY] }),
       ]),
   })
 }
