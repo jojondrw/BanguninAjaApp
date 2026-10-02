@@ -12,7 +12,7 @@
 - **A fresh database is usable**: `go run ./cmd/seed` loads regions, units, a chart of accounts, and the scoring tables.
 - **`/lokasi` has a map**: click to pick a point, see saved sites as markers, link each evaluation to a project.
 - Verified end to end on 2026-10-02 (register → login → create project → evaluate on the map → score + risk flags + regulation, saved under the project).
-- Left: merge PR #10 (news outside RDTR cities) after a browser check, payment simulation, polish (§5).
+- Left: payment simulation and polish (§5).
 
 ---
 
@@ -24,7 +24,7 @@
 | Auth | ✅ |
 | 13 business slices (CRUD, services, tests) | ✅ |
 | `regulation` + `cmd/import-rdtr` | ✅ real RDTR for 11 imported cities, simulated (`is_simulated`) elsewhere |
-| `news` (Google News RSS) | ✅ but only fetched when the regulation lookup returns a district — see §5 |
+| `news` (Google News RSS) | ✅ by RDTR district, or the regency/city from the scoring service elsewhere |
 | `site` → `POST /api/site/evaluate` | ✅ predictive + descriptive in one response; saves `project_id` |
 | `cmd/seed` | ✅ 531 regions, 14 units, 26 accounts, 5 dimensions, 4 profiles, trained weights |
 | `saved_location.project_id`, `GET /api/locations/saved?projectId=` | ✅ |
@@ -72,7 +72,7 @@ POST /api/site/evaluate   (auth required)
 
 POST /score   (internal, scoring/ service)
   in:  latitude, longitude, building_profile_code   (housing | hospital | mall | entertainment)
-  out: overall_score, dimension_scores[], risk_flags[]
+  out: overall_score, dimension_scores[], risk_flags[], region (GADM regency/city or null — used only for the news query)
 dimension_code ∈ fisik_lingkungan | infrastruktur | demografi_sosial | pasar_kompetisi | finansial_proyek
 ```
 
@@ -106,7 +106,7 @@ Gotchas seen on Derick's laptop:
 |---|---|---|---|
 | B1 | `finance` budget query calls `make_date(bigint, …)` → every `GET /api/finance/budgets` returns 500; Overview's "Serapan anggaran" card always fails | Visible on the dashboard | ✅ fixed (#8) |
 | B2 | Two concurrent `/auth/refresh` calls (React StrictMode, or parallel 401 retries) — the second presents a just-rotated token and logs the user out on reload | Users get bounced to the login page | ✅ fixed (#8) |
-| N1 | News is only fetched when the regulation lookup returns a district, and simulated regulation has none — so the news panel is empty almost everywhere | Descriptive panel looks broken in the demo | PR #10 open — needs a browser check, then merge |
+| N1 | News is only fetched when the regulation lookup returns a district, and simulated regulation has none — so the news panel is empty almost everywhere | Descriptive panel looks broken in the demo | ✅ done (#10) — falls back to the regency/city from the scoring service |
 | N2 | `/proyek` has no "create project" form (projects can only be created via the API) | Demo needs a project to link sites to | ✅ done (#9) |
 | N3 | On-chain payment simulation (billing: QR request → buyer pays from own wallet on testnet → verify via block-explorer API) | Independent, Derick's | P2 |
 | N4 | Per-project workspace (Overview / Site / Financial as tabs inside one project) | Polish | P3 |
