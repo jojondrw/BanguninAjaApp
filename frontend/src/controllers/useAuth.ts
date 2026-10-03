@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { authApi } from '../models/authApi'
-import type { LoginRequest, RegisterRequest } from '../models/auth'
+import type { LoginRequest, RegisterRequest, User } from '../models/auth'
 import { refreshSession } from '../shared/apiClient'
 import { useSessionStore } from './sessionStore'
 
@@ -57,13 +57,26 @@ export function useLogout() {
   })
 }
 
+export const PROFILE_KEY = 'profile'
+
 export function useProfile() {
   const accessToken = useSessionStore((state) => state.accessToken)
+  const userId = useSessionStore((state) => state.user?.id ?? null)
 
+  // Id user ikut di kunci supaya profil akun sebelumnya tidak terbawa
+  // ketika akun lain masuk tanpa keluar lebih dulu.
   return useQuery({
-    queryKey: ['profile'],
+    queryKey: [PROFILE_KEY, userId],
     queryFn: () => authApi.profile(),
     enabled: accessToken !== null,
     staleTime: 60_000,
   })
+}
+
+// Profil terbaru dari /auth/me kalau sudah dimuat, supaya perubahan peran oleh
+// admin terasa tanpa harus keluar-masuk. Sebelum itu pakai user dari sesi.
+export function useCurrentUser(): User | null {
+  const sessionUser = useSessionStore((state) => state.user)
+  const profile = useProfile()
+  return profile.data ?? sessionUser
 }

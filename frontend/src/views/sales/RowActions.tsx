@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE } from '../components/Form'
 
 const TEXT_ACTION_TONE = {
@@ -71,6 +72,11 @@ export function ConfirmAction({
   onConfirm,
   children,
 }: ConfirmActionProps) {
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
   if (!isAsking && !isPending) {
     return <TextAction label={label} tone={tone === 'danger' ? 'muted' : 'accent'} onClick={onAsk} />
   }

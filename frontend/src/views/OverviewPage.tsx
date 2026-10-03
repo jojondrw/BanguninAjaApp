@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { useCan } from '../controllers/useAccess'
 import { useBudgetSummary, useCashFlow, useProjects, useProjectSummary } from '../controllers/useErp'
 import { number, rupiahShort, shortDate } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
@@ -13,6 +14,7 @@ import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './com
 import { AttentionList } from './overview/AttentionList'
 
 const CHART_MONTHS = 12
+const FINANCE_ONLY = 'butuh akses Keuangan'
 const RECENT_PROJECTS = 8
 
 export function OverviewPage() {
@@ -21,6 +23,7 @@ export function OverviewPage() {
   const budgets = useBudgetSummary()
   const cashFlow = useCashFlow()
   const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() })
+  const canReadFinance = useCan('finance', 'read')
 
   const items = projects.data?.items ?? []
 
@@ -41,27 +44,36 @@ export function OverviewPage() {
           value={kpiText(summary, (data) => rupiahShort(data.contractValue))}
           note={summary.data ? `seluruh proyek, rata-rata progres ${summary.data.averageProgress}%` : undefined}
         />
-        <Kpi
-          label="Saldo kas"
-          value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)}
-          note={cashFlow.data ? `masuk ${rupiahShort(cashFlow.data.totalIn)}, keluar ${rupiahShort(cashFlow.data.totalOut)}` : undefined}
-        />
-        <Kpi
-          label="Serapan anggaran"
-          value={serapan(budgets.isPending, budgets.isError, absorption)}
-          note={serapanNote(budgets.isError, budgetTotal, realizedTotal)}
-        />
+        {canReadFinance ? (
+          <Kpi
+            label="Saldo kas"
+            value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)}
+            note={cashFlow.data ? `masuk ${rupiahShort(cashFlow.data.totalIn)}, keluar ${rupiahShort(cashFlow.data.totalOut)}` : undefined}
+          />
+        ) : (
+          <Kpi label="Saldo kas" value="—" note={FINANCE_ONLY} />
+        )}
+        {canReadFinance ? (
+          <Kpi
+            label="Serapan anggaran"
+            value={serapan(budgets.isPending, budgets.isError, absorption)}
+            note={serapanNote(budgets.isError, budgetTotal, realizedTotal)}
+          />
+        ) : (
+          <Kpi label="Serapan anggaran" value="—" note={FINANCE_ONLY} />
+        )}
       </KpiRow>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card
           title="Arus kas 12 bulan"
           description="Kas masuk di atas garis nol, kas keluar di bawahnya"
-          action={<CardLink to="/keuangan" label="Buka keuangan" />}
+          action={canReadFinance ? <CardLink to="/keuangan" label="Buka keuangan" /> : undefined}
         >
-          {yearFlow.isPending ? <Loading /> : null}
-          {yearFlow.isError ? <LoadFailed onRetry={() => yearFlow.refetch()} /> : null}
-          {yearFlow.data ? (
+          {canReadFinance ? null : <Empty message="Arus kas hanya tampil untuk peran yang punya akses Keuangan." />}
+          {canReadFinance && yearFlow.isPending ? <Loading /> : null}
+          {canReadFinance && yearFlow.isError ? <LoadFailed onRetry={() => yearFlow.refetch()} /> : null}
+          {canReadFinance && yearFlow.data ? (
             yearFlow.data.periods.every((period) => period.cashIn === 0 && period.cashOut === 0) ? (
               <Empty message="Belum ada transaksi kas dalam 12 bulan terakhir." />
             ) : (

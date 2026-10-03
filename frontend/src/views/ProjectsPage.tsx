@@ -2,6 +2,7 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
+import { useCan } from '../controllers/useAccess'
 import { useCreateProject, useProjects } from '../controllers/useErp'
 import {
   deletedProjectName,
@@ -152,6 +153,7 @@ export function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus | ''>('')
   const [search, setSearch] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const canCreate = useCan('projects', 'write')
   const location = useLocation()
   const deletedProject = deletedProjectName(location.state)
   const projects = useProjects({
@@ -165,15 +167,17 @@ export function ProjectsPage() {
       title="Proyek"
       description="Daftar proyek, disaring dan dicari langsung di server. Buka ruang kerja proyek untuk mengubah data, status, tahap, izin, dan RAB."
       actions={
-        <Button
-          variant={isFormOpen ? 'subtle' : 'primary'}
-          onClick={() => setIsFormOpen((open) => !open)}
-        >
-          {isFormOpen ? 'Tutup formulir' : 'Tambah proyek'}
-        </Button>
+        canCreate ? (
+          <Button
+            variant={isFormOpen ? 'subtle' : 'primary'}
+            onClick={() => setIsFormOpen((open) => !open)}
+          >
+            {isFormOpen ? 'Tutup formulir' : 'Tambah proyek'}
+          </Button>
+        ) : undefined
       }
     >
-      {isFormOpen ? (
+      {isFormOpen && canCreate ? (
         <div className="mb-6">
           <NewProjectCard />
         </div>
