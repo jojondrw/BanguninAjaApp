@@ -21,6 +21,7 @@ import {
   RECEIPT_CONDITION_TONE,
   emptyPurchaseOrderForm,
   purchaseOrderFormFrom,
+  receiptStockNotice,
   type PurchaseOrderStatus,
   type Vendor,
 } from '../../models/procurement'
@@ -315,7 +316,7 @@ function PurchaseOrderDetailCard({ id, vendors, projects, isLoadingOptions, onDe
               setNotice(
                 `Penerimaan ${result.receipt.number} tersimpan${
                   result.order ? `, status pesanan sekarang ${ORDER_STATUS_LABEL[result.order.status]}` : ''
-                }. Stok gudang belum bertambah, catat stok masuk dari rincian penerimaan di bawah.`,
+                }. ${receiptStockNotice(result.receipt)}`,
               )
             }}
           />

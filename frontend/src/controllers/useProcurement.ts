@@ -1,14 +1,15 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { StockMovementFilter, StockMovementRequest } from '../models/inventory'
 import { inventoryApi } from '../models/inventoryApi'
 import {
+  receiptNeedsMovementCheck,
   toGoodsReceiptRequest,
   toInputDate,
   toPurchaseOrderRequest,
   toPurchaseRequestRequest,
   toVendorRequest,
-  type GoodsReceipt,
+  type GoodsReceiptDetail,
   type GoodsReceiptFilter,
   type GoodsReceiptFormValues,
   type PurchaseOrderFilter,
@@ -165,8 +166,9 @@ export function useWarehouseOptions() {
 }
 
 // Mutasi masuk di gudang dan tanggal penerimaan. Yang referensinya nomor
-// penerimaan dipilah di receiptStockLines.
-export function useReceiptStockMovements(receipt: GoodsReceipt | undefined) {
+// penerimaan dipilah di receiptStockLines. Penerimaan yang semua barisnya
+// sudah dicatat otomatis tidak perlu mengambil mutasi sama sekali.
+export function useReceiptStockMovements(receipt: GoodsReceiptDetail | undefined) {
   const day = toInputDate(receipt?.date ?? null)
   const filter: StockMovementFilter = {
     type: 'in',
@@ -179,9 +181,15 @@ export function useReceiptStockMovements(receipt: GoodsReceipt | undefined) {
   return useQuery({
     queryKey: [...MOVEMENTS_KEY, filter],
     queryFn: () => inventoryApi.stockMovements(filter),
-    enabled: receipt !== undefined,
+    enabled: receipt !== undefined && receiptNeedsMovementCheck(receipt),
     ...DATA_QUERY,
   })
+}
+
+function invalidateStock(queryClient: QueryClient) {
+  return Promise.all(
+    [STOCKS_KEY, MOVEMENTS_KEY, LOW_STOCK_KEY].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  )
 }
 
 function useProcurementMutation<TVariables, TData>(mutationFn: (variables: TVariables) => Promise<TData>) {
@@ -278,6 +286,9 @@ interface GoodsReceiptVariables {
 // (diterima sebagian atau selesai) datang dari server. Kalau pengambilan itu
 // gagal, penerimaannya tetap dianggap berhasil.
 //
+// Backend menambah stok gudang dalam transaksi yang sama dengan penerimaan,
+// jadi data Persediaan (stok, mutasi, stok menipis) ikut diambil ulang.
+//
 // Pengambilan ulang daftar tidak ditunggu. Pesanan yang jadi Selesai menutup
 // formulir penerimaan, dan callback onSuccess milik mutate tidak dipanggil
 // kalau komponennya sudah hilang lebih dulu.
@@ -292,10 +303,12 @@ export function useRecordGoodsReceipt() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [PROCUREMENT_KEY] })
+      void invalidateStock(queryClient)
     },
   })
 }
 
+// Untuk baris yang tidak dicatat otomatis (penerimaan lama atau satuan beda).
 // Dicatat satu per satu dan berhenti di kegagalan pertama. Daftar mutasi tetap
 // diambil ulang walaupun gagal di tengah, jadi baris yang sudah masuk stok
 // tidak dicatat dua kali saat diulang.
@@ -309,9 +322,6 @@ export function useRecordReceiptStock() {
       }
       return requests.length
     },
-    onSettled: () =>
-      Promise.all(
-        [STOCKS_KEY, MOVEMENTS_KEY, LOW_STOCK_KEY].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-      ),
+    onSettled: () => invalidateStock(queryClient),
   })
 }

@@ -13,14 +13,19 @@ import (
 	"gorm.io/gorm"
 )
 
-var (
-	errPrepareUnsupported     = errors.New("recorder does not prepare statements")
-	errTransactionUnsupported = errors.New("recorder does not open transactions")
+const (
+	Begin    = "BEGIN"
+	Commit   = "COMMIT"
+	Rollback = "ROLLBACK"
 )
 
+var errPrepareUnsupported = errors.New("recorder does not prepare statements")
+
 type Result struct {
-	Columns []string
-	Rows    [][]driver.Value
+	Columns  []string
+	Rows     [][]driver.Value
+	Affected int64
+	Err      error
 }
 
 type Query struct {
@@ -66,7 +71,7 @@ func (r *Recorder) Driver() driver.Driver {
 	return recordingDriver{recorder: r}
 }
 
-func (r *Recorder) answer(query string, args []driver.NamedValue) driver.Rows {
+func (r *Recorder) answer(query string, args []driver.NamedValue) Result {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -77,11 +82,17 @@ func (r *Recorder) answer(query string, args []driver.NamedValue) driver.Rows {
 	r.queries = append(r.queries, Query{SQL: query, Args: values})
 
 	if len(r.results) == 0 {
-		return &rows{}
+		return Result{}
 	}
 	next := r.results[0]
 	r.results = r.results[1:]
-	return &rows{columns: next.Columns, values: next.Rows}
+	return next
+}
+
+func (r *Recorder) mark(statement string) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.queries = append(r.queries, Query{SQL: statement})
 }
 
 type recordingDriver struct {
@@ -105,11 +116,38 @@ func (c *connection) Close() error {
 }
 
 func (c *connection) Begin() (driver.Tx, error) {
-	return nil, errTransactionUnsupported
+	c.recorder.mark(Begin)
+	return transaction{recorder: c.recorder}, nil
 }
 
 func (c *connection) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
-	return c.recorder.answer(query, args), nil
+	result := c.recorder.answer(query, args)
+	if result.Err != nil {
+		return nil, result.Err
+	}
+	return &rows{columns: result.Columns, values: result.Rows}, nil
+}
+
+func (c *connection) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	result := c.recorder.answer(query, args)
+	if result.Err != nil {
+		return nil, result.Err
+	}
+	return driver.RowsAffected(result.Affected), nil
+}
+
+type transaction struct {
+	recorder *Recorder
+}
+
+func (t transaction) Commit() error {
+	t.recorder.mark(Commit)
+	return nil
+}
+
+func (t transaction) Rollback() error {
+	t.recorder.mark(Rollback)
+	return nil
 }
 
 type rows struct {

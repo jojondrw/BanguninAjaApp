@@ -96,10 +96,12 @@ func (GoodsReceipt) TableName() string {
 
 type GoodsReceiptItem struct {
 	entity.Base
-	GoodsReceiptID      uuid.UUID `gorm:"type:uuid;not null;index:idx_goods_receipt_item_goods_receipt"`
-	PurchaseOrderItemID uuid.UUID `gorm:"type:uuid;not null;index:idx_goods_receipt_item_purchase_order_item"`
-	AcceptedQuantity    float64   `gorm:"type:numeric(14,2);not null;default:0"`
-	RejectedQuantity    float64   `gorm:"type:numeric(14,2);not null;default:0"`
+	GoodsReceiptID      uuid.UUID  `gorm:"type:uuid;not null;index:idx_goods_receipt_item_goods_receipt"`
+	PurchaseOrderItemID uuid.UUID  `gorm:"type:uuid;not null;index:idx_goods_receipt_item_purchase_order_item"`
+	AcceptedQuantity    float64    `gorm:"type:numeric(14,2);not null;default:0"`
+	RejectedQuantity    float64    `gorm:"type:numeric(14,2);not null;default:0"`
+	StockMovementID     *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_goods_receipt_item_stock_movement"`
+	StockSkipReason     string     `gorm:"type:varchar(40);not null;default:''"`
 }
 
 func (GoodsReceiptItem) TableName() string {
@@ -138,6 +140,7 @@ func Constraints() []string {
 		database.ForeignKey("goods_receipt", "warehouse_id", "warehouse", database.DeleteRestrict),
 		database.ForeignKey("goods_receipt_item", "goods_receipt_id", "goods_receipt", database.DeleteCascade),
 		database.ForeignKey("goods_receipt_item", "purchase_order_item_id", "purchase_order_item", database.DeleteRestrict),
+		database.ForeignKey("goods_receipt_item", "stock_movement_id", "stock_movement", database.DeleteRestrict),
 		database.Check("vendor", "payment_term_days", "payment_term_days >= 0"),
 		database.Check("vendor", "rating", "rating IN ('new','good','fair','poor')"),
 		database.Check("purchase_request", "status", "status IN ('draft','submitted','approved','rejected','completed')"),
@@ -147,6 +150,7 @@ func Constraints() []string {
 		database.Check("purchase_request_item", "quantity", "quantity > 0"),
 		database.Check("purchase_order_item", "quantity", "quantity > 0"),
 		database.Check("goods_receipt_item", "quantity", "accepted_quantity >= 0 AND rejected_quantity >= 0"),
+		database.Check("goods_receipt_item", "stock_posting", "stock_skip_reason IN ('','unit_mismatch') AND (stock_movement_id IS NULL OR stock_skip_reason = '')"),
 		database.Unique("purchase_request_item", "request_material", "purchase_request_id, material_id"),
 		database.Unique("purchase_order_item", "order_material", "purchase_order_id, material_id"),
 	}

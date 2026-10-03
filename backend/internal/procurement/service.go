@@ -2,10 +2,12 @@ package procurement
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"math"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -28,7 +30,28 @@ const (
 	orderCancelled         = "cancelled"
 
 	quantityPrecision = 100
+
+	stockPosted  = "posted"
+	stockSkipped = "skipped"
+	stockLegacy  = "legacy"
+	stockNone    = "none"
+
+	stockSkipUnitMismatch = "unit_mismatch"
+
+	receiptStockFailedCode = "goods_receipt_stock_failed"
 )
+
+type IncomingStock struct {
+	Date        time.Time
+	MaterialID  uuid.UUID
+	WarehouseID uuid.UUID
+	Quantity    float64
+	Reference   string
+}
+
+type StockLedger interface {
+	RecordIncoming(ctx context.Context, stock IncomingStock) (uuid.UUID, error)
+}
 
 var requestTransitions = map[string][]string{
 	requestDraft:     {requestSubmitted},
@@ -369,14 +392,11 @@ func (s *service) GetGoodsReceipt(ctx context.Context, id uuid.UUID) (GoodsRecei
 		return GoodsReceiptDetailResponse{}, receiptReadErrors.Resolve(err)
 	}
 
-	items, err := s.repository.ListGoodsReceiptItems(ctx, id)
+	lines, err := s.repository.ListGoodsReceiptLines(ctx, id)
 	if err != nil {
 		return GoodsReceiptDetailResponse{}, apperror.Internal(err)
 	}
-	return GoodsReceiptDetailResponse{
-		GoodsReceiptResponse: newGoodsReceiptResponse(receipt, len(items)),
-		Items:                pagination.Map(items, newGoodsReceiptItemResponse),
-	}, nil
+	return newGoodsReceiptDetail(receipt, lines), nil
 }
 
 func (s *service) RecordGoodsReceipt(ctx context.Context, request GoodsReceiptRequest) (GoodsReceiptDetailResponse, error) {
@@ -573,15 +593,16 @@ func receiveGoods(ctx context.Context, repository Repository, receipt *GoodsRece
 		return errOrderNotReceiving
 	}
 
-	ordered, received, err := orderProgress(ctx, repository, order.ID)
+	orderItems, received, err := orderProgress(ctx, repository, order.ID)
 	if err != nil {
 		return err
 	}
+	ordered := orderedQuantities(orderItems)
 	updated, err := applyReceipt(ordered, received, requests)
 	if err != nil {
 		return err
 	}
-	if err := storeGoodsReceipt(ctx, repository, receipt, requests); err != nil {
+	if err := storeGoodsReceipt(ctx, repository, receipt, requests, orderItems); err != nil {
 		return err
 	}
 
@@ -589,7 +610,7 @@ func receiveGoods(ctx context.Context, repository Repository, receipt *GoodsRece
 	return orderWriteErrors.Resolve(repository.SavePurchaseOrder(ctx, &order))
 }
 
-func orderProgress(ctx context.Context, repository Repository, orderID uuid.UUID) (map[uuid.UUID]float64, map[uuid.UUID]float64, error) {
+func orderProgress(ctx context.Context, repository Repository, orderID uuid.UUID) ([]PurchaseOrderItem, map[uuid.UUID]float64, error) {
 	items, err := repository.ListPurchaseOrderItems(ctx, orderID)
 	if err != nil {
 		return nil, nil, apperror.Internal(err)
@@ -599,12 +620,15 @@ func orderProgress(ctx context.Context, repository Repository, orderID uuid.UUID
 	if err != nil {
 		return nil, nil, apperror.Internal(err)
 	}
+	return items, receivedByItem(received), nil
+}
 
+func orderedQuantities(items []PurchaseOrderItem) map[uuid.UUID]float64 {
 	ordered := make(map[uuid.UUID]float64, len(items))
 	for _, item := range items {
 		ordered[item.ID] = item.Quantity
 	}
-	return ordered, receivedByItem(received), nil
+	return ordered
 }
 
 func applyReceipt(ordered, received map[uuid.UUID]float64, requests []GoodsReceiptItemRequest) (map[uuid.UUID]float64, error) {
@@ -632,21 +656,116 @@ func statusAfterReceipt(ordered, received map[uuid.UUID]float64) string {
 	return orderCompleted
 }
 
-func storeGoodsReceipt(ctx context.Context, repository Repository, receipt *GoodsReceipt, requests []GoodsReceiptItemRequest) error {
+func storeGoodsReceipt(ctx context.Context, repository Repository, receipt *GoodsReceipt, requests []GoodsReceiptItemRequest, orderItems []PurchaseOrderItem) error {
 	if err := repository.CreateGoodsReceipt(ctx, receipt); err != nil {
 		return receiptWriteErrors.Resolve(err)
 	}
 
+	items := newGoodsReceiptItems(receipt.ID, requests)
+	if err := postReceivedStock(ctx, repository, *receipt, items, orderItems); err != nil {
+		return err
+	}
+	return receiptItemErrors.Resolve(repository.CreateGoodsReceiptItems(ctx, items))
+}
+
+func newGoodsReceiptItems(receiptID uuid.UUID, requests []GoodsReceiptItemRequest) []GoodsReceiptItem {
 	items := make([]GoodsReceiptItem, 0, len(requests))
 	for _, request := range requests {
 		items = append(items, GoodsReceiptItem{
-			GoodsReceiptID:      receipt.ID,
+			GoodsReceiptID:      receiptID,
 			PurchaseOrderItemID: request.PurchaseOrderItemID,
 			AcceptedQuantity:    roundQuantity(request.AcceptedQuantity),
 			RejectedQuantity:    roundQuantity(request.RejectedQuantity),
 		})
 	}
-	return receiptItemErrors.Resolve(repository.CreateGoodsReceiptItems(ctx, items))
+	return items
+}
+
+func postReceivedStock(ctx context.Context, repository Repository, receipt GoodsReceipt, items []GoodsReceiptItem, orderItems []PurchaseOrderItem) error {
+	materials, err := materialStockUnits(ctx, repository, orderItems)
+	if err != nil {
+		return err
+	}
+
+	lines := make(map[uuid.UUID]PurchaseOrderItem, len(orderItems))
+	for _, line := range orderItems {
+		lines[line.ID] = line
+	}
+
+	ledger := repository.StockLedger()
+	for index := range items {
+		line := lines[items[index].PurchaseOrderItemID]
+		if err := postReceiptItem(ctx, ledger, receipt, &items[index], line, materials[line.MaterialID]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func materialStockUnits(ctx context.Context, repository Repository, orderItems []PurchaseOrderItem) (map[uuid.UUID]MaterialStockUnit, error) {
+	ids := pagination.Map(orderItems, func(item PurchaseOrderItem) uuid.UUID { return item.MaterialID })
+	units, err := repository.ListMaterialStockUnits(ctx, ids)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	byMaterial := make(map[uuid.UUID]MaterialStockUnit, len(units))
+	for _, unit := range units {
+		byMaterial[unit.ID] = unit
+	}
+	return byMaterial, nil
+}
+
+func postReceiptItem(ctx context.Context, ledger StockLedger, receipt GoodsReceipt, item *GoodsReceiptItem, line PurchaseOrderItem, material MaterialStockUnit) error {
+	if item.AcceptedQuantity <= 0 {
+		return nil
+	}
+	if material.UnitOfMeasureID != line.UnitOfMeasureID {
+		item.StockSkipReason = stockSkipUnitMismatch
+		return nil
+	}
+
+	movementID, err := ledger.RecordIncoming(ctx, IncomingStock{
+		Date:        receipt.Date,
+		MaterialID:  line.MaterialID,
+		WarehouseID: receipt.WarehouseID,
+		Quantity:    item.AcceptedQuantity,
+		Reference:   receipt.Number,
+	})
+	if err != nil {
+		return stockPostingFailed(material.Name, err)
+	}
+	item.StockMovementID = &movementID
+	return nil
+}
+
+func stockPostingFailed(materialName string, err error) error {
+	cause := apperror.From(err)
+	message := fmt.Sprintf("Penerimaan barang dibatalkan karena stok %s gagal ditambahkan ke gudang: %s", materialName, cause.Message)
+	return apperror.New(cause.Status, receiptStockFailedCode, message).WithCause(err)
+}
+
+func stockStatusOf(item GoodsReceiptItem) string {
+	switch {
+	case item.StockMovementID != nil:
+		return stockPosted
+	case item.AcceptedQuantity <= 0:
+		return stockNone
+	case item.StockSkipReason != "":
+		return stockSkipped
+	default:
+		return stockLegacy
+	}
+}
+
+func unpostedReason(line GoodsReceiptLine) string {
+	if line.StockSkipReason != stockSkipUnitMismatch {
+		return ""
+	}
+	return fmt.Sprintf(
+		"Satuan pesanan (%s) berbeda dengan satuan stok material (%s). Catat stok masuk manual setelah jumlahnya dikonversi",
+		line.UnitOfMeasureCode, line.StockUnitOfMeasureCode,
+	)
 }
 
 func validatePurchaseOrder(request PurchaseOrderRequest) error {

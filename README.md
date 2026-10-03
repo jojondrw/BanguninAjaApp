@@ -138,8 +138,6 @@ Belum dikerjakan:
 
 - Simulasi pembayaran on-chain
 - Pembatasan akses berdasarkan peran
-- Penerimaan barang yang langsung menambah stok gudang (sementara lewat tombol
-  "Catat stok masuk")
 - Pembuatan berkas laporan PDF, XLSX, dan CSV
 
 Rincian dan sisa pekerjaan lain ada di `PROJECT_HANDOFF.md`.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -240,6 +241,40 @@ func (s *service) RecordStockMovement(ctx context.Context, request StockMovement
 		return StockMovementResponse{}, apperror.From(err)
 	}
 	return newStockMovementResponse(recorded), nil
+}
+
+type IncomingStock struct {
+	Date        time.Time
+	MaterialID  uuid.UUID
+	WarehouseID uuid.UUID
+	Quantity    float64
+	Reference   string
+}
+
+type StockLedger struct {
+	repository Repository
+}
+
+func NewStockLedger(repository Repository) StockLedger {
+	return StockLedger{repository: repository}
+}
+
+func (l StockLedger) RecordIncoming(ctx context.Context, incoming IncomingStock) (uuid.UUID, error) {
+	movement := newStockMovement(StockMovementRequest{
+		Date:              incoming.Date,
+		Type:              movementIn,
+		MaterialID:        incoming.MaterialID,
+		Quantity:          incoming.Quantity,
+		TargetWarehouseID: &incoming.WarehouseID,
+		Reference:         incoming.Reference,
+	})
+	if err := validateMovement(movement); err != nil {
+		return uuid.Nil, err
+	}
+	if err := applyMovement(ctx, l.repository, &movement); err != nil {
+		return uuid.Nil, err
+	}
+	return movement.ID, nil
 }
 
 func applyMovement(ctx context.Context, repository Repository, movement *StockMovement) error {
