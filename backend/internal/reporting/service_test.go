@@ -99,3 +99,17 @@ func TestReportFileNames(t *testing.T) {
 		}
 	}
 }
+
+func TestCancelledContractsLeaveTheTotals(t *testing.T) {
+	section := contractSection([]ContractRow{
+		{Number: "UJI-1", Status: "active", Value: 1000, PaidTotal: 400},
+		{Number: "UJI-2", Status: cancelledStatus, Value: 500},
+		{Number: "UJI-3", Status: paidStatus, Value: 300},
+	})
+	if section.Rows[1][9] != int64(0) {
+		t.Fatalf("cancelled contract must not show a remaining balance, got %v", section.Rows[1][9])
+	}
+	if section.Total[7] != int64(1300) || section.Total[8] != int64(700) || section.Total[9] != int64(600) {
+		t.Fatalf("got total %v", section.Total)
+	}
+}

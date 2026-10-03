@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	fullPercent    = 100
-	hoursPerDay    = 24
-	agingBucketDay = 30
-	noProjectLabel = "Kantor pusat"
-	totalLabel     = "Total"
+	fullPercent     = 100
+	hoursPerDay     = 24
+	agingBucketDay  = 30
+	noProjectLabel  = "Kantor pusat"
+	totalLabel      = "Total"
+	cancelledStatus = "cancelled"
 )
 
 type sectionBuilder func(ctx context.Context, repository Repository, filter DatasetFilter, today time.Time) ([]export.Section, error)
@@ -390,22 +391,31 @@ func contractSection(contracts []ContractRow) export.Section {
 			{Header: "Nomor", Kind: export.Text}, {Header: "Tanggal", Kind: export.Date}, {Header: "Pelanggan", Kind: export.Text},
 			{Header: "Unit", Kind: export.Text}, {Header: "Proyek", Kind: export.Text}, {Header: "Jenis", Kind: export.Text},
 			{Header: "Status", Kind: export.Text}, {Header: "Nilai (Rp)", Kind: export.Money}, {Header: "Terbayar (Rp)", Kind: export.Money},
-			{Header: "Sisa (Rp)", Kind: export.Money}, {Header: "Cicilan lunas", Kind: export.Text}, {Header: "Cicilan terlambat", Kind: export.Integer},
+			{Header: "Sisa (Rp)", Kind: export.Money}, {Header: "Cicilan lunas", Kind: export.Text}, {Header: "Terlambat", Kind: export.Integer},
 		},
 		Rows: make([][]any, 0, len(contracts)),
 	}
-	totalValue, totalPaid := int64(0), int64(0)
+	totalValue, totalPaid, totalRemaining := int64(0), int64(0), int64(0)
 	for _, contract := range contracts {
-		paid := contractPaid(contract)
-		totalValue, totalPaid = totalValue+contract.Value, totalPaid+paid
+		paid, remaining := contractPaid(contract), contractRemaining(contract)
+		if contract.Status != cancelledStatus {
+			totalValue, totalPaid, totalRemaining = totalValue+contract.Value, totalPaid+paid, totalRemaining+remaining
+		}
 		section.Rows = append(section.Rows, []any{
 			contract.Number, contract.Date, contract.CustomerName, contract.UnitCode, projectText(contract.ProjectCode, contract.ProjectName),
 			labelOf(contractTypeLabels, contract.Type), labelOf(contractStatusLabels, contract.Status), contract.Value, paid,
-			contract.Value - paid, fmt.Sprintf("%d dari %d", contract.PaidCount, contract.InstallmentCount), contract.OverdueCount,
+			remaining, fmt.Sprintf("%d dari %d", contract.PaidCount, contract.InstallmentCount), contract.OverdueCount,
 		})
 	}
-	section.Total = []any{totalLabel, nil, nil, nil, nil, nil, nil, totalValue, totalPaid, totalValue - totalPaid, nil, nil}
+	section.Total = []any{totalLabel, nil, nil, nil, nil, nil, nil, totalValue, totalPaid, totalRemaining, nil, nil}
 	return section
+}
+
+func contractRemaining(contract ContractRow) int64 {
+	if contract.Status == cancelledStatus {
+		return 0
+	}
+	return contract.Value - contractPaid(contract)
 }
 
 func contractPaid(contract ContractRow) int64 {

@@ -31,6 +31,7 @@ const (
 	measuredRows     = 300
 	textBaselineLift = 4.0
 	fixedShareLimit  = 0.7
+	textColumnFloor  = 60.0
 
 	pdfObjectsBeforePages = 5
 	continuedSuffix       = " (lanjutan)"
@@ -282,24 +283,38 @@ func desiredWidths(section Section) []float64 {
 }
 
 func fitWidths(columns []Column, desired []float64, available float64) []float64 {
-	fixed, flexible := 0.0, 0.0
+	fixed := 0.0
 	for index, column := range columns {
-		if column.Kind == Text {
-			flexible += desired[index]
-			continue
+		if column.Kind != Text {
+			fixed += desired[index]
 		}
-		fixed += desired[index]
 	}
-	if sumWidths(desired) <= available || flexible == 0 || fixed >= available*fixedShareLimit {
+	textSpace := available - fixed
+	if sumWidths(desired) <= available || fixed == sumWidths(desired) || textSpace < available*(1-fixedShareLimit) {
 		return scaleWidths(desired, available/sumWidths(desired))
 	}
-	fitted := make([]float64, len(desired))
-	textScale := (available - fixed) / flexible
+	return shrinkTextColumns(columns, desired, textSpace)
+}
+
+func shrinkTextColumns(columns []Column, desired []float64, textSpace float64) []float64 {
+	fitted := append([]float64(nil), desired...)
+	floors, surplus := 0.0, 0.0
 	for index, column := range columns {
-		fitted[index] = desired[index]
 		if column.Kind == Text {
-			fitted[index] *= textScale
+			floors += min(desired[index], textColumnFloor)
+			surplus += desired[index] - min(desired[index], textColumnFloor)
 		}
+	}
+	for index, column := range columns {
+		if column.Kind != Text {
+			continue
+		}
+		floor := min(desired[index], textColumnFloor)
+		if floors >= textSpace {
+			fitted[index] = floor * textSpace / floors
+			continue
+		}
+		fitted[index] = floor + (desired[index]-floor)*(textSpace-floors)/surplus
 	}
 	return fitted
 }
