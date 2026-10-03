@@ -2,6 +2,7 @@ import { request } from '../shared/apiClient'
 import type {
   BillingFilterOf,
   BillingKind,
+  BillingPayment,
   BillingRecordOf,
   BillingRequestOf,
   PaymentRequest,
@@ -35,4 +36,8 @@ export const billingApi = {
 
   pay: <K extends BillingKind>(kind: K, id: string, body: PaymentRequest) =>
     request<BillingRecordOf[K]>(`/billing/${kind}/${id}/payments`, { method: 'POST', body }),
+
+  // Riwayat pembayaran, terbaru dulu.
+  payments: (kind: BillingKind, id: string, page: number, pageSize: number) =>
+    request<Page<BillingPayment>>(`/billing/${kind}/${id}/payments${toQueryString({ page, pageSize })}`),
 }

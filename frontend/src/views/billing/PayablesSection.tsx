@@ -7,19 +7,21 @@ import {
   REFERENCE_SEARCH_MAX_LENGTH,
   type BillingStatus,
 } from '../../models/billing'
+import { projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { PayableForm } from './BillingForms'
-import type { Directory } from './directory'
+import { allVendorOptions } from './billingLookups'
 
 const PAGE_SIZE = 10
 
-export function PayablesSection({ directory, today }: { directory: Directory; today: string }) {
+export function PayablesSection({ today }: { today: string }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<BillingStatus | ''>('')
   const [vendorId, setVendorId] = useState('')
@@ -74,38 +76,34 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
               </option>
             ))}
           </FilterSelect>
-          <FilterSelect
+          <SearchSelect
+            {...allVendorOptions}
             id="payable-filter-vendor"
             label="Saring menurut vendor"
+            compact
+            allowEmpty
+            emptyLabel="Semua vendor"
+            className="w-52"
             value={vendorId}
-            onChange={(event) => filterChanged(setVendorId)(event.target.value)}
-          >
-            <option value="">Semua vendor</option>
-            {directory.vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.name}
-              </option>
-            ))}
-          </FilterSelect>
-          <FilterSelect
+            onChange={(value) => filterChanged(setVendorId)(value)}
+          />
+          <SearchSelect
+            {...projectOptions}
             id="payable-filter-project"
             label="Saring menurut proyek"
+            compact
+            allowEmpty
+            emptyLabel="Semua proyek"
+            className="w-52"
             value={projectId}
-            onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-          >
-            <option value="">Semua proyek</option>
-            {directory.projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={(value) => filterChanged(setProjectId)(value)}
+          />
           <FormToggle isOpen={isFormOpen} openLabel="Catat utang" onToggle={() => setIsFormOpen((open) => !open)} />
         </Toolbar>
 
         {isFormOpen ? (
           <FormPanel>
-            {directory.isLoading ? <Loading label="Mengambil daftar vendor..." /> : <PayableForm directory={directory} />}
+            <PayableForm />
           </FormPanel>
         ) : null}
 
@@ -180,7 +178,6 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
           renderEdit={(payable, controls) => (
             <PayableForm
               record={payable}
-              directory={directory}
               onSaved={controls.onSaved}
               onCancel={controls.onCancel}
             />

@@ -4,11 +4,13 @@ import {
   billingTotals,
   toInvoiceRequest,
   toPayableRequest,
+  toPaymentRequest,
   toReceivableRequest,
   type BillingFilterOf,
   type BillingKind,
   type InvoiceFormValues,
   type PayableFormValues,
+  type PaymentFormValues,
   type ReceivableFormValues,
 } from '../models/billing'
 import { billingApi } from '../models/billingApi'
@@ -28,6 +30,7 @@ const PAGED_QUERY = {
 }
 
 const DETAIL = 'detail'
+const PAYMENTS = 'payments'
 
 export function useBillingList<K extends BillingKind>(kind: K, filter: BillingFilterOf[K]) {
   return useQuery({
@@ -43,6 +46,14 @@ export function useBillingRecord<K extends BillingKind>(kind: K, id: string | nu
     queryFn: () => billingApi.get(kind, id ?? ''),
     enabled: id !== null,
     ...DATA_QUERY,
+  })
+}
+
+export function useBillingPayments(kind: BillingKind, id: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: [BILLING_KEY, kind, PAYMENTS, id, page, pageSize],
+    queryFn: () => billingApi.payments(kind, id, page, pageSize),
+    ...PAGED_QUERY,
   })
 }
 
@@ -116,9 +127,11 @@ export function useUpdatePayable() {
   )
 }
 
+// Pembayaran faktur yang tertaut piutang ikut menggeser piutangnya (dan
+// sebaliknya), jadi semua query tagihan dibatalkan, bukan hanya jenis ini.
 export function usePayBilling(kind: BillingKind) {
-  return useBillingMutation(({ id, amount }: { id: string; amount: number }) =>
-    billingApi.pay(kind, id, { amount }),
+  return useBillingMutation(({ id, values }: { id: string; values: PaymentFormValues }) =>
+    billingApi.pay(kind, id, toPaymentRequest(values)),
   )
 }
 
@@ -132,7 +145,7 @@ export function useDeleteBilling(kind: BillingKind) {
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: [BILLING_KEY],
-        predicate: (query) => query.queryKey[2] !== DETAIL,
+        predicate: (query) => query.queryKey[2] !== DETAIL && query.queryKey[2] !== PAYMENTS,
       }),
   })
 }
