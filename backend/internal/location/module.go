@@ -26,6 +26,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	saved := routes.Group("/saved")
 	saved.GET("", m.controller.ListSavedLocations)
 	saved.POST("", m.controller.CreateSavedLocation)
+	saved.GET("/summary", m.controller.SummarizeSavedLocations)
 	saved.GET("/:id", m.controller.GetSavedLocation)
 	saved.PUT("/:id", m.controller.UpdateSavedLocation)
 	saved.DELETE("/:id", m.controller.DeleteSavedLocation)

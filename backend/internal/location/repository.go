@@ -10,7 +10,12 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
 
-const wgs84 = 4326
+const (
+	wgs84 = 4326
+
+	savedLocationTotalsColumns = "COUNT(*) AS count, COALESCE(ROUND(AVG(score)), 0)::bigint AS average_score"
+	savedLocationPickColumns   = "id, name, score, saved_at"
+)
 
 type Bounds struct {
 	MinLongitude float64
@@ -31,6 +36,24 @@ type SavedLocationFilter struct {
 	Limit             int
 }
 
+type SavedLocationPick struct {
+	ID      uuid.UUID
+	Name    string
+	Score   int
+	SavedAt time.Time
+}
+
+type SavedLocationAggregate struct {
+	Count        int64
+	AverageScore int64
+}
+
+type SavedLocationTotals struct {
+	SavedLocationAggregate
+	Best   *SavedLocationPick
+	Latest *SavedLocationPick
+}
+
 type ComparisonRow struct {
 	ID            uuid.UUID
 	Name          string
@@ -43,6 +66,7 @@ type Repository interface {
 	Transaction(ctx context.Context, work func(Repository) error) error
 
 	ListSavedLocations(ctx context.Context, filter SavedLocationFilter) ([]SavedLocation, int64, error)
+	SummarizeSavedLocations(ctx context.Context, filter SavedLocationFilter) (SavedLocationTotals, error)
 	FindSavedLocation(ctx context.Context, userID, id uuid.UUID) (SavedLocation, error)
 	FindSavedLocations(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]SavedLocation, error)
 	CreateSavedLocation(ctx context.Context, location *SavedLocation) error
@@ -83,6 +107,42 @@ func (r *gormRepository) ListSavedLocations(ctx context.Context, filter SavedLoc
 		Offset: filter.Offset,
 		Limit:  filter.Limit,
 	})
+}
+
+func (r *gormRepository) SummarizeSavedLocations(ctx context.Context, filter SavedLocationFilter) (SavedLocationTotals, error) {
+	var totals SavedLocationTotals
+	err := r.db.WithContext(ctx).
+		Model(&SavedLocation{}).
+		Scopes(filter.apply).
+		Select(savedLocationTotalsColumns).
+		Scan(&totals.SavedLocationAggregate).Error
+	if err != nil || totals.Count == 0 {
+		return totals, database.Translate(err)
+	}
+
+	best, err := r.pickSavedLocation(ctx, filter, "score DESC, saved_at DESC, id ASC")
+	if err != nil {
+		return totals, err
+	}
+	latest, err := r.pickSavedLocation(ctx, filter, "saved_at DESC, id ASC")
+	if err != nil {
+		return totals, err
+	}
+	totals.Best = &best
+	totals.Latest = &latest
+	return totals, nil
+}
+
+func (r *gormRepository) pickSavedLocation(ctx context.Context, filter SavedLocationFilter, order string) (SavedLocationPick, error) {
+	var pick SavedLocationPick
+	err := r.db.WithContext(ctx).
+		Model(&SavedLocation{}).
+		Scopes(filter.apply).
+		Select(savedLocationPickColumns).
+		Order(order).
+		Limit(1).
+		Scan(&pick).Error
+	return pick, database.Translate(err)
 }
 
 func (r *gormRepository) FindSavedLocation(ctx context.Context, userID, id uuid.UUID) (SavedLocation, error) {
