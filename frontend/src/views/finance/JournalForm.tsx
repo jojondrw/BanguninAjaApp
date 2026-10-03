@@ -12,7 +12,6 @@ import {
   emptyJournalForm,
   emptyJournalLine,
   journalBalance,
-  postableAccountGroups,
   reservedJournalReason,
   type JournalBalance,
   type JournalEntryDetail,
@@ -20,38 +19,44 @@ import {
   type JournalLineValues,
   type JournalSide,
 } from '../../models/accounting'
-import type { AccountGroup, Account } from '../../models/master'
+import { postableAccountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { FormPanel } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { amountHint } from './financeTabs'
-import { AccountOptions, SubmitButton } from './parts'
+import { SubmitButton } from './parts'
 
 const BALANCE_STATUS_ID = 'journal-balance-status'
 const SIDES: JournalSide[] = ['debit', 'credit']
 
-function JournalLineFields({ line, index, groups, canRemove, onChange, onRemove }: {
+function JournalLineFields({ line, index, canRemove, onChange, onRemove }: {
   line: JournalLineValues
   index: number
-  groups: AccountGroup[]
   canRemove: boolean
   onChange: (line: JournalLineValues) => void
   onRemove: () => void
 }) {
   const id = line.key
 
-  const update = (key: 'accountId' | 'side' | 'amount') =>
+  const update = (key: 'side' | 'amount') =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange({ ...line, [key]: event.target.value })
 
   return (
     <fieldset className="rounded-xl bg-white p-4 shadow-hairline">
       <legend className="float-left mb-3 w-full text-xs font-medium text-slate-500">Baris {index + 1}</legend>
       <div className="clear-both grid gap-4 md:grid-cols-[2fr_1fr_1.2fr]">
-        <SelectField id={`${id}-account`} label="Akun" required value={line.accountId} onChange={update('accountId')}>
-          <AccountOptions groups={groups} placeholder="Pilih akun" />
-        </SelectField>
+        <SearchSelect
+          {...postableAccountOptions}
+          id={`${id}-account`}
+          label="Akun"
+          placeholder="Cari kode atau nama akun"
+          required
+          value={line.accountId}
+          onChange={(accountId) => onChange({ ...line, accountId })}
+        />
         <SelectField id={`${id}-side`} label="Posisi" value={line.side} onChange={update('side')}>
           {SIDES.map((side) => (
             <option key={side} value={side}>
@@ -133,14 +138,9 @@ function BalancePanel({ balance }: { balance: JournalBalance }) {
   )
 }
 
-export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
-  accounts: Account[]
-  isLoadingAccounts: boolean
-  onRecorded: (entry: JournalEntryDetail) => void
-}) {
+export function JournalForm({ onRecorded }: { onRecorded: (entry: JournalEntryDetail) => void }) {
   const [values, setValues] = useState<JournalFormValues>(() => emptyJournalForm(todayDate()))
   const createEntry = useCreateJournalEntry()
-  const groups = postableAccountGroups(accounts)
   const balance = journalBalance(values.lines)
   const reservedReason = reservedJournalReason(values)
 
@@ -211,13 +211,12 @@ export function JournalForm({ accounts, isLoadingAccounts, onRecorded }: {
         </div>
 
         <div className="space-y-3">
-          {isLoadingAccounts ? <p className="text-sm text-slate-600">Memuat daftar akun...</p> : null}
+          <p className="text-xs text-slate-500">Hanya akun rincian (tanpa akun anak) yang bisa dipakai di baris jurnal.</p>
           {values.lines.map((line, index) => (
             <JournalLineFields
               key={line.key}
               line={line}
               index={index}
-              groups={groups}
               canRemove={values.lines.length > JOURNAL_MIN_LINES}
               onChange={changeLine(line.key)}
               onRemove={removeLine(line.key)}

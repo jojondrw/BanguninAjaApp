@@ -158,6 +158,16 @@ export function useCreateJournalEntry() {
   })
 }
 
+// Satu akun untuk judul dan saldo normal buku besar, tanpa memuat bagan akun.
+export function useLedgerAccount(id: string) {
+  return useQuery({
+    queryKey: ['ledger-account', id],
+    queryFn: () => accountingApi.account(id),
+    enabled: id !== '',
+    ...DATA_QUERY,
+  })
+}
+
 export function useLedger(filter: LedgerFilter, enabled: boolean) {
   return useQuery({
     queryKey: [LEDGER_KEY, filter],

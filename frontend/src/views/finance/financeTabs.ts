@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { rupiah } from '../../shared/format'
 import { balanceSide } from '../../models/accounting'
+import type { CashTransaction } from '../../models/finance'
 
 export type FinanceTab = 'ringkasan' | 'anggaran' | 'kas' | 'jurnal' | 'buku-besar'
 
@@ -58,6 +59,11 @@ export function useSearchParam(name: string): [string, (value: string) => void] 
     )
 
   return [params.get(name) ?? '', update]
+}
+
+// Transaksi tanpa proyek adalah transaksi kantor pusat.
+export function cashProjectName(transaction: Pick<CashTransaction, 'projectId' | 'projectName'>): string {
+  return transaction.projectId === null ? 'Kantor pusat' : transaction.projectName || '-'
 }
 
 export function amountHint(value: string, fallback: string): string {

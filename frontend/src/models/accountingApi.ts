@@ -12,6 +12,7 @@ import type {
 } from './accounting'
 import { toQueryString, type Page } from './common'
 import type { Budget, CashTransaction, CashTransactionRequest } from './finance'
+import type { Account } from './master'
 
 export const accountingApi = {
   budgets: (filter: BudgetFilter = {}) =>
@@ -47,4 +48,6 @@ export const accountingApi = {
     request<JournalEntryDetail>('/finance/journal-entries', { method: 'POST', body }),
 
   ledger: (filter: LedgerFilter) => request<LedgerPage>(`/finance/ledger${toQueryString({ ...filter })}`),
+
+  account: (id: string) => request<Account>(`/master/accounts/${encodeURIComponent(id)}`),
 }

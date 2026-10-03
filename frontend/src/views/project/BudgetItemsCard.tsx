@@ -5,11 +5,10 @@ import {
   useBudgetItemPage,
   useCreateBudgetItem,
   useDeleteBudgetItem,
-  useUnitsOfMeasure,
   useUpdateBudgetItem,
 } from '../../controllers/useProjectWorkspace'
 import { summarizeBudgets, type Budget } from '../../models/finance'
-import type { UnitOfMeasure } from '../../models/master'
+import { unitOfMeasureOptions } from '../../models/lookupApi'
 import {
   BUDGET_ITEM_CODE_MAX_LENGTH,
   BUDGET_ITEM_DESCRIPTION_MAX_LENGTH,
@@ -25,14 +24,15 @@ import {
 import { errorMessage } from '../../shared/errorMessage'
 import { kpiValue, number, rupiah } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table, type Column } from '../components/Data'
-import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
+import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
+import { LookupName } from '../components/LookupName'
 import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { FormSection, InlineConfirm } from './parts'
 
 const PAGE_SIZE = 20
 const NO_BUDGETS: Budget[] = []
-const NO_UNITS: UnitOfMeasure[] = []
 
 type UpdateBudgetItem = ReturnType<typeof useUpdateBudgetItem>
 type BudgetPanel = { kind: 'new' } | { kind: 'edit'; itemId: string } | null
@@ -46,14 +46,11 @@ export function BudgetItemsCard({ project }: { project: Project }) {
     page,
     pageSize: PAGE_SIZE,
   })
-  const units = useUnitsOfMeasure()
   const budgets = useBudgets(project.id)
   const updateItem = useUpdateBudgetItem(project.id)
   const deleteItem = useDeleteBudgetItem(project.id)
   const isClosed = isProjectClosed(project)
 
-  const unitList = units.data?.items ?? NO_UNITS
-  const unitCode = (id: string) => unitList.find((unit) => unit.id === id)?.code ?? ''
   const data = items.data
   const grandTotal = data?.grandTotal ?? 0
   const selected = panel?.kind === 'edit' ? data?.items.find((item) => item.id === panel.itemId) : undefined
@@ -77,7 +74,15 @@ export function BudgetItemsCard({ project }: { project: Project }) {
   const columns: Column<BudgetItem>[] = [
     { header: 'Kode', cell: (row) => <span className="font-medium text-slate-900">{row.code}</span> },
     { header: 'Uraian', cell: (row) => row.description },
-    { header: 'Volume', align: 'right', cell: (row) => `${number(row.volume)} ${unitCode(row.unitOfMeasureId)}` },
+    {
+      header: 'Volume',
+      align: 'right',
+      cell: (row) => (
+        <>
+          {number(row.volume)} <LookupName source={unitOfMeasureOptions} value={row.unitOfMeasureId} fallback="" />
+        </>
+      ),
+    },
     { header: 'Harga satuan', align: 'right', cell: (row) => rupiah(row.unitPrice) },
     { header: 'Jumlah', align: 'right', cell: (row) => rupiah(row.total) },
     { header: 'Porsi RAB', align: 'right', cell: (row) => <Bar percent={budgetShare(row.total, grandTotal)} /> },
@@ -146,20 +151,10 @@ export function BudgetItemsCard({ project }: { project: Project }) {
 
       {panel?.kind === 'new' && !isClosed ? (
         <FormPanel>
-          <NewBudgetItemForm projectId={project.id} units={unitList} />
+          <NewBudgetItemForm projectId={project.id} />
         </FormPanel>
       ) : null}
 
-      {units.isError ? (
-        <div className="mb-4">
-          <ErrorNote message="Daftar satuan gagal dimuat, jadi satuan volume tidak tampil dan tidak bisa dipilih." />
-          <div className="mt-2">
-            <Button variant="subtle" onClick={() => units.refetch()}>
-              Muat ulang satuan
-            </Button>
-          </div>
-        </div>
-      ) : null}
       {deleteItem.isError ? (
         <div className="mb-4">
           <ErrorNote message={errorMessage(deleteItem.error)} />
@@ -198,7 +193,6 @@ export function BudgetItemsCard({ project }: { project: Project }) {
         <EditBudgetItemForm
           key={selected.id}
           item={selected}
-          units={unitList}
           update={updateItem}
           onDone={() => setPanel(null)}
         />
@@ -278,11 +272,11 @@ function totalHint(values: BudgetItemFormValues): string {
   return total === null ? 'Jumlah = volume x harga satuan' : `Jumlah ${rupiah(total)}`
 }
 
-function BudgetItemFields({ idPrefix, values, units, onChange, autoFocus = false }: {
+function BudgetItemFields({ idPrefix, values, onChange, onUnitChange, autoFocus = false }: {
   idPrefix: string
   values: BudgetItemFormValues
-  units: UnitOfMeasure[]
   onChange: (key: keyof BudgetItemFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
+  onUnitChange: (unitOfMeasureId: string) => void
   autoFocus?: boolean
 }) {
   return (
@@ -324,21 +318,15 @@ function BudgetItemFields({ idPrefix, values, units, onChange, autoFocus = false
         value={values.volume}
         onChange={onChange('volume')}
       />
-      <SelectField
+      <SearchSelect
+        {...unitOfMeasureOptions}
         id={`${idPrefix}-unit`}
         label="Satuan"
+        placeholder="Cari kode atau nama satuan"
         required
-        disabled={units.length === 0}
         value={values.unitOfMeasureId}
-        onChange={onChange('unitOfMeasureId')}
-      >
-        <option value="">{units.length === 0 ? 'Memuat satuan...' : 'Pilih satuan'}</option>
-        {units.map((unit) => (
-          <option key={unit.id} value={unit.id}>
-            {unit.name} ({unit.code})
-          </option>
-        ))}
-      </SelectField>
+        onChange={onUnitChange}
+      />
       <Field
         id={`${idPrefix}-unit-price`}
         label="Harga satuan"
@@ -363,13 +351,15 @@ function useBudgetItemValues(initial: BudgetItemFormValues) {
     (key: keyof BudgetItemFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setValues((current) => ({ ...current, [key]: event.target.value }))
 
-  return { values, setValues, change }
+  const changeUnit = (unitOfMeasureId: string) => setValues((current) => ({ ...current, unitOfMeasureId }))
+
+  return { values, setValues, change, changeUnit }
 }
 
 // Formulir tetap terbuka setelah menyimpan supaya beberapa item bisa dicatat
 // berturut-turut. Satuan terakhir dipertahankan karena biasanya sama.
-function NewBudgetItemForm({ projectId, units }: { projectId: string; units: UnitOfMeasure[] }) {
-  const { values, setValues, change } = useBudgetItemValues(EMPTY_BUDGET_ITEM_FORM)
+function NewBudgetItemForm({ projectId }: { projectId: string }) {
+  const { values, setValues, change, changeUnit } = useBudgetItemValues(EMPTY_BUDGET_ITEM_FORM)
   const createItem = useCreateBudgetItem(projectId)
 
   const submit = (event: FormEvent) => {
@@ -381,7 +371,7 @@ function NewBudgetItemForm({ projectId, units }: { projectId: string; units: Uni
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <BudgetItemFields idPrefix="rab-new" values={values} units={units} onChange={change} />
+      <BudgetItemFields idPrefix="rab-new" values={values} onChange={change} onUnitChange={changeUnit} />
 
       <Button type="submit" isPending={createItem.isPending} pendingLabel="Menyimpan item">
         Simpan item RAB
@@ -397,13 +387,12 @@ function NewBudgetItemForm({ projectId, units }: { projectId: string; units: Uni
   )
 }
 
-function EditBudgetItemForm({ item, units, update, onDone }: {
+function EditBudgetItemForm({ item, update, onDone }: {
   item: BudgetItem
-  units: UnitOfMeasure[]
   update: UpdateBudgetItem
   onDone: () => void
 }) {
-  const { values, change } = useBudgetItemValues(budgetItemFormValues(item))
+  const { values, change, changeUnit } = useBudgetItemValues(budgetItemFormValues(item))
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -413,7 +402,7 @@ function EditBudgetItemForm({ item, units, update, onDone }: {
   return (
     <FormSection title={`Ubah item ${item.code}`}>
       <form onSubmit={submit} className="space-y-4">
-        <BudgetItemFields idPrefix="rab-edit" values={values} units={units} onChange={change} autoFocus />
+        <BudgetItemFields idPrefix="rab-edit" values={values} onChange={change} onUnitChange={changeUnit} autoFocus />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={update.isPending} pendingLabel="Menyimpan item">

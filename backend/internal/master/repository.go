@@ -27,6 +27,7 @@ type AccountFilter struct {
 	Search   string
 	Type     string
 	ParentID *uuid.UUID
+	Postable bool
 	Offset   int
 	Limit    int
 }
@@ -209,6 +210,9 @@ func (f AccountFilter) apply(db *gorm.DB) *gorm.DB {
 	}
 	if f.ParentID != nil {
 		db = db.Where("parent_id = ?", *f.ParentID)
+	}
+	if f.Postable {
+		db = db.Where("NOT EXISTS (SELECT 1 FROM account AS child WHERE child.parent_id = account.id)")
 	}
 	return db
 }

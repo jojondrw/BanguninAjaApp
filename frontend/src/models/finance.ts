@@ -1,6 +1,8 @@
 export interface Budget {
   id: string
   projectId: string
+  // Diisi backend dari tabel proyek, jadi tabel tidak perlu memuat daftar proyek.
+  projectName: string
   year: number
   value: number
   note: string
@@ -16,7 +18,12 @@ export interface CashTransaction {
   date: string
   type: 'in' | 'out'
   accountId: string
+  // Kode dan nama akun serta nama proyek diisi backend pada daftar dan rincian.
+  accountCode: string
+  accountName: string
   projectId: string | null
+  // Tidak dikirim untuk transaksi kantor pusat (tanpa proyek).
+  projectName?: string
   amount: number
   note: string
   // Jurnal otomatis milik transaksi ini. null hanya untuk transaksi lama yang
