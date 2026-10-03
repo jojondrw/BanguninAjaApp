@@ -1,12 +1,13 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import {
-  useMaterials,
+  PROJECT_WAREHOUSE_LIMIT,
+  useProjectWarehouses,
   usePurchaseOrder,
   useRecordGoodsReceipt,
-  useUnitsOfMeasure,
-  useWarehouseOptions,
+  useWarehouseCount,
 } from '../../controllers/useProcurement'
+import type { MaterialOption } from '../../models/lookupApi'
 import {
   ORDER_STATUS_LABEL,
   RECEIPT_CONDITIONS,
@@ -21,6 +22,7 @@ import {
   type GoodsReceiptDetail,
   type GoodsReceiptFormValues,
   type PurchaseOrderDetail,
+  type PurchaseOrderItem,
   type ReceiptLineValues,
 } from '../../models/procurement'
 import { errorMessage } from '../../shared/errorMessage'
@@ -30,7 +32,7 @@ import { Button, ErrorNote, Field } from '../components/Form'
 import { SelectField } from '../components/ListTools'
 import { warehouseOptions } from '../../models/lookupApi'
 import { SearchSelect } from '../components/SearchSelect'
-import { codeOf, nameOf } from './lookup'
+import { useMaterialLookups, useUnitCode } from './lookup'
 import { TextAreaField } from './parts'
 
 const ALL_WAREHOUSES = warehouseOptions()
@@ -48,35 +50,31 @@ export interface ReceiveResult {
 // Penerimaan barang.
 export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSaved: (result: ReceiveResult) => void }) {
   const order = usePurchaseOrder(orderId)
-  const warehouses = useWarehouseOptions()
-  const materials = useMaterials()
-  const units = useUnitsOfMeasure()
+  const warehouseCount = useWarehouseCount()
+  const projectWarehouses = useProjectWarehouses(order.data?.projectId)
+  const materials = useMaterialLookups(order.data?.items.map((item) => item.materialId) ?? [])
   const recordReceipt = useRecordGoodsReceipt()
   const [values, setValues] = useState<GoodsReceiptFormValues>(emptyGoodsReceiptForm)
   const [lines, setLines] = useState<Record<string, ReceiptLineValues>>({})
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false)
 
-  if (order.isPending || warehouses.isPending || materials.isPending || units.isPending) {
-    return <Loading label="Mengambil pesanan, gudang, material, dan satuan..." />
+  if (order.isPending || warehouseCount.isPending || projectWarehouses.isPending) {
+    return <Loading label="Mengambil pesanan dan gudang..." />
   }
 
-  if (order.isError || warehouses.isError || materials.isError || units.isError) {
+  if (order.isError || warehouseCount.isError || projectWarehouses.isError) {
     return (
       <LoadFailed
         onRetry={() => {
           void order.refetch()
-          void warehouses.refetch()
-          void materials.refetch()
-          void units.refetch()
+          void warehouseCount.refetch()
+          void projectWarehouses.refetch()
         }}
       />
     )
   }
 
   const detail = order.data
-  const materialItems = materials.data.items
-  const unitItems = units.data.items
-  const warehouseItems = warehouses.data.items
 
   if (!RECEIVABLE_ORDER_STATUSES.includes(detail.status)) {
     return (
@@ -86,14 +84,21 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
     )
   }
 
-  if (warehouseItems.length === 0) {
+  if (warehouseCount.data === 0) {
     return <Empty message="Belum ada gudang. Tambahkan gudang di halaman Persediaan dulu, lalu catat penerimaan ini." />
   }
 
-  // Gudang milik proyek pesanan didahulukan. Kalau proyeknya punya tepat satu
-  // gudang, gudang itu langsung terpilih.
-  const projectWarehouses = warehouseItems.filter((warehouse) => warehouse.projectId === detail.projectId)
-  const warehouseId = values.warehouseId || (projectWarehouses.length === 1 ? projectWarehouses[0].id : '')
+  // Gudang milik proyek pesanan jadi petunjuk. Kalau proyeknya punya tepat
+  // satu gudang, gudang itu langsung terpilih.
+  const ownWarehouses = projectWarehouses.data.items
+  const ownTotal = projectWarehouses.data.totalItems
+  const warehouseId = values.warehouseId || (ownTotal === 1 ? ownWarehouses[0].id : '')
+  const warehouseHint =
+    ownTotal === 0
+      ? undefined
+      : `Gudang proyek ini: ${ownWarehouses.map((item) => item.name).join(', ')}${
+          ownTotal > PROJECT_WAREHOUSE_LIMIT ? `, dan ${number(ownTotal - PROJECT_WAREHOUSE_LIMIT)} lainnya` : ''
+        }`
 
   const resolved = detail.items.map((item) => {
     const line = lines[item.id] ?? defaultReceiptLine(item)
@@ -158,7 +163,7 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
           id={`receipt-${detail.id}-warehouse`}
           label="Gudang penerima"
           placeholder="Cari nama atau kode gudang"
-          hint={projectWarehouses.length > 0 ? `Gudang proyek ini: ${projectWarehouses.map((item) => item.name).join(', ')}` : undefined}
+          hint={warehouseHint}
           required
           value={warehouseId}
           onChange={(value) => setValues((current) => ({ ...current, warehouseId: value }))}
@@ -189,82 +194,17 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
       </div>
 
       <div className="space-y-3">
-        {resolved.map(({ item, line }, index) => {
-          const id = `receipt-${detail.id}-line-${item.id}`
-          const unit = codeOf(unitItems, item.unitOfMeasureId)
-          const isComplete = item.remainingQuantity <= 0
-          const material = materialItems.find((candidate) => candidate.id === item.materialId)
-          const stockUnitId = material?.unitOfMeasureId ?? item.unitOfMeasureId
-
-          return (
-            <fieldset key={item.id} className="rounded-xl bg-white p-4 shadow-hairline">
-              <legend className="float-left mb-3 w-full text-xs font-medium text-slate-500">
-                Baris {index + 1}: {nameOf(materialItems, item.materialId)}
-              </legend>
-              <div className="clear-both grid gap-4 md:grid-cols-[1.4fr_1fr_1fr]">
-                <dl className="grid grid-cols-3 gap-2 text-[13px]">
-                  <div>
-                    <dt className="text-xs text-slate-500">Dipesan</dt>
-                    <dd className="mt-0.5 text-slate-900 tabular-nums">
-                      {number(item.quantity)} {unit}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Sudah diterima</dt>
-                    <dd className="mt-0.5 text-slate-900 tabular-nums">
-                      {number(item.receivedQuantity)} {unit}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Sisa</dt>
-                    <dd className="mt-0.5 font-medium text-slate-900 tabular-nums">
-                      {number(item.remainingQuantity)} {unit}
-                    </dd>
-                  </div>
-                </dl>
-                {isComplete ? (
-                  <p className="self-center text-[13px] text-slate-600 md:col-span-2">
-                    Baris ini sudah diterima lengkap.
-                  </p>
-                ) : (
-                  <>
-                    <Field
-                      id={`${id}-accepted`}
-                      label={`Diterima baik (${unit})`}
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      max={item.remainingQuantity}
-                      step={0.01}
-                      placeholder="0"
-                      hint="Mengurangi sisa pesanan. Kosongkan kalau belum datang."
-                      value={line.accepted}
-                      onChange={updateLine(item.id, line, 'accepted')}
-                    />
-                    <Field
-                      id={`${id}-rejected`}
-                      label={`Ditolak (${unit})`}
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.01}
-                      placeholder="0"
-                      hint="Barang rusak yang dikembalikan, tidak mengurangi sisa."
-                      value={line.rejected}
-                      onChange={updateLine(item.id, line, 'rejected')}
-                    />
-                  </>
-                )}
-              </div>
-              {!isComplete && stockUnitId !== item.unitOfMeasureId ? (
-                <p className="mt-3 text-xs text-amber-800">
-                  Satuan stok material ini {codeOf(unitItems, stockUnitId)}, beda dengan satuan pesanan ({unit}). Baris
-                  ini tidak menambah stok otomatis: catat manual dari rincian penerimaan setelah jumlahnya dikonversi.
-                </p>
-              ) : null}
-            </fieldset>
-          )
-        })}
+        {resolved.map(({ item, line }, index) => (
+          <ReceiveLineFields
+            key={item.id}
+            id={`receipt-${detail.id}-line-${item.id}`}
+            index={index}
+            item={item}
+            line={line}
+            material={materials.byId.get(item.materialId)}
+            onChange={(key) => updateLine(item.id, line, key)}
+          />
+        ))}
       </div>
 
       <TextAreaField
@@ -284,5 +224,92 @@ export function ReceiveGoodsForm({ orderId, onSaved }: { orderId: string; onSave
 
       {recordReceipt.isError ? <ErrorNote message={errorMessage(recordReceipt.error)} /> : null}
     </form>
+  )
+}
+
+function withUnit(label: string, unit: string): string {
+  return unit === '' ? label : `${label} (${unit})`
+}
+
+function ReceiveLineFields({ id, index, item, line, material, onChange }: {
+  id: string
+  index: number
+  item: PurchaseOrderItem
+  line: ReceiptLineValues
+  material: MaterialOption | undefined
+  onChange: (key: keyof ReceiptLineValues) => (event: ChangeEvent<HTMLInputElement>) => void
+}) {
+  const unit = useUnitCode(item.unitOfMeasureId)
+  const isComplete = item.remainingQuantity <= 0
+  const stockUnitId = material?.unitOfMeasureId ?? item.unitOfMeasureId
+  const stockUnit = useUnitCode(stockUnitId)
+
+  return (
+    <fieldset className="rounded-xl bg-white p-4 shadow-hairline">
+      <legend className="float-left mb-3 w-full text-xs font-medium text-slate-500">
+        Baris {index + 1}: {material?.label ?? '…'}
+      </legend>
+      <div className="clear-both grid gap-4 md:grid-cols-[1.4fr_1fr_1fr]">
+        <dl className="grid grid-cols-3 gap-2 text-[13px]">
+          <div>
+            <dt className="text-xs text-slate-500">Dipesan</dt>
+            <dd className="mt-0.5 text-slate-900 tabular-nums">
+              {number(item.quantity)} {unit}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">Sudah diterima</dt>
+            <dd className="mt-0.5 text-slate-900 tabular-nums">
+              {number(item.receivedQuantity)} {unit}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-slate-500">Sisa</dt>
+            <dd className="mt-0.5 font-medium text-slate-900 tabular-nums">
+              {number(item.remainingQuantity)} {unit}
+            </dd>
+          </div>
+        </dl>
+        {isComplete ? (
+          <p className="self-center text-[13px] text-slate-600 md:col-span-2">
+            Baris ini sudah diterima lengkap.
+          </p>
+        ) : (
+          <>
+            <Field
+              id={`${id}-accepted`}
+              label={withUnit('Diterima baik', unit)}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={item.remainingQuantity}
+              step={0.01}
+              placeholder="0"
+              hint="Mengurangi sisa pesanan. Kosongkan kalau belum datang."
+              value={line.accepted}
+              onChange={onChange('accepted')}
+            />
+            <Field
+              id={`${id}-rejected`}
+              label={withUnit('Ditolak', unit)}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={0.01}
+              placeholder="0"
+              hint="Barang rusak yang dikembalikan, tidak mengurangi sisa."
+              value={line.rejected}
+              onChange={onChange('rejected')}
+            />
+          </>
+        )}
+      </div>
+      {!isComplete && stockUnitId !== item.unitOfMeasureId ? (
+        <p className="mt-3 text-xs text-amber-800">
+          Satuan stok material ini {stockUnit || '-'}, beda dengan satuan pesanan ({unit || '-'}). Baris ini tidak
+          menambah stok otomatis: catat manual dari rincian penerimaan setelah jumlahnya dikonversi.
+        </p>
+      ) : null}
+    </fieldset>
   )
 }

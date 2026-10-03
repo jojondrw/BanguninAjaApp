@@ -84,6 +84,14 @@ export function useLeadStageCounts(projectId?: string) {
   })
 }
 
+export function useContractSummary(projectId?: string) {
+  return useQuery({
+    queryKey: [SALES_KEY, 'contract-summary', projectId ?? 'all'],
+    queryFn: () => salesApi.contractSummary(projectId),
+    ...DATA_QUERY,
+  })
+}
+
 export function useContracts(filter: ContractFilter = {}) {
   return useQuery({
     queryKey: [SALES_KEY, 'contracts', filter],

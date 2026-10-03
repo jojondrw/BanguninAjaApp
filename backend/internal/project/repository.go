@@ -10,12 +10,32 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
 
+const projectTotalsColumns = "COUNT(*) AS count, " +
+	"COUNT(*) FILTER (WHERE status = ?) AS planning, " +
+	"COUNT(*) FILTER (WHERE status = ?) AS ongoing, " +
+	"COUNT(*) FILTER (WHERE status = ?) AS on_hold, " +
+	"COUNT(*) FILTER (WHERE status = ?) AS completed, " +
+	"COUNT(*) FILTER (WHERE status = ?) AS cancelled, " +
+	"COALESCE(SUM(contract_value), 0) AS contract_value, " +
+	"COALESCE(ROUND(AVG(progress)), 0) AS average_progress"
+
 type ProjectFilter struct {
 	Search   string
 	Status   string
 	RegionID *uuid.UUID
 	Offset   int
 	Limit    int
+}
+
+type ProjectTotals struct {
+	Count           int64
+	Planning        int64
+	Ongoing         int64
+	OnHold          int64
+	Completed       int64
+	Cancelled       int64
+	ContractValue   int64
+	AverageProgress int64
 }
 
 type BudgetItemFilter struct {
@@ -29,6 +49,7 @@ type Repository interface {
 	Transaction(ctx context.Context, work func(Repository) error) error
 
 	ListProjects(ctx context.Context, filter ProjectFilter) ([]Project, int64, error)
+	SummarizeProjects(ctx context.Context) (ProjectTotals, error)
 	FindProject(ctx context.Context, id uuid.UUID) (Project, error)
 	LockProject(ctx context.Context, id uuid.UUID) (Project, error)
 	CreateProject(ctx context.Context, project *Project) error
@@ -77,6 +98,15 @@ func (r *gormRepository) ListProjects(ctx context.Context, filter ProjectFilter)
 		Offset: filter.Offset,
 		Limit:  filter.Limit,
 	})
+}
+
+func (r *gormRepository) SummarizeProjects(ctx context.Context) (ProjectTotals, error) {
+	var totals ProjectTotals
+	err := r.db.WithContext(ctx).
+		Model(&Project{}).
+		Select(projectTotalsColumns, statusPlanning, statusOngoing, statusOnHold, statusCompleted, statusCancelled).
+		Scan(&totals).Error
+	return totals, database.Translate(err)
 }
 
 func (r *gormRepository) FindProject(ctx context.Context, id uuid.UUID) (Project, error) {

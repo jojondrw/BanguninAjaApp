@@ -59,6 +59,8 @@ var requestTransitions = map[string][]string{
 	requestApproved:  {requestCompleted},
 }
 
+var openOrderStatuses = []string{orderDraft, orderSent, orderPartiallyReceived}
+
 var orderTransitions = map[string][]string{
 	orderDraft: {orderSent, orderCancelled},
 	orderSent:  {orderCancelled},
@@ -135,6 +137,7 @@ type Service interface {
 	DeletePurchaseRequest(ctx context.Context, id uuid.UUID) error
 
 	ListPurchaseOrders(ctx context.Context, query PurchaseOrderQuery) (pagination.Page[PurchaseOrderResponse], error)
+	SummarizePurchaseOrders(ctx context.Context, query PurchaseOrderSummaryQuery) (PurchaseOrderSummaryResponse, error)
 	GetPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrderDetailResponse, error)
 	CreatePurchaseOrder(ctx context.Context, request PurchaseOrderRequest) (PurchaseOrderDetailResponse, error)
 	UpdatePurchaseOrder(ctx context.Context, id uuid.UUID, request PurchaseOrderRequest) (PurchaseOrderDetailResponse, error)
@@ -283,6 +286,14 @@ func (s *service) DeletePurchaseRequest(ctx context.Context, id uuid.UUID) error
 		return apperror.From(err)
 	}
 	return nil
+}
+
+func (s *service) SummarizePurchaseOrders(ctx context.Context, query PurchaseOrderSummaryQuery) (PurchaseOrderSummaryResponse, error) {
+	totals, err := s.repository.SummarizePurchaseOrders(ctx, PurchaseOrderFilter{ProjectID: query.ProjectID})
+	if err != nil {
+		return PurchaseOrderSummaryResponse{}, apperror.Internal(err)
+	}
+	return newPurchaseOrderSummaryResponse(totals), nil
 }
 
 func (s *service) ListPurchaseOrders(ctx context.Context, query PurchaseOrderQuery) (pagination.Page[PurchaseOrderResponse], error) {

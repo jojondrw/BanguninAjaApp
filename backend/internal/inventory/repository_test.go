@@ -118,3 +118,19 @@ func TestStockMovementResponseKeepsNames(t *testing.T) {
 		t.Fatalf("got source %v target %v", response.SourceWarehouseName, response.TargetWarehouseName)
 	}
 }
+
+func TestListStockMovementsFiltersByExactReference(t *testing.T) {
+	warehouseID := uuid.New()
+	db, recorder := databasetest.Open(t, countResult)
+
+	_, _, err := NewRepository(db).ListStockMovements(context.Background(), StockMovementFilter{WarehouseID: &warehouseID, Type: movementIn, Reference: "UJI-BPB-001", Limit: 10})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, query := range recorder.Queries() {
+		assertContains(t, query.SQL, "stock_movement.type = $3", "stock_movement.reference = $4")
+	}
+	if args := recorder.Queries()[0].Args; len(args) != 4 || args[3] != "UJI-BPB-001" {
+		t.Fatalf("got args %v", args)
+	}
+}

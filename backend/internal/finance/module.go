@@ -10,12 +10,14 @@ import (
 
 type Module struct {
 	controller *Controller
+	summary    *BudgetSummaryController
 	tokens     *token.Manager
 }
 
 func NewModule(db *gorm.DB, tokens *token.Manager) *Module {
 	return &Module{
 		controller: NewController(NewService(NewRepository(db))),
+		summary:    newBudgetSummaryController(db),
 		tokens:     tokens,
 	}
 }
@@ -26,6 +28,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	budgets := routes.Group("/budgets")
 	budgets.GET("", m.controller.ListBudgets)
 	budgets.POST("", m.controller.CreateBudget)
+	budgets.GET("/summary", m.summary.SummarizeBudgets)
 	budgets.GET("/:id", m.controller.GetBudget)
 	budgets.PUT("/:id", m.controller.UpdateBudget)
 	budgets.DELETE("/:id", m.controller.DeleteBudget)

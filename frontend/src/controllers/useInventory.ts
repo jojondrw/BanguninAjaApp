@@ -57,13 +57,6 @@ export function useMaterials(filter: MaterialFilter) {
   })
 }
 
-// Pilihan material di formulir mutasi dan penyaring stok. Batasnya 100, ukuran
-// halaman terbesar backend. Tabel stok dan mutasi tidak bergantung pada daftar
-// ini karena nama material sudah dikirim backend.
-export function useMaterialOptions() {
-  return useMaterials({ pageSize: MAX_PAGE_SIZE })
-}
-
 export function useLowStockMaterials(page: number) {
   return useQuery({
     queryKey: [...LOW_STOCK_KEY, page],
@@ -121,10 +114,6 @@ export function useWarehouses(filter: WarehouseFilter) {
     queryFn: () => inventoryApi.warehouses(filter),
     ...PAGED_QUERY,
   })
-}
-
-export function useWarehouseOptions() {
-  return useWarehouses({ pageSize: MAX_PAGE_SIZE })
 }
 
 export function useCreateWarehouse() {
@@ -216,17 +205,6 @@ export function useAssets(filter: AssetFilter) {
     queryKey: [...ASSETS_KEY, filter],
     queryFn: () => assetApi.assets(filter),
     ...PAGED_QUERY,
-  })
-}
-
-// Pilihan aset induk di formulir alat. Aset yang sudah dilepas ditolak backend
-// (equipment_asset_disposed), jadi tidak ditawarkan.
-export function useParentAssetOptions() {
-  return useQuery({
-    queryKey: [...ASSETS_KEY, { pageSize: MAX_PAGE_SIZE }],
-    queryFn: () => assetApi.assets({ pageSize: MAX_PAGE_SIZE }),
-    select: (page) => page.items.filter((asset) => asset.status !== 'disposed'),
-    ...DATA_QUERY,
   })
 }
 

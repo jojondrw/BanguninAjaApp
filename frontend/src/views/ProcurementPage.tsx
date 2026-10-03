@@ -2,16 +2,16 @@ import { useState } from 'react'
 
 import {
   useActiveVendorCount,
-  usePurchaseOrders,
+  usePurchaseOrderSummary,
   usePurchaseRequestCount,
 } from '../controllers/useProcurement'
-import { OPEN_ORDER_STATUSES, type PurchaseOrderFormValues } from '../models/procurement'
+import type { PurchaseOrderFormValues } from '../models/procurement'
 import { number, rupiahShort } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
 import { AppShell } from './components/AppShell'
 import { Kpi, KpiRow } from './components/Data'
 import { SectionTabs } from './components/ListTools'
-import { OPTION_LIMIT, type OrderPrefill } from './procurement/lookup'
+import type { OrderPrefill } from './procurement/lookup'
 import { OrdersSection } from './procurement/OrdersSection'
 import { ReceiptsSection } from './procurement/ReceiptsSection'
 import { RequestsSection } from './procurement/RequestsSection'
@@ -27,30 +27,21 @@ const TABS: { value: ProcurementTab; label: string }[] = [
 ]
 
 function ProcurementKpis() {
-  const orders = usePurchaseOrders({ pageSize: OPTION_LIMIT })
+  const orders = usePurchaseOrderSummary()
   const activeVendors = useActiveVendorCount()
   const pendingRequests = usePurchaseRequestCount('submitted')
-
-  const items = orders.data?.items ?? []
-  const open = items.filter((order) => OPEN_ORDER_STATUSES.includes(order.status))
-  const openValue = open.reduce((total, order) => total + order.value, 0)
-  const totalValue = items
-    .filter((order) => order.status !== 'cancelled')
-    .reduce((total, order) => total + order.value, 0)
-  const isPartial = (orders.data?.totalItems ?? 0) > items.length
-  const scope = isPartial ? `, dari ${OPTION_LIMIT} PO terbaru` : ''
 
   return (
     <KpiRow>
       <Kpi
         label="PO terbuka"
-        value={kpiText(orders, () => number(open.length))}
-        note={orders.data ? `draf, dikirim, atau diterima sebagian${scope}` : undefined}
+        value={kpiText(orders, (summary) => number(summary.openCount))}
+        note={orders.data ? 'draf, dikirim, atau diterima sebagian' : undefined}
       />
       <Kpi
         label="Nilai PO terbuka"
-        value={kpiText(orders, () => rupiahShort(openValue))}
-        note={orders.data ? `total ${rupiahShort(totalValue)} di luar yang batal${scope}` : undefined}
+        value={kpiText(orders, (summary) => rupiahShort(summary.openValue))}
+        note={orders.data ? `total ${rupiahShort(orders.data.totalValue)} di luar yang batal` : undefined}
       />
       <Kpi label="Vendor aktif" value={kpiText(activeVendors, number)} note="bisa menerima pesanan baru" />
       <Kpi label="Permintaan menunggu" value={kpiText(pendingRequests, number)} note="diajukan, belum disetujui" />

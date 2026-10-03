@@ -5,18 +5,17 @@ import type {
   GoodsReceiptDetail,
   GoodsReceiptFilter,
   GoodsReceiptRequest,
-  Material,
   PurchaseOrder,
   PurchaseOrderDetail,
   PurchaseOrderFilter,
   PurchaseOrderRequest,
   PurchaseOrderStatusChange,
+  PurchaseOrderSummary,
   PurchaseRequest,
   PurchaseRequestDetail,
   PurchaseRequestFilter,
   PurchaseRequestRequest,
   PurchaseRequestStatusChange,
-  UnitOfMeasure,
   Vendor,
   VendorFilter,
   VendorRequest,
@@ -61,6 +60,9 @@ export const procurementApi = {
   purchaseOrders: (filter: PurchaseOrderFilter = {}) =>
     request<Page<PurchaseOrder>>(`/procurement/purchase-orders${toQueryString({ ...filter })}`),
 
+  purchaseOrderSummary: (projectId?: string) =>
+    request<PurchaseOrderSummary>(`/procurement/purchase-orders/summary${toQueryString({ projectId })}`),
+
   purchaseOrder: (id: string) =>
     request<PurchaseOrderDetail>(`/procurement/purchase-orders/${id}`),
 
@@ -87,10 +89,4 @@ export const procurementApi = {
 
   recordGoodsReceipt: (body: GoodsReceiptRequest) =>
     request<GoodsReceiptDetail>('/procurement/goods-receipts', { method: 'POST', body }),
-
-  materials: (pageSize: number) =>
-    request<Page<Material>>(`/inventory/materials${toQueryString({ pageSize })}`),
-
-  unitsOfMeasure: (pageSize: number) =>
-    request<Page<UnitOfMeasure>>(`/master/units-of-measure${toQueryString({ pageSize })}`),
 }

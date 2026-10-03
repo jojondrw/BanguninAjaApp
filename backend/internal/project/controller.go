@@ -31,6 +31,11 @@ func (c *Controller) ListProjects(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizeProjects(ctx *gin.Context) {
+	summary, err := c.service.SummarizeProjects(ctx.Request.Context())
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) GetProject(ctx *gin.Context) {
 	id, err := httprequest.PathID(ctx, projectParam)
 	if err != nil {

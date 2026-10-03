@@ -21,7 +21,6 @@ import {
 import { hrApi } from '../models/hrApi'
 
 const ONE_MINUTE = 60_000
-const MAX_PAGE_SIZE = 100
 
 const HR_KEY = 'hr'
 const EMPLOYEES_KEY = [HR_KEY, 'employees'] as const
@@ -45,11 +44,6 @@ export function useEmployees(filter: EmployeeFilter) {
     queryFn: () => hrApi.employees(filter),
     ...PAGED_QUERY,
   })
-}
-
-// Pilihan karyawan di formulir absensi dan penggajian: hanya yang masih aktif.
-export function useActiveEmployeeOptions() {
-  return useEmployees({ active: 'true', pageSize: MAX_PAGE_SIZE })
 }
 
 export interface EmployeeHeadcount {

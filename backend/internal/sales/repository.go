@@ -20,6 +20,12 @@ const (
 	installmentColumns = "installment.id, installment.contract_id, contract.number AS contract_number, " +
 		"contract.customer_id, customer.name AS customer_name, installment.installment_number, installment.due_date, " +
 		"installment.amount, installment.paid_date, installment.status, installment.created_at, installment.updated_at"
+	contractTotalsColumns = "COUNT(*) AS count, " +
+		"COUNT(*) FILTER (WHERE contract.status = ?) AS draft, " +
+		"COUNT(*) FILTER (WHERE contract.status = ?) AS active, " +
+		"COUNT(*) FILTER (WHERE contract.status = ?) AS paid, " +
+		"COUNT(*) FILTER (WHERE contract.status = ?) AS cancelled, " +
+		"COALESCE(SUM(contract.value) FILTER (WHERE contract.status <> ?), 0) AS total_value"
 )
 
 type CustomerFilter struct {
@@ -62,6 +68,15 @@ type InstallmentFilter struct {
 	DueBefore  *time.Time
 	Offset     int
 	Limit      int
+}
+
+type ContractTotals struct {
+	Count      int64
+	Draft      int64
+	Active     int64
+	Paid       int64
+	Cancelled  int64
+	TotalValue int64
 }
 
 type UnitStatusCount struct {
@@ -124,6 +139,7 @@ type Repository interface {
 	DeleteLead(ctx context.Context, id uuid.UUID) error
 
 	ListContracts(ctx context.Context, filter ContractFilter) ([]ContractRow, int64, error)
+	SummarizeContracts(ctx context.Context, projectID *uuid.UUID) (ContractTotals, error)
 	FindContractRow(ctx context.Context, id uuid.UUID) (ContractRow, error)
 	LockContract(ctx context.Context, id uuid.UUID) (Contract, error)
 	CreateContract(ctx context.Context, contract *Contract) error
@@ -272,6 +288,18 @@ func (r *gormRepository) ListContracts(ctx context.Context, filter ContractFilte
 		Limit(filter.Limit).
 		Scan(&rows).Error
 	return rows, total, database.Translate(err)
+}
+
+func (r *gormRepository) SummarizeContracts(ctx context.Context, projectID *uuid.UUID) (ContractTotals, error) {
+	var totals ContractTotals
+	query := r.db.WithContext(ctx).
+		Model(&Contract{}).
+		Select(contractTotalsColumns, contractDraft, contractActive, contractPaid, contractCancelled, contractCancelled)
+	if projectID != nil {
+		query = query.Joins("JOIN unit ON unit.id = contract.unit_id").Where("unit.project_id = ?", *projectID)
+	}
+	err := query.Scan(&totals).Error
+	return totals, database.Translate(err)
 }
 
 func (r *gormRepository) FindContractRow(ctx context.Context, id uuid.UUID) (ContractRow, error) {

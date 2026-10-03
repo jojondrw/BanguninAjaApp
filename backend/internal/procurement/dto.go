@@ -125,6 +125,26 @@ type PurchaseOrderQuery struct {
 	DateTo    *time.Time `form:"dateTo" time_format:"2006-01-02"`
 }
 
+type PurchaseOrderSummaryQuery struct {
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type PurchaseOrderSummaryResponse struct {
+	Count      int64                     `json:"count"`
+	OpenCount  int64                     `json:"openCount"`
+	OpenValue  int64                     `json:"openValue"`
+	TotalValue int64                     `json:"totalValue"`
+	ByStatus   PurchaseOrderStatusCounts `json:"byStatus"`
+}
+
+type PurchaseOrderStatusCounts struct {
+	Draft             int64 `json:"draft"`
+	Sent              int64 `json:"sent"`
+	PartiallyReceived int64 `json:"partially_received"`
+	Completed         int64 `json:"completed"`
+	Cancelled         int64 `json:"cancelled"`
+}
+
 type PurchaseOrderResponse struct {
 	ID                uuid.UUID  `json:"id"`
 	Number            string     `json:"number"`
@@ -197,18 +217,20 @@ type GoodsReceiptResponse struct {
 }
 
 type GoodsReceiptItemResponse struct {
-	ID                   uuid.UUID  `json:"id"`
-	PurchaseOrderItemID  uuid.UUID  `json:"purchaseOrderItemId"`
-	MaterialID           uuid.UUID  `json:"materialId"`
-	MaterialName         string     `json:"materialName"`
-	UnitOfMeasureID      uuid.UUID  `json:"unitOfMeasureId"`
-	StockUnitOfMeasureID uuid.UUID  `json:"stockUnitOfMeasureId"`
-	AcceptedQuantity     float64    `json:"acceptedQuantity"`
-	RejectedQuantity     float64    `json:"rejectedQuantity"`
-	StockStatus          string     `json:"stockStatus"`
-	StockPosted          bool       `json:"stockPosted"`
-	StockMovementID      *uuid.UUID `json:"stockMovementId"`
-	UnpostedReason       string     `json:"unpostedReason"`
+	ID                     uuid.UUID  `json:"id"`
+	PurchaseOrderItemID    uuid.UUID  `json:"purchaseOrderItemId"`
+	MaterialID             uuid.UUID  `json:"materialId"`
+	MaterialName           string     `json:"materialName"`
+	UnitOfMeasureID        uuid.UUID  `json:"unitOfMeasureId"`
+	UnitOfMeasureCode      string     `json:"unitOfMeasureCode"`
+	StockUnitOfMeasureID   uuid.UUID  `json:"stockUnitOfMeasureId"`
+	StockUnitOfMeasureCode string     `json:"stockUnitOfMeasureCode"`
+	AcceptedQuantity       float64    `json:"acceptedQuantity"`
+	RejectedQuantity       float64    `json:"rejectedQuantity"`
+	StockStatus            string     `json:"stockStatus"`
+	StockPosted            bool       `json:"stockPosted"`
+	StockMovementID        *uuid.UUID `json:"stockMovementId"`
+	UnpostedReason         string     `json:"unpostedReason"`
 }
 
 type UnpostedLineResponse struct {
@@ -267,6 +289,22 @@ func newPurchaseRequestItemResponse(item PurchaseRequestItem) PurchaseRequestIte
 		MaterialID:      item.MaterialID,
 		Quantity:        item.Quantity,
 		UnitOfMeasureID: item.UnitOfMeasureID,
+	}
+}
+
+func newPurchaseOrderSummaryResponse(totals PurchaseOrderTotals) PurchaseOrderSummaryResponse {
+	return PurchaseOrderSummaryResponse{
+		Count:      totals.Count,
+		OpenCount:  totals.Draft + totals.Sent + totals.PartiallyReceived,
+		OpenValue:  totals.OpenValue,
+		TotalValue: totals.TotalValue,
+		ByStatus: PurchaseOrderStatusCounts{
+			Draft:             totals.Draft,
+			Sent:              totals.Sent,
+			PartiallyReceived: totals.PartiallyReceived,
+			Completed:         totals.Completed,
+			Cancelled:         totals.Cancelled,
+		},
 	}
 }
 
@@ -330,18 +368,20 @@ func newGoodsReceiptRowResponse(row GoodsReceiptRow) GoodsReceiptResponse {
 func newGoodsReceiptItemResponse(line GoodsReceiptLine) GoodsReceiptItemResponse {
 	status := stockStatusOf(line.GoodsReceiptItem)
 	return GoodsReceiptItemResponse{
-		ID:                   line.ID,
-		PurchaseOrderItemID:  line.PurchaseOrderItemID,
-		MaterialID:           line.MaterialID,
-		MaterialName:         line.MaterialName,
-		UnitOfMeasureID:      line.UnitOfMeasureID,
-		StockUnitOfMeasureID: line.StockUnitOfMeasureID,
-		AcceptedQuantity:     line.AcceptedQuantity,
-		RejectedQuantity:     line.RejectedQuantity,
-		StockStatus:          status,
-		StockPosted:          status == stockPosted,
-		StockMovementID:      line.StockMovementID,
-		UnpostedReason:       unpostedReason(line),
+		ID:                     line.ID,
+		PurchaseOrderItemID:    line.PurchaseOrderItemID,
+		MaterialID:             line.MaterialID,
+		MaterialName:           line.MaterialName,
+		UnitOfMeasureID:        line.UnitOfMeasureID,
+		UnitOfMeasureCode:      line.UnitOfMeasureCode,
+		StockUnitOfMeasureID:   line.StockUnitOfMeasureID,
+		StockUnitOfMeasureCode: line.StockUnitOfMeasureCode,
+		AcceptedQuantity:       line.AcceptedQuantity,
+		RejectedQuantity:       line.RejectedQuantity,
+		StockStatus:            status,
+		StockPosted:            status == stockPosted,
+		StockMovementID:        line.StockMovementID,
+		UnpostedReason:         unpostedReason(line),
 	}
 }
 

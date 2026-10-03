@@ -99,6 +99,7 @@ type StockMovementQuery struct {
 	MaterialID  *uuid.UUID `form:"materialId,parser=encoding.TextUnmarshaler"`
 	WarehouseID *uuid.UUID `form:"warehouseId,parser=encoding.TextUnmarshaler"`
 	Type        string     `form:"type" binding:"omitempty,oneof=in out transfer adjustment"`
+	Reference   string     `form:"reference" binding:"omitempty,max=60"`
 	DateFrom    *time.Time `form:"dateFrom" time_format:"2006-01-02"`
 	DateTo      *time.Time `form:"dateTo" time_format:"2006-01-02"`
 }

@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useCreatePurchaseOrder, useUnitsOfMeasure, useUpdatePurchaseOrder } from '../../controllers/useProcurement'
+import { useCreatePurchaseOrder, useUpdatePurchaseOrder } from '../../controllers/useProcurement'
 import { activeVendorOptions, projectOptions } from '../../models/lookupApi'
 import {
   ORDER_NUMBER_MAX_LENGTH,
@@ -10,7 +10,7 @@ import {
 } from '../../models/procurement'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading } from '../components/Data'
+import { Card } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
 import { MaterialLinesEditor } from './MaterialLines'
@@ -34,8 +34,6 @@ export function PurchaseOrderFormCard({
   const [values, setValues] = useState<PurchaseOrderFormValues>(initial)
   const createOrder = useCreatePurchaseOrder()
   const updateOrder = useUpdatePurchaseOrder()
-  const units = useUnitsOfMeasure()
-  const unitItems = units.data?.items ?? []
   const isEditing = editingId !== null
   const isFromRequest = values.purchaseRequestId !== ''
   const requestLabel = requestNumber ? ` ${requestNumber}` : ''
@@ -70,22 +68,6 @@ export function PurchaseOrderFormCard({
       Batal ubah
     </Button>
   ) : undefined
-
-  if (units.isPending) {
-    return (
-      <Card title={title}>
-        <Loading label="Mengambil satuan..." />
-      </Card>
-    )
-  }
-
-  if (units.isError) {
-    return (
-      <Card title={title}>
-        <LoadFailed onRetry={() => units.refetch()} />
-      </Card>
-    )
-  }
 
   return (
     <Card
@@ -153,7 +135,6 @@ export function PurchaseOrderFormCard({
         <MaterialLinesEditor
           idPrefix="po"
           lines={values.items}
-          units={unitItems}
           showPrice
           onChange={(items) => setValues((current) => ({ ...current, items }))}
         />

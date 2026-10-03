@@ -49,6 +49,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	contracts := routes.Group("/contracts")
 	contracts.GET("", m.controller.ListContracts)
 	contracts.POST("", m.controller.CreateContract)
+	contracts.GET("/summary", m.controller.SummarizeContracts)
 	contracts.GET("/:id", m.controller.GetContract)
 	contracts.PUT("/:id", m.controller.UpdateContract)
 	contracts.PATCH("/:id/status", m.controller.UpdateContractStatus)

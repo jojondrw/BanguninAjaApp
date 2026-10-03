@@ -1,4 +1,3 @@
-import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
 
@@ -24,12 +23,4 @@ export function amountHint(value: string, fallback: string): string {
     return fallback
   }
   return rupiah(amount)
-}
-
-export function projectLabel(projects: Project[], id: string | null): string {
-  if (id === null) {
-    return '-'
-  }
-  const project = projects.find((item) => item.id === id)
-  return project ? project.name : '-'
 }

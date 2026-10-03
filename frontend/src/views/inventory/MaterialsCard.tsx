@@ -10,17 +10,20 @@ import {
   materialFormValues,
   type Material,
   type MaterialFormValues,
-  type UnitOfMeasure,
 } from '../../models/inventory'
+import { unitOfMeasureOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { FormPanel, FormToggle, Pager, SelectField, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { LookupName } from '../components/LookupName'
+import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { amountHint, pageAfterRemoval, refusalText } from '../hr/hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from '../hr/RowActions'
-import { PAGE_SIZE, quantityText, unitCode, type Lookups } from './inventoryShared'
+import { useUnitCode } from '../procurement/lookup'
+import { PAGE_SIZE, quantityText } from './inventoryShared'
 
 const CATEGORY_OPTIONS_ID = 'material-category-options'
 
@@ -32,16 +35,22 @@ function useMaterialValues(initial: MaterialFormValues) {
   const change: ChangeMaterial = (key) => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
 
-  return { values, setValues, change }
+  const changeUnit = (unitOfMeasureId: string) => setValues((current) => ({ ...current, unitOfMeasureId }))
+
+  return { values, setValues, change, changeUnit }
 }
 
-function MaterialFields({ idPrefix, values, onChange, units }: {
+function UnitQuantity({ quantity, unitOfMeasureId }: { quantity: number; unitOfMeasureId: string }) {
+  return <>{quantityText(quantity, useUnitCode(unitOfMeasureId))}</>
+}
+
+function MaterialFields({ idPrefix, values, onChange, onUnitChange }: {
   idPrefix: string
   values: MaterialFormValues
   onChange: ChangeMaterial
-  units: UnitOfMeasure[]
+  onUnitChange: (unitOfMeasureId: string) => void
 }) {
-  const unit = units.find((item) => item.id === values.unitOfMeasureId)?.code ?? ''
+  const unit = useUnitCode(values.unitOfMeasureId)
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -76,20 +85,15 @@ function MaterialFields({ idPrefix, values, onChange, units }: {
         value={values.category}
         onChange={onChange('category')}
       />
-      <SelectField
+      <SearchSelect
+        {...unitOfMeasureOptions}
         id={`${idPrefix}-unit`}
         label="Satuan"
+        placeholder="Cari kode atau nama satuan"
         required
         value={values.unitOfMeasureId}
-        onChange={onChange('unitOfMeasureId')}
-      >
-        <option value="">Pilih satuan</option>
-        {units.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.name} ({item.code})
-          </option>
-        ))}
-      </SelectField>
+        onChange={(value) => onUnitChange(value)}
+      />
       <Field
         id={`${idPrefix}-minimum`}
         label={unit === '' ? 'Stok minimum' : `Stok minimum (${unit})`}
@@ -118,8 +122,8 @@ function MaterialFields({ idPrefix, values, onChange, units }: {
   )
 }
 
-function NewMaterialForm({ units }: { units: UnitOfMeasure[] }) {
-  const { values, setValues, change } = useMaterialValues(EMPTY_MATERIAL_FORM)
+function NewMaterialForm() {
+  const { values, setValues, change, changeUnit } = useMaterialValues(EMPTY_MATERIAL_FORM)
   const createMaterial = useCreateMaterial()
 
   const submit = (event: FormEvent) => {
@@ -130,7 +134,7 @@ function NewMaterialForm({ units }: { units: UnitOfMeasure[] }) {
   return (
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
-        <MaterialFields idPrefix="material-new" values={values} onChange={change} units={units} />
+        <MaterialFields idPrefix="material-new" values={values} onChange={change} onUnitChange={changeUnit} />
 
         <Button type="submit" isPending={createMaterial.isPending} pendingLabel="Menyimpan material">
           Simpan material
@@ -145,13 +149,12 @@ function NewMaterialForm({ units }: { units: UnitOfMeasure[] }) {
   )
 }
 
-function EditMaterialForm({ material, units, onSaved, onCancel }: {
+function EditMaterialForm({ material, onSaved, onCancel }: {
   material: Material
-  units: UnitOfMeasure[]
   onSaved: (saved: Material) => void
   onCancel: () => void
 }) {
-  const { values, change } = useMaterialValues(materialFormValues(material))
+  const { values, change, changeUnit } = useMaterialValues(materialFormValues(material))
   const updateMaterial = useUpdateMaterial()
 
   const submit = (event: FormEvent) => {
@@ -163,7 +166,7 @@ function EditMaterialForm({ material, units, onSaved, onCancel }: {
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
         <h3 className="text-[15px] font-semibold text-slate-900">Ubah material {material.code}</h3>
-        <MaterialFields idPrefix="material-edit" values={values} onChange={change} units={units} />
+        <MaterialFields idPrefix="material-edit" values={values} onChange={change} onUnitChange={changeUnit} />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={updateMaterial.isPending} pendingLabel="Menyimpan perubahan">
@@ -180,7 +183,7 @@ function EditMaterialForm({ material, units, onSaved, onCancel }: {
   )
 }
 
-export function MaterialsCard({ lookups }: { lookups: Lookups }) {
+export function MaterialsCard() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [isCreating, setIsCreating] = useState(false)
@@ -255,12 +258,11 @@ export function MaterialsCard({ lookups }: { lookups: Lookups }) {
         <FormToggle isOpen={isFormOpen} openLabel="Tambah material" onToggle={toggleForm} />
       </Toolbar>
 
-      {isCreating ? <NewMaterialForm units={lookups.units} /> : null}
+      {isCreating ? <NewMaterialForm /> : null}
       {editing ? (
         <EditMaterialForm
           key={editing.id}
           material={editing}
-          units={lookups.units}
           onCancel={closeForm}
           onSaved={(saved) => {
             closeForm()
@@ -295,11 +297,14 @@ export function MaterialsCard({ lookups }: { lookups: Lookups }) {
               { header: 'Kode', cell: (row) => row.code },
               { header: 'Nama', cell: (row) => row.name },
               { header: 'Kategori', cell: (row) => row.category || '-' },
-              { header: 'Satuan', cell: (row) => unitCode(lookups, row.unitOfMeasureId) || '-' },
+              {
+                header: 'Satuan',
+                cell: (row) => <LookupName source={unitOfMeasureOptions} value={row.unitOfMeasureId} />,
+              },
               {
                 header: 'Stok minimum',
                 align: 'right',
-                cell: (row) => quantityText(row.minimumStock, unitCode(lookups, row.unitOfMeasureId)),
+                cell: (row) => <UnitQuantity quantity={row.minimumStock} unitOfMeasureId={row.unitOfMeasureId} />,
               },
               { header: 'Harga terakhir', align: 'right', cell: (row) => rupiah(row.lastPrice) },
               {

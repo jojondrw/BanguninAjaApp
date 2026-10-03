@@ -27,7 +27,27 @@ const (
 		"material.unit_of_measure_id AS stock_unit_of_measure_id, stock_unit.code AS stock_unit_of_measure_code"
 )
 
+const purchaseOrderTotalsColumns = "COUNT(*) AS count, " +
+	"COUNT(*) FILTER (WHERE purchase_order.status = ?) AS draft, " +
+	"COUNT(*) FILTER (WHERE purchase_order.status = ?) AS sent, " +
+	"COUNT(*) FILTER (WHERE purchase_order.status = ?) AS partially_received, " +
+	"COUNT(*) FILTER (WHERE purchase_order.status = ?) AS completed, " +
+	"COUNT(*) FILTER (WHERE purchase_order.status = ?) AS cancelled, " +
+	"COALESCE(SUM(purchase_order.value) FILTER (WHERE purchase_order.status IN ?), 0) AS open_value, " +
+	"COALESCE(SUM(purchase_order.value) FILTER (WHERE purchase_order.status <> ?), 0) AS total_value"
+
 type StockLedgerFactory func(db *gorm.DB) StockLedger
+
+type PurchaseOrderTotals struct {
+	Count             int64
+	Draft             int64
+	Sent              int64
+	PartiallyReceived int64
+	Completed         int64
+	Cancelled         int64
+	OpenValue         int64
+	TotalValue        int64
+}
 
 type VendorFilter struct {
 	Search   string
@@ -128,6 +148,7 @@ type Repository interface {
 	ReplacePurchaseRequestItems(ctx context.Context, requestID uuid.UUID, items []PurchaseRequestItem) error
 
 	ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrderRow, int64, error)
+	SummarizePurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) (PurchaseOrderTotals, error)
 	FindPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrder, error)
 	LockPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrder, error)
 	CreatePurchaseOrder(ctx context.Context, order *PurchaseOrder) error
@@ -242,6 +263,18 @@ func (r *gormRepository) ReplacePurchaseRequestItems(ctx context.Context, reques
 		return database.Translate(err)
 	}
 	return database.Translate(r.db.WithContext(ctx).Create(&items).Error)
+}
+
+func (r *gormRepository) SummarizePurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) (PurchaseOrderTotals, error) {
+	var totals PurchaseOrderTotals
+	err := r.db.WithContext(ctx).
+		Model(&PurchaseOrder{}).
+		Scopes(filter.apply).
+		Select(purchaseOrderTotalsColumns,
+			orderDraft, orderSent, orderPartiallyReceived, orderCompleted, orderCancelled,
+			openOrderStatuses, orderCancelled).
+		Scan(&totals).Error
+	return totals, database.Translate(err)
 }
 
 func (r *gormRepository) ListPurchaseOrders(ctx context.Context, filter PurchaseOrderFilter) ([]PurchaseOrderRow, int64, error) {

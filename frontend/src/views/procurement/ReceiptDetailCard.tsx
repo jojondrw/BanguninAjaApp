@@ -5,9 +5,8 @@ import {
   usePurchaseOrder,
   useReceiptStockMovements,
   useRecordReceiptStock,
-  useUnitsOfMeasure,
-  useWarehouseOptions,
 } from '../../controllers/useProcurement'
+import { warehouseOptions } from '../../models/lookupApi'
 import {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_TONE,
@@ -25,9 +24,11 @@ import { number, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip } from '../components/ListTools'
-import { codeOf, nameOf } from './lookup'
+import { useLookupLabel } from '../components/searchSelectLogic'
 import { ManualStockLine } from './ManualStockLine'
 import { ConfirmAction, Facts } from './parts'
+
+const WAREHOUSES = warehouseOptions()
 
 const STOCK_STATE_LABEL: Record<ReceiptStockState, string> = {
   posted: 'Masuk stok otomatis',
@@ -52,8 +53,7 @@ function countOf(lines: ReceiptStockLine[], state: ReceiptStockState): number {
 export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () => void }) {
   const receipt = useGoodsReceipt(id)
   const order = usePurchaseOrder(receipt.data?.purchaseOrderId ?? null)
-  const units = useUnitsOfMeasure()
-  const warehouses = useWarehouseOptions()
+  const warehouseLabel = useLookupLabel(WAREHOUSES, receipt.data?.warehouseId ?? null)
   const movements = useReceiptStockMovements(receipt.data)
   const recordStock = useRecordReceiptStock()
   const recordManualStock = useRecordReceiptStock()
@@ -82,8 +82,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
   }
 
   const detail = receipt.data
-  const unitItems = units.data?.items ?? []
-  const warehouseName = nameOf(warehouses.data?.items ?? [], detail.warehouseId)
+  const warehouseName = detail.warehouseName || warehouseLabel || '-'
   const needsCheck = receiptNeedsMovementCheck(detail)
   const isStockKnown = !needsCheck || movements.data !== undefined
   const lines = receiptStockLines(detail, movements.data?.items ?? [])
@@ -134,7 +133,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
           { header: 'Material', cell: (row) => row.materialName },
           { header: 'Diterima baik', align: 'right', cell: (row) => number(row.acceptedQuantity) },
           { header: 'Ditolak', align: 'right', cell: (row) => number(row.rejectedQuantity) },
-          { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },
+          { header: 'Satuan', cell: (row) => row.unitOfMeasureCode || '-' },
           {
             header: 'Stok gudang',
             cell: (row) =>
@@ -201,8 +200,8 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
                       key={line.receiptItemId}
                       receiptId={detail.id}
                       line={line}
-                      orderUnit={codeOf(unitItems, line.unitOfMeasureId)}
-                      stockUnit={codeOf(unitItems, line.stockUnitOfMeasureId)}
+                      orderUnit={line.unitOfMeasureCode || '-'}
+                      stockUnit={line.stockUnitOfMeasureCode || '-'}
                       warehouseName={warehouseName}
                       isPending={recordManualStock.isPending && manualLine?.receiptItemId === line.receiptItemId}
                       error={
@@ -231,7 +230,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
         ) : null}
         {recordManualStock.isSuccess && manualRequest && manualLine ? (
           <SuccessNote
-            message={`Stok ${manualLine.materialName} bertambah ${number(manualRequest.quantity)} ${codeOf(unitItems, manualLine.stockUnitOfMeasureId)} di ${warehouseName}.`}
+            message={`Stok ${manualLine.materialName} bertambah ${number(manualRequest.quantity)} ${manualLine.stockUnitOfMeasureCode} di ${warehouseName}.`}
           />
         ) : null}
       </div>

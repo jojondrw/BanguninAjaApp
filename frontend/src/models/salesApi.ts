@@ -4,6 +4,7 @@ import {
   LEAD_STAGES,
   type Contract,
   type ContractFilter,
+  type ContractSummary,
   type ContractRequest,
   type ContractTarget,
   type Customer,
@@ -74,6 +75,9 @@ export const salesApi = {
 
   contracts: (filter: ContractFilter = {}) =>
     request<Page<Contract>>(`/sales/contracts${toQueryString({ ...filter })}`),
+
+  contractSummary: (projectId?: string) =>
+    request<ContractSummary>(`/sales/contracts/summary${toQueryString({ projectId })}`),
 
   contract: (id: string) => request<Contract>(`/sales/contracts/${id}`),
 

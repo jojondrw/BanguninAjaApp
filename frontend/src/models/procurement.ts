@@ -179,7 +179,9 @@ export interface GoodsReceiptItem {
   materialId: string
   materialName: string
   unitOfMeasureId: string
+  unitOfMeasureCode: string
   stockUnitOfMeasureId: string
+  stockUnitOfMeasureCode: string
   acceptedQuantity: number
   rejectedQuantity: number
   stockStatus: GoodsReceiptStockStatus
@@ -261,7 +263,15 @@ export const RECEIPT_NOTE_MAX_LENGTH = 2000
 
 export const VENDOR_CATEGORY_SUGGESTIONS = ['Material', 'Alat berat', 'Subkontraktor', 'Jasa', 'Logistik']
 
-export const OPEN_ORDER_STATUSES: PurchaseOrderStatus[] = ['draft', 'sent', 'partially_received']
+// Ringkasan seluruh pesanan dari backend. Terbuka berarti draf, dikirim, atau
+// diterima sebagian. totalValue di luar pesanan batal.
+export interface PurchaseOrderSummary {
+  count: number
+  openCount: number
+  openValue: number
+  totalValue: number
+  byStatus: Record<PurchaseOrderStatus, number>
+}
 
 // Sama dengan pengecekan receiveGoods di backend.
 export const RECEIVABLE_ORDER_STATUSES: PurchaseOrderStatus[] = ['sent', 'partially_received']
@@ -399,13 +409,18 @@ export function purchaseOrderFormFrom(order: PurchaseOrderDetail): PurchaseOrder
 // Pesanan dari permintaan: proyek, material, jumlah, dan satuan diambil dari
 // permintaan, harga satuan dari harga terakhir material. Vendor dan nomor
 // dipilih sendiri.
-export function purchaseOrderFormFromRequest(request: PurchaseRequestDetail, materials: Material[]): PurchaseOrderFormValues {
+// Harga satuan diisi dari harga terakhir material. Material yang belum
+// termuat dibiarkan kosong supaya diisi pengguna.
+export function purchaseOrderFormFromRequest(
+  request: PurchaseRequestDetail,
+  materials: ReadonlyMap<string, { lastPrice: number }>,
+): PurchaseOrderFormValues {
   return {
     ...emptyPurchaseOrderForm(),
     projectId: request.projectId,
     purchaseRequestId: request.id,
     items: request.items.map((item) => {
-      const material = materials.find((candidate) => candidate.id === item.materialId)
+      const material = materials.get(item.materialId)
       return lineFrom(item, material ? String(material.lastPrice) : '')
     }),
   }
@@ -603,7 +618,9 @@ export interface ReceiptStockLine {
   materialId: string
   materialName: string
   unitOfMeasureId: string
+  unitOfMeasureCode: string
   stockUnitOfMeasureId: string
+  stockUnitOfMeasureCode: string
   acceptedQuantity: number
   rejectedQuantity: number
   state: ReceiptStockState
@@ -634,7 +651,9 @@ export function receiptStockLines(receipt: GoodsReceiptDetail, movements: StockM
     materialId: item.materialId,
     materialName: item.materialName,
     unitOfMeasureId: item.unitOfMeasureId,
+    unitOfMeasureCode: item.unitOfMeasureCode,
     stockUnitOfMeasureId: item.stockUnitOfMeasureId,
+    stockUnitOfMeasureCode: item.stockUnitOfMeasureCode,
     acceptedQuantity: item.acceptedQuantity,
     rejectedQuantity: item.rejectedQuantity,
     state: stockStateOf(
