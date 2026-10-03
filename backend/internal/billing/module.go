@@ -30,6 +30,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	invoices.PUT("/:id", m.controller.UpdateInvoice)
 	invoices.DELETE("/:id", m.controller.DeleteInvoice)
 	invoices.POST("/:id/payments", m.controller.PayInvoice)
+	invoices.GET("/:id/payments", m.controller.InvoicePayments)
 
 	receivables := routes.Group("/receivables")
 	receivables.GET("", m.controller.ListReceivables)
@@ -38,6 +39,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	receivables.PUT("/:id", m.controller.UpdateReceivable)
 	receivables.DELETE("/:id", m.controller.DeleteReceivable)
 	receivables.POST("/:id/payments", m.controller.PayReceivable)
+	receivables.GET("/:id/payments", m.controller.ReceivablePayments)
 
 	payables := routes.Group("/payables")
 	payables.GET("", m.controller.ListPayables)
@@ -46,4 +48,5 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	payables.PUT("/:id", m.controller.UpdatePayable)
 	payables.DELETE("/:id", m.controller.DeletePayable)
 	payables.POST("/:id/payments", m.controller.PayPayable)
+	payables.GET("/:id/payments", m.controller.PayablePayments)
 }

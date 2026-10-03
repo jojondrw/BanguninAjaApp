@@ -1,10 +1,14 @@
 package billing
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
 )
 
 const idParam = "id"
@@ -82,7 +86,7 @@ func (c *Controller) PayInvoice(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	invoice, err := c.service.PayInvoice(ctx.Request.Context(), id, request)
+	invoice, err := c.service.PayInvoice(ctx.Request.Context(), id, request, actorOf(ctx))
 	httpresponse.Respond(ctx, invoice, err)
 }
 
@@ -151,7 +155,7 @@ func (c *Controller) PayReceivable(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	receivable, err := c.service.PayReceivable(ctx.Request.Context(), id, request)
+	receivable, err := c.service.PayReceivable(ctx.Request.Context(), id, request, actorOf(ctx))
 	httpresponse.Respond(ctx, receivable, err)
 }
 
@@ -220,6 +224,43 @@ func (c *Controller) PayPayable(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	payable, err := c.service.PayPayable(ctx.Request.Context(), id, request)
+	payable, err := c.service.PayPayable(ctx.Request.Context(), id, request, actorOf(ctx))
 	httpresponse.Respond(ctx, payable, err)
+}
+
+func (c *Controller) InvoicePayments(ctx *gin.Context) {
+	c.listPayments(ctx, c.service.InvoicePayments)
+}
+
+func (c *Controller) ReceivablePayments(ctx *gin.Context) {
+	c.listPayments(ctx, c.service.ReceivablePayments)
+}
+
+func (c *Controller) PayablePayments(ctx *gin.Context) {
+	c.listPayments(ctx, c.service.PayablePayments)
+}
+
+type paymentLister func(ctx context.Context, id uuid.UUID, query PaymentQuery) (pagination.Page[PaymentResponse], error)
+
+func (c *Controller) listPayments(ctx *gin.Context, list paymentLister) {
+	id, err := httprequest.PathID(ctx, idParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var query PaymentQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	page, err := list(ctx.Request.Context(), id, query)
+	httpresponse.Respond(ctx, page, err)
+}
+
+func actorOf(ctx *gin.Context) *uuid.UUID {
+	userID, err := httprequest.UserID(ctx)
+	if err != nil {
+		return nil
+	}
+	return &userID
 }

@@ -35,6 +35,7 @@ type InvoiceResponse struct {
 	Note                string     `json:"note"`
 	PartyType           string     `json:"partyType"`
 	PartyID             uuid.UUID  `json:"partyId"`
+	PartyName           *string    `json:"partyName"`
 	ProjectID           *uuid.UUID `json:"projectId"`
 	ProjectName         *string    `json:"projectName"`
 	ReceivableID        *uuid.UUID `json:"receivableId"`
@@ -45,6 +46,7 @@ type InvoiceResponse struct {
 	Outstanding         int64      `json:"outstanding"`
 	Status              string     `json:"status"`
 	DaysOverdue         int        `json:"daysOverdue"`
+	LastPaidAt          *time.Time `json:"lastPaidAt"`
 	CreatedAt           time.Time  `json:"createdAt"`
 	UpdatedAt           time.Time  `json:"updatedAt"`
 }
@@ -85,6 +87,7 @@ type ReceivableResponse struct {
 	Outstanding    int64      `json:"outstanding"`
 	Status         string     `json:"status"`
 	DaysOverdue    int        `json:"daysOverdue"`
+	LastPaidAt     *time.Time `json:"lastPaidAt"`
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
 }
@@ -122,12 +125,57 @@ type PayableResponse struct {
 	Outstanding         int64      `json:"outstanding"`
 	Status              string     `json:"status"`
 	DaysOverdue         int        `json:"daysOverdue"`
+	LastPaidAt          *time.Time `json:"lastPaidAt"`
 	CreatedAt           time.Time  `json:"createdAt"`
 	UpdatedAt           time.Time  `json:"updatedAt"`
 }
 
 type PaymentRequest struct {
-	Amount int64 `json:"amount" binding:"required,gt=0"`
+	Amount    int64      `json:"amount" binding:"required,gt=0"`
+	PaidAt    *time.Time `json:"paidAt"`
+	Method    string     `json:"method" binding:"omitempty,oneof=transfer tunai cek lainnya"`
+	Reference string     `json:"reference" binding:"max=60"`
+	Note      string     `json:"note" binding:"max=200"`
+}
+
+type PaymentQuery struct {
+	pagination.Query
+}
+
+type PaymentResponse struct {
+	ID                  uuid.UUID  `json:"id"`
+	InvoiceID           *uuid.UUID `json:"invoiceId"`
+	InvoiceNumber       *string    `json:"invoiceNumber"`
+	ReceivableID        *uuid.UUID `json:"receivableId"`
+	ReceivableReference *string    `json:"receivableReference"`
+	PayableID           *uuid.UUID `json:"payableId"`
+	Amount              int64      `json:"amount"`
+	PaidAt              time.Time  `json:"paidAt"`
+	Method              string     `json:"method"`
+	Reference           string     `json:"reference"`
+	Note                string     `json:"note"`
+	CreatedBy           *uuid.UUID `json:"createdBy"`
+	CreatedByName       *string    `json:"createdByName"`
+	CreatedAt           time.Time  `json:"createdAt"`
+}
+
+func newPaymentResponse(row PaymentRow) PaymentResponse {
+	return PaymentResponse{
+		ID:                  row.ID,
+		InvoiceID:           row.InvoiceID,
+		InvoiceNumber:       row.InvoiceNumber,
+		ReceivableID:        row.ReceivableID,
+		ReceivableReference: row.ReceivableReference,
+		PayableID:           row.PayableID,
+		Amount:              row.Amount,
+		PaidAt:              row.PaidAt,
+		Method:              row.Method,
+		Reference:           row.Reference,
+		Note:                row.Note,
+		CreatedBy:           row.CreatedBy,
+		CreatedByName:       row.CreatedByName,
+		CreatedAt:           row.CreatedAt,
+	}
 }
 
 func newInvoiceResponse(row InvoiceRow, today time.Time) InvoiceResponse {
@@ -139,6 +187,7 @@ func newInvoiceResponse(row InvoiceRow, today time.Time) InvoiceResponse {
 		Note:                invoice.Note,
 		PartyType:           invoice.PartyType,
 		PartyID:             invoice.PartyID,
+		PartyName:           row.PartyName,
 		ProjectID:           invoice.ProjectID,
 		ProjectName:         row.ProjectName,
 		ReceivableID:        row.ReceivableID,
@@ -149,6 +198,7 @@ func newInvoiceResponse(row InvoiceRow, today time.Time) InvoiceResponse {
 		Outstanding:         invoice.Amount - invoice.PaidAmount,
 		Status:              duedate.Status(invoice.DueDate, settled, today),
 		DaysOverdue:         duedate.DaysOverdue(invoice.DueDate, settled, today),
+		LastPaidAt:          row.LastPaidAt,
 		CreatedAt:           invoice.CreatedAt,
 		UpdatedAt:           invoice.UpdatedAt,
 	}
@@ -174,6 +224,7 @@ func newReceivableResponse(row ReceivableRow, today time.Time) ReceivableRespons
 		Outstanding:    receivable.Amount - receivable.PaidAmount,
 		Status:         duedate.Status(receivable.DueDate, settled, today),
 		DaysOverdue:    duedate.DaysOverdue(receivable.DueDate, settled, today),
+		LastPaidAt:     row.LastPaidAt,
 		CreatedAt:      receivable.CreatedAt,
 		UpdatedAt:      receivable.UpdatedAt,
 	}
@@ -197,6 +248,7 @@ func newPayableResponse(row PayableRow, today time.Time) PayableResponse {
 		Outstanding:         payable.Amount - payable.PaidAmount,
 		Status:              duedate.Status(payable.DueDate, settled, today),
 		DaysOverdue:         duedate.DaysOverdue(payable.DueDate, settled, today),
+		LastPaidAt:          row.LastPaidAt,
 		CreatedAt:           payable.CreatedAt,
 		UpdatedAt:           payable.UpdatedAt,
 	}
