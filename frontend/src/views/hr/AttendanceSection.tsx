@@ -1,7 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import {
-  useActiveEmployeeOptions,
   useAttendances,
   useCreateAttendance,
   useDeleteAttendance,
@@ -17,6 +16,7 @@ import {
   type AttendanceFormValues,
   type AttendanceStatus,
 } from '../../models/hr'
+import { activeEmployeeOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
@@ -32,7 +32,7 @@ import {
   Toolbar,
   ToolbarInput,
 } from '../components/RecordControls'
-import { EmployeeOptions } from './EmployeeOptions'
+import { SearchSelect } from '../components/SearchSelect'
 import { PAGE_SIZE, pageAfterRemoval, refusalText } from './hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from './RowActions'
 
@@ -93,7 +93,6 @@ function AttendanceTimeFields({ idPrefix, values, onChange }: {
 
 function NewAttendanceForm({ date }: { date: string }) {
   const { values, setValues, change } = useAttendanceValues(EMPTY_ATTENDANCE_FORM)
-  const employees = useActiveEmployeeOptions()
   const createAttendance = useCreateAttendance(date)
 
   // Formulir tetap memegang pilihan status dan jam, supaya mencatat beberapa
@@ -113,17 +112,15 @@ function NewAttendanceForm({ date }: { date: string }) {
           Ganti tanggal di penyaring di atas.
         </p>
         <div className="grid gap-4 md:grid-cols-4">
-          <SelectField
+          <SearchSelect
+            {...activeEmployeeOptions}
             id="attendance-employee"
             label="Karyawan"
+            placeholder="Cari nama karyawan aktif"
             required
-            disabled={employees.isPending}
-            hint={employees.isError ? 'Daftar karyawan gagal dimuat' : undefined}
             value={values.employeeId}
-            onChange={change('employeeId')}
-          >
-            <EmployeeOptions employees={employees.data?.items ?? []} />
-          </SelectField>
+            onChange={(employeeId) => setValues((current) => ({ ...current, employeeId }))}
+          />
           <AttendanceTimeFields idPrefix="attendance-new" values={values} onChange={change} />
         </div>
 

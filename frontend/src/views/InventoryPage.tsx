@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-import { useProjects } from '../controllers/useErp'
 import {
   useLowStockMaterials,
   useMaterialOptions,
@@ -36,15 +35,11 @@ export function InventoryPage() {
   const materials = useMaterialOptions()
   const warehouses = useWarehouseOptions()
   const units = useUnitsOfMeasure()
-  const projects = useProjects({ pageSize: 100 })
   const lowStock = useLowStockMaterials(1)
   const movementsThisMonth = useStockMovementCount({ dateFrom: firstDayOfMonth(today), dateTo: today })
 
   const lookups: Lookups = {
-    materials: materials.data?.items ?? [],
-    warehouses: warehouses.data?.items ?? [],
     units: units.data?.items ?? [],
-    projects: projects.data?.items ?? [],
   }
 
   const lowStockCount = lowStock.data?.totalItems ?? 0
@@ -81,7 +76,7 @@ export function InventoryPage() {
       {tab === 'stock' ? (
         <div className="grid gap-6">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <StockCard lookups={lookups} />
+            <StockCard />
             <LowStockCard lookups={lookups} />
           </div>
           <MovementsCard lookups={lookups} today={today} />
@@ -91,14 +86,14 @@ export function InventoryPage() {
       {tab === 'catalog' ? (
         <div className="grid gap-6">
           <MaterialsCard lookups={lookups} />
-          <WarehousesCard lookups={lookups} />
+          <WarehousesCard />
         </div>
       ) : null}
 
       {tab === 'assets' ? (
         <div className="grid gap-6">
           <AssetsCard />
-          <EquipmentCard lookups={lookups} today={today} />
+          <EquipmentCard today={today} />
         </div>
       ) : null}
     </AppShell>

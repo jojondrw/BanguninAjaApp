@@ -11,7 +11,6 @@ import {
 import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
   accountLabel,
-  allAccountGroups,
   cashFormFrom,
   emptyCashForm,
   isDateRangeValid,
@@ -25,14 +24,15 @@ import {
   type CashType,
 } from '../../models/finance'
 import { accountGroups, type Account } from '../../models/master'
-import type { Project } from '../../models/project'
+import { accountOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { FilterChips, RowAction } from '../components/ListTools'
-import { Chip, FilterSelect, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
+import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { CashFocusPanel } from './CashFocusPanel'
 import { CASH_PARAM, amountHint, journalLink, useSearchParam } from './financeTabs'
 import {
@@ -40,12 +40,12 @@ import {
   ConfirmDelete,
   DateRangeFilter,
   Notice,
-  ProjectOptions,
   RowActions,
   RowLink,
   SignedAmount,
 } from './parts'
 
+const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
 const OPTION_LIMIT = 100
 
@@ -60,9 +60,8 @@ function transactionName(transaction: CashTransaction): string {
   return `${direction} ${rupiah(transaction.amount)} tanggal ${shortDate(transaction.date)}`
 }
 
-function CashForm({ transaction, projects, accounts, isLoadingAccounts, onUpdated }: {
+function CashForm({ transaction, accounts, isLoadingAccounts, onUpdated }: {
   transaction: CashTransaction | null
-  projects: Project[]
   accounts: Account[]
   isLoadingAccounts: boolean
   onUpdated?: (message: string) => void
@@ -131,15 +130,17 @@ function CashForm({ transaction, projects, accounts, isLoadingAccounts, onUpdate
           >
             <AccountOptions groups={groups} placeholder={isLoadingAccounts ? 'Memuat akun...' : 'Pilih akun'} />
           </SelectField>
-          <SelectField
+          <SearchSelect
+            {...projectOptions}
             id="cash-project"
             label="Proyek (opsional)"
+            placeholder="Cari proyek"
             hint="Kas keluar proyek dihitung sebagai realisasi anggaran"
+            allowEmpty
+            emptyLabel="Tanpa proyek, kantor pusat"
             value={values.projectId}
-            onChange={update('projectId')}
-          >
-            <ProjectOptions projects={projects} placeholder="Tanpa proyek, kantor pusat" />
-          </SelectField>
+            onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
+          />
           <Field
             id="cash-note"
             label="Keterangan (opsional)"
@@ -245,24 +246,28 @@ export function CashTab() {
         <FilterChips filters={TYPE_FILTERS} active={type} onChange={filterChanged(setType)} label="Saring menurut jenis kas" />
       </div>
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="cash-filter-project"
           label="Saring menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          disabled={projects.isPending}
-          onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-        >
-          <ProjectOptions projects={projectItems} placeholder="Semua proyek" />
-        </FilterSelect>
-        <FilterSelect
+          onChange={(value) => filterChanged(setProjectId)(value)}
+        />
+        <SearchSelect
+          {...ALL_ACCOUNTS}
           id="cash-filter-account"
           label="Saring menurut akun"
+          compact
+          allowEmpty
+          emptyLabel="Semua akun"
+          className="w-56"
           value={accountId}
-          disabled={accounts.isPending}
-          onChange={(event) => filterChanged(setAccountId)(event.target.value)}
-        >
-          <AccountOptions groups={allAccountGroups(accountItems)} placeholder="Semua akun" />
-        </FilterSelect>
+          onChange={(value) => filterChanged(setAccountId)(value)}
+        />
         <DateRangeFilter
           idPrefix="cash-filter"
           dateFrom={range.dateFrom}
@@ -296,7 +301,6 @@ export function CashTab() {
       {isCreating ? (
         <CashForm
           transaction={null}
-          projects={projectItems}
           accounts={accountItems}
           isLoadingAccounts={accounts.isPending}
         />
@@ -305,7 +309,6 @@ export function CashTab() {
         <CashForm
           key={editing.id}
           transaction={editing}
-          projects={projectItems}
           accounts={accountItems}
           isLoadingAccounts={accounts.isPending}
           onUpdated={(message) => {

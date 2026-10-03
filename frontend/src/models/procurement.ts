@@ -54,6 +54,8 @@ export interface PurchaseRequest {
   status: PurchaseRequestStatus
   note: string
   itemCount: number
+  // Hanya ada di respons daftar.
+  projectName?: string
   createdAt: string
   updatedAt: string
 }
@@ -101,6 +103,9 @@ export interface PurchaseOrder {
   dueDate: string | null
   value: number
   status: PurchaseOrderStatus
+  // Hanya ada di respons daftar.
+  vendorName?: string
+  projectName?: string
   createdAt: string
   updatedAt: string
 }
@@ -155,6 +160,9 @@ export interface GoodsReceipt {
   condition: GoodsReceiptCondition
   note: string
   itemCount: number
+  // Hanya ada di respons daftar.
+  warehouseName?: string
+  purchaseOrderNumber?: string
   createdAt: string
 }
 

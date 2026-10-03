@@ -1,6 +1,5 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useProjects } from '../../controllers/useErp'
 import {
   useCreatePurchaseRequest,
   useDeletePurchaseRequest,
@@ -26,15 +25,18 @@ import {
   type PurchaseRequestStatus,
   type PurchaseRequestStatusChange,
 } from '../../models/procurement'
-import type { Project } from '../../models/project'
+import { materialOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
-import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
-import { Chip, FilterChips, Pager, RowAction, SelectField } from '../components/ListTools'
+import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
+import { LookupName } from '../components/LookupName'
 import { ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
+import { useLookupLabel } from '../components/searchSelectLogic'
 import { MaterialLinesEditor } from './MaterialLines'
-import { OPTION_LIMIT, PAGE_SIZE, codeOf, nameOf } from './lookup'
+import { PAGE_SIZE, codeOf } from './lookup'
 import { ConfirmAction, Facts, TextAreaField } from './parts'
 
 const REQUEST_FILTERS: { value: PurchaseRequestStatus | ''; label: string }[] = [
@@ -87,10 +89,8 @@ const STATUS_CONFIRM: Record<Exclude<PurchaseRequestStatusChange, 'submitted'>, 
 
 const CONFIRMED_STEPS = ['approved', 'rejected', 'completed'] as const
 
-function PurchaseRequestFormCard({ editing, projects, isLoadingProjects, onSaved, onCancel }: {
+function PurchaseRequestFormCard({ editing, onSaved, onCancel }: {
   editing: PurchaseRequestDetail | null
-  projects: Project[]
-  isLoadingProjects: boolean
   onSaved: (request: PurchaseRequestDetail) => void
   onCancel?: () => void
 }) {
@@ -99,14 +99,13 @@ function PurchaseRequestFormCard({ editing, projects, isLoadingProjects, onSaved
   )
   const createRequest = useCreatePurchaseRequest()
   const updateRequest = useUpdatePurchaseRequest()
-  const materials = useMaterials()
   const units = useUnitsOfMeasure()
   const isEditing = editing !== null
   const title = editing ? `Ubah permintaan ${editing.number}` : 'Permintaan pembelian baru'
   const isSaving = createRequest.isPending || updateRequest.isPending
   const saveError = isEditing ? updateRequest.error : createRequest.error
 
-  const update = (key: 'number' | 'projectId' | 'date' | 'note') =>
+  const update = (key: 'number' | 'date' | 'note') =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setValues((current) => ({ ...current, [key]: event.target.value }))
 
@@ -130,33 +129,21 @@ function PurchaseRequestFormCard({ editing, projects, isLoadingProjects, onSaved
     </Button>
   ) : undefined
 
-  if (materials.isPending || units.isPending || isLoadingProjects) {
+  if (units.isPending) {
     return (
       <Card title={title} action={cancelAction}>
-        <Loading label="Mengambil proyek, material, dan satuan..." />
+        <Loading label="Mengambil satuan..." />
       </Card>
     )
   }
 
-  if (materials.isError || units.isError) {
+  if (units.isError) {
     return (
       <Card title={title} action={cancelAction}>
-        <LoadFailed
-          onRetry={() => {
-            void materials.refetch()
-            void units.refetch()
-          }}
-        />
+        <LoadFailed onRetry={() => units.refetch()} />
       </Card>
     )
   }
-
-  const missing =
-    materials.data.items.length === 0
-      ? 'Belum ada material di modul Persediaan. Permintaan pembelian butuh minimal satu material, jadi tambahkan materialnya dulu.'
-      : projects.length === 0
-        ? 'Belum ada proyek. Buat proyek dulu di menu Proyek.'
-        : null
 
   return (
     <Card
@@ -168,80 +155,74 @@ function PurchaseRequestFormCard({ editing, projects, isLoadingProjects, onSaved
       }
       action={cancelAction}
     >
-      {missing ? (
-        <Empty message={missing} />
-      ) : (
-        <form onSubmit={submit} className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field
-              id="pr-number"
-              label="Nomor permintaan"
-              placeholder="PR-2026-001"
-              autoComplete="off"
-              maxLength={REQUEST_NUMBER_MAX_LENGTH}
-              required
-              value={values.number}
-              onChange={update('number')}
-            />
-            <SelectField id="pr-project" label="Proyek" required value={values.projectId} onChange={update('projectId')}>
-              <option value="">Pilih proyek</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name} ({project.code})
-                </option>
-              ))}
-            </SelectField>
-            <Field
-              id="pr-date"
-              label="Tanggal permintaan"
-              type="date"
-              required
-              value={values.date}
-              onChange={update('date')}
-            />
-          </div>
-
-          <TextAreaField
-            id="pr-note"
-            label="Catatan (opsional)"
-            placeholder="Misalnya untuk pekerjaan apa dan kapan barang harus sampai di lokasi"
-            hint="Permintaan tidak punya kolom tanggal dibutuhkan, jadi tulis tenggatnya di sini."
-            maxLength={REQUEST_NOTE_MAX_LENGTH}
-            value={values.note}
-            onChange={update('note')}
+      <form onSubmit={submit} className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field
+            id="pr-number"
+            label="Nomor permintaan"
+            placeholder="PR-2026-001"
+            autoComplete="off"
+            maxLength={REQUEST_NUMBER_MAX_LENGTH}
+            required
+            value={values.number}
+            onChange={update('number')}
           />
-
-          <MaterialLinesEditor
-            idPrefix="pr"
-            lines={values.items}
-            materials={materials.data.items}
-            units={units.data.items}
-            showPrice={false}
-            onChange={(items) => setValues((current) => ({ ...current, items }))}
+          <SearchSelect
+            {...projectOptions}
+            id="pr-project"
+            label="Proyek"
+            placeholder="Cari nama atau kode proyek"
+            required
+            value={values.projectId}
+            onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
           />
+          <Field
+            id="pr-date"
+            label="Tanggal permintaan"
+            type="date"
+            required
+            value={values.date}
+            onChange={update('date')}
+          />
+        </div>
 
-          <Button type="submit" isPending={isSaving} pendingLabel={isEditing ? 'Menyimpan perubahan' : 'Menyimpan permintaan'}>
-            {isEditing ? 'Simpan perubahan' : 'Simpan permintaan'}
-          </Button>
+        <TextAreaField
+          id="pr-note"
+          label="Catatan (opsional)"
+          placeholder="Misalnya untuk pekerjaan apa dan kapan barang harus sampai di lokasi"
+          hint="Permintaan tidak punya kolom tanggal dibutuhkan, jadi tulis tenggatnya di sini."
+          maxLength={REQUEST_NOTE_MAX_LENGTH}
+          value={values.note}
+          onChange={update('note')}
+        />
 
-          {saveError ? <ErrorNote message={errorMessage(saveError)} /> : null}
-          {!isEditing && createRequest.isSuccess ? (
-            <SuccessNote
-              message={`Permintaan ${createRequest.data.number} tersimpan sebagai draf. Ajukan lewat rincian permintaan supaya bisa disetujui.`}
-            />
-          ) : null}
-        </form>
-      )}
+        <MaterialLinesEditor
+          idPrefix="pr"
+          lines={values.items}
+          units={units.data.items}
+          showPrice={false}
+          onChange={(items) => setValues((current) => ({ ...current, items }))}
+        />
+
+        <Button type="submit" isPending={isSaving} pendingLabel={isEditing ? 'Menyimpan perubahan' : 'Menyimpan permintaan'}>
+          {isEditing ? 'Simpan perubahan' : 'Simpan permintaan'}
+        </Button>
+
+        {saveError ? <ErrorNote message={errorMessage(saveError)} /> : null}
+        {!isEditing && createRequest.isSuccess ? (
+          <SuccessNote
+            message={`Permintaan ${createRequest.data.number} tersimpan sebagai draf. Ajukan lewat rincian permintaan supaya bisa disetujui.`}
+          />
+        ) : null}
+      </form>
     </Card>
   )
 }
 
 type RequestConfirm = (typeof CONFIRMED_STEPS)[number] | 'delete'
 
-function PurchaseRequestDetailCard({ id, projects, isLoadingProjects, onDeleted, onCreateOrder }: {
+function PurchaseRequestDetailCard({ id, onDeleted, onCreateOrder }: {
   id: string
-  projects: Project[]
-  isLoadingProjects: boolean
   onDeleted: (number: string) => void
   onCreateOrder: (values: PurchaseOrderFormValues, requestNumber: string) => void
 }) {
@@ -255,6 +236,7 @@ function PurchaseRequestDetailCard({ id, projects, isLoadingProjects, onDeleted,
   const deleteRequest = useDeletePurchaseRequest()
   const materialItems = materials.data?.items ?? []
   const unitItems = units.data?.items ?? []
+  const projectName = useLookupLabel(projectOptions, request.data?.projectId) ?? '-'
 
   if (request.isPending) {
     return (
@@ -279,8 +261,6 @@ function PurchaseRequestDetailCard({ id, projects, isLoadingProjects, onDeleted,
     return (
       <PurchaseRequestFormCard
         editing={detail}
-        projects={projects}
-        isLoadingProjects={isLoadingProjects}
         onSaved={(saved) => {
           setIsEditing(false)
           setNotice(`Perubahan permintaan ${saved.number} tersimpan.`)
@@ -400,7 +380,7 @@ function PurchaseRequestDetailCard({ id, projects, isLoadingProjects, onDeleted,
   return (
     <Card
       title={`Rincian permintaan ${detail.number}`}
-      description={`${nameOf(projects, detail.projectId)}, ${shortDate(detail.date)}`}
+      description={`${projectName}, ${shortDate(detail.date)}`}
     >
       <Facts
         items={[
@@ -428,7 +408,7 @@ function PurchaseRequestDetailCard({ id, projects, isLoadingProjects, onDeleted,
         rows={detail.items}
         emptyMessage="Permintaan ini tidak punya baris material."
         columns={[
-          { header: 'Material', cell: (row) => nameOf(materialItems, row.materialId) },
+          { header: 'Material', cell: (row) => <LookupName source={materialOptions} value={row.materialId} /> },
           { header: 'Jumlah', align: 'right', cell: (row) => number(row.quantity) },
           { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },
         ]}
@@ -452,16 +432,12 @@ export function RequestsSection({ onCreateOrder }: {
     page,
     pageSize: PAGE_SIZE,
   })
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
-  const projectItems = projects.data?.items ?? []
 
   return (
     <div className="space-y-6">
       {isFormOpen ? (
         <PurchaseRequestFormCard
           editing={null}
-          projects={projectItems}
-          isLoadingProjects={projects.isPending}
           onSaved={(created) => {
             setNotice(null)
             setSelectedId(created.id)
@@ -522,7 +498,7 @@ export function RequestsSection({ onCreateOrder }: {
               }
               columns={[
                 { header: 'Nomor', cell: (row) => row.number },
-                { header: 'Proyek', cell: (row) => nameOf(projectItems, row.projectId) },
+                { header: 'Proyek', cell: (row) => row.projectName ?? '-' },
                 { header: 'Tanggal', cell: (row) => shortDate(row.date) },
                 { header: 'Jumlah barang', align: 'right', cell: (row) => number(row.itemCount) },
                 { header: 'Catatan', cell: (row) => row.note || '-' },
@@ -559,8 +535,6 @@ export function RequestsSection({ onCreateOrder }: {
         <PurchaseRequestDetailCard
           key={selectedId}
           id={selectedId}
-          projects={projectItems}
-          isLoadingProjects={projects.isPending}
           onDeleted={(deletedNumber) => {
             setSelectedId(null)
             setNotice(`Permintaan ${deletedNumber} dihapus.`)

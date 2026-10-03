@@ -8,12 +8,14 @@ import {
   type Employee,
   type EmploymentType,
 } from '../../models/hr'
-import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import { rupiah, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { CONTROL_CLASS } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FilterSelect, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { LookupName } from '../components/LookupName'
+import { SearchSelect } from '../components/SearchSelect'
 import { EditEmployeeForm, NewEmployeeForm } from './EmployeeForm'
 import { PAGE_SIZE, pageAfterRemoval, refusalText } from './hrShared'
 import { ActionGroup, ConfirmAction, RowNotice, TextAction } from './RowActions'
@@ -45,9 +47,7 @@ function laterDate(first: string, second: string): string {
   return first > second ? first : second
 }
 
-export function EmployeesSection({ projects, projectName, today }: {
-  projects: Project[]
-  projectName: (id: string | null) => string
+export function EmployeesSection({ today }: {
   today: string
 }) {
   const [search, setSearch] = useState('')
@@ -170,19 +170,17 @@ export function EmployeesSection({ projects, projectName, today }: {
           value={search}
           onChange={(event) => filterChanged(setSearch)(event.target.value)}
         />
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="employee-filter-project"
           label="Saring menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-        >
-          <option value="">Semua proyek</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+          onChange={(value) => filterChanged(setProjectId)(value)}
+        />
         <FilterSelect
           id="employee-filter-type"
           label="Saring menurut jenis kepegawaian"
@@ -209,12 +207,11 @@ export function EmployeesSection({ projects, projectName, today }: {
         <FormToggle isOpen={isFormOpen} openLabel="Tambah karyawan" onToggle={toggleForm} />
       </Toolbar>
 
-      {isCreating ? <NewEmployeeForm projects={projects} /> : null}
+      {isCreating ? <NewEmployeeForm /> : null}
       {editing ? (
         <EditEmployeeForm
           key={editing.id}
           employee={editing}
-          projects={projects}
           onCancel={closeForm}
           onSaved={(saved) => {
             closeForm()
@@ -243,7 +240,11 @@ export function EmployeesSection({ projects, projectName, today }: {
                   </span>
                 ),
               },
-              { header: 'Proyek', cell: (row) => projectName(row.projectId) },
+              {
+                header: 'Proyek',
+                cell: (row) =>
+                  row.projectId ? <LookupName source={projectOptions} value={row.projectId} /> : 'Kantor pusat',
+              },
               { header: 'Jenis', cell: (row) => EMPLOYMENT_TYPE_LABEL[row.employmentType] },
               { header: 'Bergabung', cell: (row) => shortDate(row.joinedDate) },
               { header: 'Gaji pokok', align: 'right', cell: salaryText },

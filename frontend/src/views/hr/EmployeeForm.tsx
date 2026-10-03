@@ -12,10 +12,11 @@ import {
   type Employee,
   type EmployeeFormValues,
 } from '../../models/hr'
-import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { FormPanel, SelectField } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { amountHint } from './hrShared'
 
 function useEmployeeValues(initial: EmployeeFormValues) {
@@ -28,11 +29,11 @@ function useEmployeeValues(initial: EmployeeFormValues) {
   return { values, setValues, change }
 }
 
-function EmployeeFields({ idPrefix, values, onChange, projects, withLeftDate = false }: {
+function EmployeeFields({ idPrefix, values, onChange, onProject, withLeftDate = false }: {
   idPrefix: string
   values: EmployeeFormValues
   onChange: (key: keyof EmployeeFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
-  projects: Project[]
+  onProject: (projectId: string) => void
   withLeftDate?: boolean
 }) {
   const isDaily = values.employmentType === 'daily'
@@ -83,19 +84,16 @@ function EmployeeFields({ idPrefix, values, onChange, projects, withLeftDate = f
           </option>
         ))}
       </SelectField>
-      <SelectField
+      <SearchSelect
+        {...projectOptions}
         id={`${idPrefix}-project`}
         label="Ditempatkan di proyek (opsional)"
+        placeholder="Cari proyek"
+        allowEmpty
+        emptyLabel="Kantor pusat, tanpa proyek"
         value={values.projectId}
-        onChange={onChange('projectId')}
-      >
-        <option value="">Kantor pusat, tanpa proyek</option>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </SelectField>
+        onChange={onProject}
+      />
       <Field
         id={`${idPrefix}-joined`}
         label="Tanggal bergabung"
@@ -132,7 +130,7 @@ function EmployeeFields({ idPrefix, values, onChange, projects, withLeftDate = f
   )
 }
 
-export function NewEmployeeForm({ projects }: { projects: Project[] }) {
+export function NewEmployeeForm() {
   const { values, setValues, change } = useEmployeeValues(EMPTY_EMPLOYEE_FORM)
   const createEmployee = useCreateEmployee()
 
@@ -144,7 +142,12 @@ export function NewEmployeeForm({ projects }: { projects: Project[] }) {
   return (
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
-        <EmployeeFields idPrefix="employee-new" values={values} onChange={change} projects={projects} />
+        <EmployeeFields
+          idPrefix="employee-new"
+          values={values}
+          onChange={change}
+          onProject={(projectId) => setValues((current) => ({ ...current, projectId }))}
+        />
 
         <Button type="submit" isPending={createEmployee.isPending} pendingLabel="Menyimpan karyawan">
           Simpan karyawan
@@ -159,13 +162,12 @@ export function NewEmployeeForm({ projects }: { projects: Project[] }) {
   )
 }
 
-export function EditEmployeeForm({ employee, projects, onSaved, onCancel }: {
+export function EditEmployeeForm({ employee, onSaved, onCancel }: {
   employee: Employee
-  projects: Project[]
   onSaved: (saved: Employee) => void
   onCancel: () => void
 }) {
-  const { values, change } = useEmployeeValues(employeeFormValues(employee))
+  const { values, setValues, change } = useEmployeeValues(employeeFormValues(employee))
   const updateEmployee = useUpdateEmployee()
 
   const submit = (event: FormEvent) => {
@@ -177,7 +179,13 @@ export function EditEmployeeForm({ employee, projects, onSaved, onCancel }: {
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
         <h3 className="text-[15px] font-semibold text-slate-900">Ubah data {employee.name}</h3>
-        <EmployeeFields idPrefix="employee-edit" values={values} onChange={change} projects={projects} withLeftDate />
+        <EmployeeFields
+          idPrefix="employee-edit"
+          values={values}
+          onChange={change}
+          onProject={(projectId) => setValues((current) => ({ ...current, projectId }))}
+          withLeftDate
+        />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={updateEmployee.isPending} pendingLabel="Menyimpan perubahan">

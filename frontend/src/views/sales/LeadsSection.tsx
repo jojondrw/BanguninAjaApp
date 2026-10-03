@@ -1,7 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, Fragment, useState } from 'react'
 
-import { useProjects } from '../../controllers/useErp'
 import {
   useCreateLead,
   useDeleteLead,
@@ -10,7 +9,7 @@ import {
   useMoveLeadStage,
   useUpdateLead,
 } from '../../controllers/useSales'
-import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import {
   EMPTY_LEAD_FORM,
   LEAD_CONTACT_MAX_LENGTH,
@@ -35,7 +34,6 @@ import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
   Chip,
-  FilterSelect,
   FormPanel,
   FormToggle,
   Pager,
@@ -45,7 +43,9 @@ import {
 } from '../components/RecordControls'
 import { CustomerForm } from './CustomerForm'
 import { ActionGroup, ConfirmAction, TextAction } from './RowActions'
-import { OPTION_LIMIT, PAGE_SIZE, pageAfterRemoval, projectLabel, refusalText } from './salesShared'
+import { LookupName } from '../components/LookupName'
+import { SearchSelect } from '../components/SearchSelect'
+import { PAGE_SIZE, pageAfterRemoval, refusalText } from './salesShared'
 
 const SOURCE_SUGGESTIONS = ['Pameran', 'Iklan online', 'Media sosial', 'Rujukan', 'Datang langsung']
 
@@ -119,9 +119,8 @@ function StagePipeline({ counts, active, onChange }: {
   )
 }
 
-function LeadForm({ lead, projects, defaultStage, onSaved, onCancel }: {
+function LeadForm({ lead, defaultStage, onSaved, onCancel }: {
   lead: Lead | null
-  projects: Project[]
   defaultStage: StageFilter
   onSaved: (message: string) => void
   onCancel: () => void
@@ -180,19 +179,16 @@ function LeadForm({ lead, projects, defaultStage, onSaved, onCancel }: {
             value={values.contact}
             onChange={update('contact')}
           />
-          <SelectField
+          <SearchSelect
+            {...projectOptions}
             id="lead-project"
             label="Minat proyek (opsional)"
+            placeholder="Cari proyek"
+            allowEmpty
+            emptyLabel="Belum menentukan proyek"
             value={values.projectId}
-            onChange={update('projectId')}
-          >
-            <option value="">Belum menentukan proyek</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </SelectField>
+            onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
+          />
           <Field
             id="lead-source"
             label="Sumber (opsional)"
@@ -256,7 +252,6 @@ export function LeadsSection() {
   const [panel, setPanel] = useState<Panel | null>(null)
   const [askingId, setAskingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
   const counts = useLeadStageCounts(projectId === '' ? undefined : projectId)
   const leads = useLeads({
     stage: stage === '' ? undefined : stage,
@@ -267,7 +262,6 @@ export function LeadsSection() {
   })
   const moveStage = useMoveLeadStage()
   const deleteLead = useDeleteLead()
-  const projectItems = projects.data?.items ?? []
   const panelLeadId = panel && panel.kind !== 'create' ? panel.lead.id : null
 
   const filterChanged = <T,>(apply: (value: T) => void) => (value: T) => {
@@ -344,20 +338,17 @@ export function LeadsSection() {
           value={search}
           onChange={(event) => filterChanged(setSearch)(event.target.value)}
         />
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="lead-project-filter"
           label="Saring menurut minat proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          disabled={projects.isPending}
-          onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-        >
-          <option value="">Semua proyek</option>
-          {projectItems.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+          onChange={(value) => filterChanged(setProjectId)(value)}
+        />
         <FormToggle
           isOpen={panel !== null}
           openLabel="Tambah prospek"
@@ -369,7 +360,6 @@ export function LeadsSection() {
         <LeadForm
           key={panel.kind === 'edit' ? panel.lead.id : 'new'}
           lead={panel.kind === 'edit' ? panel.lead : null}
-          projects={projectItems}
           defaultStage={stage}
           onCancel={() => setPanel(null)}
           onSaved={(message) => {
@@ -428,7 +418,10 @@ export function LeadsSection() {
                   </span>
                 ),
               },
-              { header: 'Minat proyek', cell: (row) => projectLabel(projectItems, row.projectId) },
+              {
+                header: 'Minat proyek',
+                cell: (row) => (row.projectId ? <LookupName source={projectOptions} value={row.projectId} /> : '-'),
+              },
               { header: 'Sumber', cell: (row) => row.source || '-' },
               {
                 header: 'Tahap',

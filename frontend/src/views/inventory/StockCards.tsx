@@ -3,9 +3,12 @@ import { useState } from 'react'
 import { useLowStockMaterials, useStocks } from '../../controllers/useInventory'
 import { shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
-import { FilterSelect, Pager, Toolbar } from '../components/RecordControls'
+import { materialOptions, warehouseOptions } from '../../models/lookupApi'
+import { Pager, Toolbar } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { PAGE_SIZE, quantityText, unitCode, type Lookups } from './inventoryShared'
-import { WarehouseOptions } from './WarehouseOptions'
+
+const ALL_WAREHOUSES = warehouseOptions()
 
 function NameWithCode({ name, code }: { name: string; code: string }) {
   return (
@@ -16,7 +19,7 @@ function NameWithCode({ name, code }: { name: string; code: string }) {
   )
 }
 
-export function StockCard({ lookups }: { lookups: Lookups }) {
+export function StockCard() {
   const [warehouseId, setWarehouseId] = useState('')
   const [materialId, setMaterialId] = useState('')
   const [page, setPage] = useState(1)
@@ -30,33 +33,34 @@ export function StockCard({ lookups }: { lookups: Lookups }) {
   return (
     <Card title="Stok per gudang" description="Jumlah tersedia untuk setiap pasangan material dan gudang">
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...ALL_WAREHOUSES}
           id="stock-filter-warehouse"
           label="Saring menurut gudang"
+          compact
+          allowEmpty
+          emptyLabel="Semua gudang"
+          className="w-52"
           value={warehouseId}
-          onChange={(event) => {
-            setWarehouseId(event.target.value)
+          onChange={(value) => {
+            setWarehouseId(value)
             setPage(1)
           }}
-        >
-          <WarehouseOptions warehouses={lookups.warehouses} placeholder="Semua gudang" />
-        </FilterSelect>
-        <FilterSelect
+        />
+        <SearchSelect
+          {...materialOptions}
           id="stock-filter-material"
           label="Saring menurut material"
+          compact
+          allowEmpty
+          emptyLabel="Semua material"
+          className="w-52"
           value={materialId}
-          onChange={(event) => {
-            setMaterialId(event.target.value)
+          onChange={(value) => {
+            setMaterialId(value)
             setPage(1)
           }}
-        >
-          <option value="">Semua material</option>
-          {lookups.materials.map((material) => (
-            <option key={material.id} value={material.id}>
-              {material.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
       </Toolbar>
 
       {stocks.isPending ? <Loading /> : null}

@@ -1,14 +1,16 @@
 import { useState } from 'react'
 
-import { useProjects, useSavedLocations } from '../../controllers/useErp'
+import { useSavedLocations } from '../../controllers/useErp'
 import type { SavedLocation } from '../../models/erpApi'
+import { projectOptions } from '../../models/lookupApi'
 import { MAX_COMPARED, MIN_COMPARED, searchSites } from '../../models/location'
 import { number, shortDate } from '../../shared/format'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
-import { FilterSelect, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { LookupName } from '../components/LookupName'
+import { Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { ROW_BUTTON } from './buttons'
 
-const PROJECT_OPTION_LIMIT = 100
 const NO_SITES: SavedLocation[] = []
 
 interface LocationPickerProps {
@@ -36,7 +38,6 @@ function emptyMessage(total: number, isProjectChosen: boolean, isSearching: bool
 export function LocationPicker({ projectId, onProjectChange, selectedIds, onToggle, onClear }: LocationPickerProps) {
   const [keyword, setKeyword] = useState('')
   const sites = useSavedLocations(projectId || undefined)
-  const projects = useProjects({ pageSize: PROJECT_OPTION_LIMIT })
 
   const items = sites.data?.items ?? NO_SITES
   const shown = searchSites(items, keyword)
@@ -44,29 +45,23 @@ export function LocationPicker({ projectId, onProjectChange, selectedIds, onTogg
   const isSearching = keyword.trim() !== ''
   const tooFew = !isSearching && items.length < MIN_COMPARED
 
-  const projectName = (id: string | null) =>
-    id ? (projects.data?.items.find((project) => project.id === id)?.name ?? 'Proyek lain') : 'Tanpa proyek'
-
   return (
     <Card
       title="Pilih lokasi"
       description={`Centang ${MIN_COMPARED} sampai ${MAX_COMPARED} lokasi tersimpan. Urutan kolom mengikuti urutan centang.`}
     >
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="compare-project"
           label="Saring lokasi menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-56"
           value={projectId}
-          onChange={(event) => onProjectChange(event.target.value)}
-          disabled={projects.isPending}
-        >
-          <option value="">{projects.isPending ? 'Memuat proyek...' : 'Semua proyek'}</option>
-          {projects.data?.items.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name} ({project.code})
-            </option>
-          ))}
-        </FilterSelect>
+          onChange={(value) => onProjectChange(value)}
+        />
         <ToolbarInput
           id="compare-search"
           label="Cari nama lokasi"
@@ -84,12 +79,6 @@ export function LocationPicker({ projectId, onProjectChange, selectedIds, onTogg
           </button>
         ) : null}
       </Toolbar>
-
-      {projects.isError ? (
-        <p role="alert" className="mb-3 text-xs text-red-600">
-          Gagal mengambil daftar proyek, jadi nama proyek tidak bisa ditampilkan.
-        </p>
-      ) : null}
 
       {isFull ? (
         <p className="mb-3 text-xs text-slate-500">
@@ -132,7 +121,12 @@ export function LocationPicker({ projectId, onProjectChange, selectedIds, onTogg
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-slate-900">{site.name}</span>
                     <span className="mt-0.5 block truncate text-xs text-slate-500">
-                      {projectName(site.projectId)} · {shortDate(site.savedAt)}
+                      {site.projectId ? (
+                        <LookupName source={projectOptions} value={site.projectId} />
+                      ) : (
+                        'Tanpa proyek'
+                      )}{' '}
+                      · {shortDate(site.savedAt)}
                     </span>
                     {isChecked ? (
                       <span className="mt-1 block text-[11px] font-medium text-navy-700">Kolom {order}</span>

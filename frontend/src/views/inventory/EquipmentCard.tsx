@@ -4,7 +4,6 @@ import {
   useCreateEquipment,
   useDeleteEquipment,
   useEquipment,
-  useParentAssetOptions,
   useUpdateEquipment,
 } from '../../controllers/useInventory'
 import {
@@ -15,12 +14,11 @@ import {
   EQUIPMENT_STATUS_LABEL,
   EQUIPMENT_STATUS_TONE,
   equipmentFormValues,
-  type Asset,
   type Equipment,
   type EquipmentFormValues,
   type EquipmentStatus,
 } from '../../models/inventory'
-import type { Project } from '../../models/project'
+import { assetOptions, parentAssetOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
@@ -38,10 +36,10 @@ import {
 } from '../components/RecordControls'
 import { pageAfterRemoval, refusalText } from '../hr/hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from '../hr/RowActions'
-import { projectLabel, type Lookups } from './inventoryShared'
+import { LookupName } from '../components/LookupName'
+import { SearchSelect } from '../components/SearchSelect'
 
 const EQUIPMENT_PAGE_SIZE = 10
-const NO_ASSETS: Asset[] = []
 
 type ChangeEquipment = (
   key: keyof EquipmentFormValues,
@@ -53,20 +51,21 @@ function useEquipmentValues(initial: EquipmentFormValues) {
   const change: ChangeEquipment = (key) => (event) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
 
-  return { values, setValues, change }
+  const pick = (key: 'projectId' | 'assetId') => (value: string) =>
+    setValues((current) => ({ ...current, [key]: value }))
+
+  return { values, setValues, change, pick }
 }
 
 // Backend menolak alat yang beroperasi tanpa proyek (equipment_project_required),
 // jadi proyek wajib diisi begitu status Beroperasi dipilih.
-function EquipmentFields({ idPrefix, values, onChange, projects, assets }: {
+function EquipmentFields({ idPrefix, values, onChange, onPick }: {
   idPrefix: string
   values: EquipmentFormValues
   onChange: ChangeEquipment
-  projects: Project[]
-  assets: Asset[]
+  onPick: (key: 'projectId' | 'assetId') => (value: string) => void
 }) {
   const isOperating = values.status === 'operating'
-  const linksUnlistedAsset = values.assetId !== '' && !assets.some((asset) => asset.id === values.assetId)
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -98,36 +97,29 @@ function EquipmentFields({ idPrefix, values, onChange, projects, assets }: {
           </option>
         ))}
       </SelectField>
-      <SelectField
+      <SearchSelect
+        {...projectOptions}
         id={`${idPrefix}-project`}
         label={isOperating ? 'Proyek' : 'Proyek (opsional)'}
+        placeholder="Cari proyek"
         hint={isOperating ? 'Wajib untuk alat yang beroperasi' : undefined}
         required={isOperating}
+        allowEmpty={!isOperating}
+        emptyLabel="Belum ditugaskan"
         value={values.projectId}
-        onChange={onChange('projectId')}
-      >
-        <option value="">{isOperating ? 'Pilih proyek' : 'Belum ditugaskan'}</option>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </SelectField>
-      <SelectField
+        onChange={onPick('projectId')}
+      />
+      <SearchSelect
+        {...parentAssetOptions}
         id={`${idPrefix}-asset`}
         label="Aset induk (opsional)"
+        placeholder="Cari aset"
         hint="Aset yang sudah dilepas tidak bisa dipilih"
+        allowEmpty
+        emptyLabel="Tanpa aset induk"
         value={values.assetId}
-        onChange={onChange('assetId')}
-      >
-        <option value="">Tanpa aset induk</option>
-        {linksUnlistedAsset ? <option value={values.assetId}>Aset yang tertaut sekarang</option> : null}
-        {assets.map((asset) => (
-          <option key={asset.id} value={asset.id}>
-            {asset.name} ({asset.code})
-          </option>
-        ))}
-      </SelectField>
+        onChange={onPick('assetId')}
+      />
       <Field
         id={`${idPrefix}-hours`}
         label="Jam operasi"
@@ -150,8 +142,8 @@ function EquipmentFields({ idPrefix, values, onChange, projects, assets }: {
   )
 }
 
-function NewEquipmentForm({ projects, assets }: { projects: Project[]; assets: Asset[] }) {
-  const { values, setValues, change } = useEquipmentValues(EMPTY_EQUIPMENT_FORM)
+function NewEquipmentForm() {
+  const { values, setValues, change, pick } = useEquipmentValues(EMPTY_EQUIPMENT_FORM)
   const createEquipment = useCreateEquipment()
 
   const submit = (event: FormEvent) => {
@@ -162,7 +154,7 @@ function NewEquipmentForm({ projects, assets }: { projects: Project[]; assets: A
   return (
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
-        <EquipmentFields idPrefix="equipment-new" values={values} onChange={change} projects={projects} assets={assets} />
+        <EquipmentFields idPrefix="equipment-new" values={values} onChange={change} onPick={pick} />
 
         <Button type="submit" isPending={createEquipment.isPending} pendingLabel="Menyimpan alat">
           Simpan alat
@@ -177,14 +169,12 @@ function NewEquipmentForm({ projects, assets }: { projects: Project[]; assets: A
   )
 }
 
-function EditEquipmentForm({ equipment, projects, assets, onSaved, onCancel }: {
+function EditEquipmentForm({ equipment, onSaved, onCancel }: {
   equipment: Equipment
-  projects: Project[]
-  assets: Asset[]
   onSaved: (saved: Equipment) => void
   onCancel: () => void
 }) {
-  const { values, change } = useEquipmentValues(equipmentFormValues(equipment))
+  const { values, change, pick } = useEquipmentValues(equipmentFormValues(equipment))
   const updateEquipment = useUpdateEquipment()
 
   const submit = (event: FormEvent) => {
@@ -196,7 +186,7 @@ function EditEquipmentForm({ equipment, projects, assets, onSaved, onCancel }: {
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
         <h3 className="text-[15px] font-semibold text-slate-900">Ubah alat {equipment.code}</h3>
-        <EquipmentFields idPrefix="equipment-edit" values={values} onChange={change} projects={projects} assets={assets} />
+        <EquipmentFields idPrefix="equipment-edit" values={values} onChange={change} onPick={pick} />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={updateEquipment.isPending} pendingLabel="Menyimpan perubahan">
@@ -223,7 +213,7 @@ function ServiceDate({ date, today }: { date: string | null; today: string }) {
   return <>{shortDate(date)}</>
 }
 
-export function EquipmentCard({ lookups, today }: { lookups: Lookups; today: string }) {
+export function EquipmentCard({ today }: { today: string }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<EquipmentStatus | ''>('')
   const [projectId, setProjectId] = useState('')
@@ -232,9 +222,7 @@ export function EquipmentCard({ lookups, today }: { lookups: Lookups; today: str
   const [editing, setEditing] = useState<Equipment | null>(null)
   const [askingId, setAskingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const parentAssets = useParentAssetOptions()
   const deleteEquipment = useDeleteEquipment()
-  const assets = parentAssets.data ?? NO_ASSETS
   const isFormOpen = isCreating || editing !== null
   const equipment = useEquipment({
     search: search.trim() === '' ? undefined : search.trim(),
@@ -243,13 +231,6 @@ export function EquipmentCard({ lookups, today }: { lookups: Lookups; today: str
     page,
     pageSize: EQUIPMENT_PAGE_SIZE,
   })
-
-  const assetName = (id: string | null) => {
-    if (id === null) {
-      return '-'
-    }
-    return assets.find((asset) => asset.id === id)?.name ?? 'Tertaut'
-  }
 
   const clearNotes = () => {
     setNotice(null)
@@ -321,32 +302,28 @@ export function EquipmentCard({ lookups, today }: { lookups: Lookups; today: str
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="equipment-filter-project"
           label="Saring menurut proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          onChange={(event) => {
-            setProjectId(event.target.value)
+          onChange={(value) => {
+            setProjectId(value)
             setPage(1)
           }}
-        >
-          <option value="">Semua proyek</option>
-          {lookups.projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
         <FormToggle isOpen={isFormOpen} openLabel="Tambah alat" onToggle={toggleForm} />
       </Toolbar>
 
-      {isCreating ? <NewEquipmentForm projects={lookups.projects} assets={assets} /> : null}
+      {isCreating ? <NewEquipmentForm /> : null}
       {editing ? (
         <EditEquipmentForm
           key={editing.id}
           equipment={editing}
-          projects={lookups.projects}
-          assets={assets}
           onCancel={closeForm}
           onSaved={(saved) => {
             closeForm()
@@ -381,8 +358,14 @@ export function EquipmentCard({ lookups, today }: { lookups: Lookups; today: str
                   </span>
                 ),
               },
-              { header: 'Proyek', cell: (row) => projectLabel(lookups, row.projectId, '-') },
-              { header: 'Aset induk', cell: (row) => assetName(row.assetId) },
+              {
+                header: 'Proyek',
+                cell: (row) => (row.projectId ? <LookupName source={projectOptions} value={row.projectId} /> : '-'),
+              },
+              {
+                header: 'Aset induk',
+                cell: (row) => (row.assetId ? <LookupName source={assetOptions} value={row.assetId} /> : '-'),
+              },
               { header: 'Jam operasi', align: 'right', cell: (row) => number(row.operatingHours) },
               {
                 header: 'Servis berikutnya',

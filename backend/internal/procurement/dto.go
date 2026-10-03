@@ -77,6 +77,7 @@ type PurchaseRequestResponse struct {
 	Status      string    `json:"status"`
 	Note        string    `json:"note"`
 	ItemCount   int       `json:"itemCount"`
+	ProjectName string    `json:"projectName,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -134,6 +135,8 @@ type PurchaseOrderResponse struct {
 	DueDate           *time.Time `json:"dueDate"`
 	Value             int64      `json:"value"`
 	Status            string     `json:"status"`
+	VendorName        string     `json:"vendorName,omitempty"`
+	ProjectName       string     `json:"projectName,omitempty"`
 	CreatedAt         time.Time  `json:"createdAt"`
 	UpdatedAt         time.Time  `json:"updatedAt"`
 }
@@ -180,15 +183,17 @@ type GoodsReceiptQuery struct {
 }
 
 type GoodsReceiptResponse struct {
-	ID              uuid.UUID `json:"id"`
-	Number          string    `json:"number"`
-	PurchaseOrderID uuid.UUID `json:"purchaseOrderId"`
-	WarehouseID     uuid.UUID `json:"warehouseId"`
-	Date            time.Time `json:"date"`
-	Condition       string    `json:"condition"`
-	Note            string    `json:"note"`
-	ItemCount       int       `json:"itemCount"`
-	CreatedAt       time.Time `json:"createdAt"`
+	ID                  uuid.UUID `json:"id"`
+	Number              string    `json:"number"`
+	PurchaseOrderID     uuid.UUID `json:"purchaseOrderId"`
+	WarehouseID         uuid.UUID `json:"warehouseId"`
+	Date                time.Time `json:"date"`
+	Condition           string    `json:"condition"`
+	Note                string    `json:"note"`
+	ItemCount           int       `json:"itemCount"`
+	WarehouseName       string    `json:"warehouseName,omitempty"`
+	PurchaseOrderNumber string    `json:"purchaseOrderNumber,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 type GoodsReceiptItemResponse struct {
@@ -251,7 +256,9 @@ func newPurchaseRequestResponse(request PurchaseRequest, itemCount int) Purchase
 }
 
 func newPurchaseRequestRowResponse(row PurchaseRequestRow) PurchaseRequestResponse {
-	return newPurchaseRequestResponse(row.PurchaseRequest, row.ItemCount)
+	response := newPurchaseRequestResponse(row.PurchaseRequest, row.ItemCount)
+	response.ProjectName = row.ProjectName
+	return response
 }
 
 func newPurchaseRequestItemResponse(item PurchaseRequestItem) PurchaseRequestItemResponse {
@@ -277,6 +284,13 @@ func newPurchaseOrderResponse(order PurchaseOrder) PurchaseOrderResponse {
 		CreatedAt:         order.CreatedAt,
 		UpdatedAt:         order.UpdatedAt,
 	}
+}
+
+func newPurchaseOrderRowResponse(row PurchaseOrderRow) PurchaseOrderResponse {
+	response := newPurchaseOrderResponse(row.PurchaseOrder)
+	response.VendorName = row.VendorName
+	response.ProjectName = row.ProjectName
+	return response
 }
 
 func newPurchaseOrderItemResponse(item PurchaseOrderItem, received float64) PurchaseOrderItemResponse {
@@ -307,7 +321,10 @@ func newGoodsReceiptResponse(receipt GoodsReceipt, itemCount int) GoodsReceiptRe
 }
 
 func newGoodsReceiptRowResponse(row GoodsReceiptRow) GoodsReceiptResponse {
-	return newGoodsReceiptResponse(row.GoodsReceipt, row.ItemCount)
+	response := newGoodsReceiptResponse(row.GoodsReceipt, row.ItemCount)
+	response.WarehouseName = row.WarehouseName
+	response.PurchaseOrderNumber = row.PurchaseOrderNumber
+	return response
 }
 
 func newGoodsReceiptItemResponse(line GoodsReceiptLine) GoodsReceiptItemResponse {

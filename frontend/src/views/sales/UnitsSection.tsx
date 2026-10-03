@@ -1,8 +1,7 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useProjects } from '../../controllers/useErp'
 import { useCreateUnit, useDeleteUnit, useUnits, useUpdateUnit } from '../../controllers/useSales'
-import type { Project } from '../../models/project'
+import { projectOptions } from '../../models/lookupApi'
 import {
   EMPTY_UNIT_FORM,
   UNIT_CODE_MAX_LENGTH,
@@ -17,19 +16,19 @@ import {
 } from '../../models/sales'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiahShort } from '../../shared/format'
-import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { Chip, FilterSelect, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
+import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from './RowActions'
-import { OPTION_LIMIT, PAGE_SIZE, amountHint, pageAfterRemoval, projectLabel, refusalText } from './salesShared'
+import { LookupName } from '../components/LookupName'
+import { SearchSelect } from '../components/SearchSelect'
+import { PAGE_SIZE, amountHint, pageAfterRemoval, refusalText } from './salesShared'
 
 const NEW_UNIT_STATUSES: NewUnitStatus[] = ['available', 'on_hold']
 
-function UnitForm({ unit, projects, isLoadingProjects, onSaved, onCancel }: {
+function UnitForm({ unit, onSaved, onCancel }: {
   unit: PropertyUnit | null
-  projects: Project[]
-  isLoadingProjects: boolean
   onSaved: (message: string) => void
   onCancel: () => void
 }) {
@@ -54,22 +53,6 @@ function UnitForm({ unit, projects, isLoadingProjects, onSaved, onCancel }: {
     createUnit.mutate(values, { onSuccess: () => setValues(EMPTY_UNIT_FORM) })
   }
 
-  if (isLoadingProjects) {
-    return (
-      <FormPanel>
-        <Loading label="Mengambil proyek..." />
-      </FormPanel>
-    )
-  }
-
-  if (projects.length === 0) {
-    return (
-      <FormPanel>
-        <Empty message="Belum ada proyek. Buat proyek dulu di menu Proyek, lalu tambahkan unitnya di sini." />
-      </FormPanel>
-    )
-  }
-
   return (
     <FormPanel>
       <form onSubmit={submit} className="space-y-4">
@@ -87,14 +70,15 @@ function UnitForm({ unit, projects, isLoadingProjects, onSaved, onCancel }: {
             value={values.code}
             onChange={update('code')}
           />
-          <SelectField id="unit-project" label="Proyek" required value={values.projectId} onChange={update('projectId')}>
-            <option value="">Pilih proyek</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name} ({project.code})
-              </option>
-            ))}
-          </SelectField>
+          <SearchSelect
+            {...projectOptions}
+            id="unit-project"
+            label="Proyek"
+            placeholder="Cari nama atau kode proyek"
+            required
+            value={values.projectId}
+            onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
+          />
           <Field
             id="unit-type"
             label="Tipe"
@@ -171,10 +155,8 @@ export function UnitsSection() {
   const [editing, setEditing] = useState<PropertyUnit | null>(null)
   const [askingId, setAskingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
   const units = useUnits({ projectId: projectId === '' ? undefined : projectId, page, pageSize: PAGE_SIZE })
   const deleteUnit = useDeleteUnit()
-  const projectItems = projects.data?.items ?? []
   const isFormOpen = isCreating || editing !== null
 
   const closeForm = () => {
@@ -219,23 +201,20 @@ export function UnitsSection() {
   return (
     <Card title="Daftar unit" description="Unit yang sudah dipesan atau terjual terkunci oleh kontraknya.">
       <Toolbar>
-        <FilterSelect
+        <SearchSelect
+          {...projectOptions}
           id="unit-project-filter"
           label="Saring per proyek"
+          compact
+          allowEmpty
+          emptyLabel="Semua proyek"
+          className="w-52"
           value={projectId}
-          disabled={projects.isPending}
-          onChange={(event) => {
-            setProjectId(event.target.value)
+          onChange={(value) => {
+            setProjectId(value)
             setPage(1)
           }}
-        >
-          <option value="">Semua proyek</option>
-          {projectItems.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
         <FormToggle isOpen={isFormOpen} openLabel="Tambah unit" onToggle={toggleForm} />
       </Toolbar>
 
@@ -243,8 +222,6 @@ export function UnitsSection() {
         <UnitForm
           key={editing?.id ?? 'new'}
           unit={editing}
-          projects={projectItems}
-          isLoadingProjects={projects.isPending}
           onCancel={closeForm}
           onSaved={(message) => {
             closeForm()
@@ -277,7 +254,7 @@ export function UnitsSection() {
             }
             columns={[
               { header: 'Kode', cell: (row) => <span className="font-medium text-slate-900">{row.code}</span> },
-              { header: 'Proyek', cell: (row) => projectLabel(projectItems, row.projectId) },
+              { header: 'Proyek', cell: (row) => <LookupName source={projectOptions} value={row.projectId} /> },
               { header: 'Tipe', cell: (row) => row.unitType },
               { header: 'Luas', align: 'right', cell: (row) => `${number(row.areaSqm)} m²` },
               { header: 'Harga', align: 'right', cell: (row) => rupiahShort(row.price) },
