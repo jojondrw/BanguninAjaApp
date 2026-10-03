@@ -155,6 +155,16 @@ func (c *Controller) ListPurchaseOrders(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizePurchaseOrders(ctx *gin.Context) {
+	var query PurchaseOrderSummaryQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	summary, err := c.service.SummarizePurchaseOrders(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) GetPurchaseOrder(ctx *gin.Context) {
 	id, err := httprequest.PathID(ctx, idParam)
 	if err != nil {

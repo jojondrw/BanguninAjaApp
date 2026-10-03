@@ -126,6 +126,23 @@ type ContractQuery struct {
 	Type       string     `form:"type" binding:"omitempty,oneof=cash mortgage installment"`
 }
 
+type ContractSummaryQuery struct {
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type ContractSummaryResponse struct {
+	Count      int64                `json:"count"`
+	TotalValue int64                `json:"totalValue"`
+	ByStatus   ContractStatusCounts `json:"byStatus"`
+}
+
+type ContractStatusCounts struct {
+	Draft     int64 `json:"draft"`
+	Active    int64 `json:"active"`
+	Paid      int64 `json:"paid"`
+	Cancelled int64 `json:"cancelled"`
+}
+
 type ContractResponse struct {
 	ID           uuid.UUID `json:"id"`
 	Number       string    `json:"number"`
@@ -217,6 +234,19 @@ func newLeadResponse(lead Lead) LeadResponse {
 		CustomerID:      lead.CustomerID,
 		CreatedAt:       lead.CreatedAt,
 		UpdatedAt:       lead.UpdatedAt,
+	}
+}
+
+func newContractSummaryResponse(totals ContractTotals) ContractSummaryResponse {
+	return ContractSummaryResponse{
+		Count:      totals.Count,
+		TotalValue: totals.TotalValue,
+		ByStatus: ContractStatusCounts{
+			Draft:     totals.Draft,
+			Active:    totals.Active,
+			Paid:      totals.Paid,
+			Cancelled: totals.Cancelled,
+		},
 	}
 }
 

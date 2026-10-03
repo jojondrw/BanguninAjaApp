@@ -17,6 +17,14 @@ export interface Project {
   updatedAt: string
 }
 
+// Ringkasan seluruh proyek yang dihitung backend, bukan dari satu halaman daftar.
+export interface ProjectSummary {
+  count: number
+  byStatus: Record<ProjectStatus, number>
+  contractValue: number
+  averageProgress: number
+}
+
 export interface ProjectFilter {
   search?: string
   status?: ProjectStatus

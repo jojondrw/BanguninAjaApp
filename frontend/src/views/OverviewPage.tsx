@@ -1,8 +1,9 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { useBudgets, useCashFlow, useProjects } from '../controllers/useErp'
-import { rupiahShort, shortDate } from '../shared/format'
+import { useBudgetSummary, useCashFlow, useProjects, useProjectSummary } from '../controllers/useErp'
+import { number, rupiahShort, shortDate } from '../shared/format'
+import { kpiText } from '../shared/kpiText'
 import { todayDate } from '../shared/localDate'
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, type Project } from '../models/project'
 import { AppShell } from './components/AppShell'
@@ -12,20 +13,19 @@ import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './com
 import { AttentionList } from './overview/AttentionList'
 
 const CHART_MONTHS = 12
+const RECENT_PROJECTS = 8
 
 export function OverviewPage() {
-  const projects = useProjects({ pageSize: 100 })
-  const budgets = useBudgets()
+  const summary = useProjectSummary()
+  const projects = useProjects({ pageSize: RECENT_PROJECTS })
+  const budgets = useBudgetSummary()
   const cashFlow = useCashFlow()
   const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() })
 
   const items = projects.data?.items ?? []
-  const ongoing = items.filter((project) => project.status === 'ongoing')
-  const contractValue = items.reduce((total, project) => total + project.contractValue, 0)
 
-  const budgetItems = budgets.data?.items ?? []
-  const budgetTotal = budgetItems.reduce((total, budget) => total + budget.value, 0)
-  const realizedTotal = budgetItems.reduce((total, budget) => total + budget.realized, 0)
+  const budgetTotal = budgets.data?.budget ?? 0
+  const realizedTotal = budgets.data?.realized ?? 0
   const absorption = budgetTotal > 0 ? Math.round((realizedTotal / budgetTotal) * 100) : 0
 
   return (
@@ -33,13 +33,13 @@ export function OverviewPage() {
       <KpiRow>
         <Kpi
           label="Proyek berjalan"
-          value={projects.isPending ? '...' : String(ongoing.length)}
-          note={`dari ${items.length} proyek terdaftar`}
+          value={kpiText(summary, (data) => number(data.byStatus.ongoing))}
+          note={summary.data ? `dari ${number(summary.data.count)} proyek terdaftar` : undefined}
         />
         <Kpi
           label="Nilai kontrak"
-          value={projects.isPending ? '...' : rupiahShort(contractValue)}
-          note="seluruh proyek"
+          value={kpiText(summary, (data) => rupiahShort(data.contractValue))}
+          note={summary.data ? `seluruh proyek, rata-rata progres ${summary.data.averageProgress}%` : undefined}
         />
         <Kpi
           label="Saldo kas"
@@ -85,7 +85,7 @@ export function OverviewPage() {
           {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
           {projects.data ? (
             <Table
-              rows={items.slice(0, 8)}
+              rows={items}
               emptyMessage="Belum ada proyek. Buat proyek pertama dari halaman Proyek."
               columns={[
                 { header: 'Kode', cell: (row: Project) => row.code },

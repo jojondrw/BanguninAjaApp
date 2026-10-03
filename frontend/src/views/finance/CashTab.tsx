@@ -1,16 +1,14 @@
 import { BookOpen } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useProjects } from '../../controllers/useErp'
 import {
   useCashTransactionList,
   useDeleteCashTransaction,
   useRecordCashTransaction,
   useUpdateCashTransaction,
 } from '../../controllers/useFinance'
-import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
-  accountLabel,
+  accountText,
   cashFormFrom,
   emptyCashForm,
   isDateRangeValid,
@@ -23,8 +21,7 @@ import {
   type CashTransaction,
   type CashType,
 } from '../../models/finance'
-import { accountGroups, type Account } from '../../models/master'
-import { accountOptions, projectOptions } from '../../models/lookupApi'
+import { accountOptions, postableAccountOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
@@ -34,20 +31,11 @@ import { FilterChips, RowAction } from '../components/ListTools'
 import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
 import { CashFocusPanel } from './CashFocusPanel'
-import { CASH_PARAM, amountHint, journalLink, useSearchParam } from './financeTabs'
-import {
-  AccountOptions,
-  ConfirmDelete,
-  DateRangeFilter,
-  Notice,
-  RowActions,
-  RowLink,
-  SignedAmount,
-} from './parts'
+import { CASH_PARAM, amountHint, cashProjectName, journalLink, useSearchParam } from './financeTabs'
+import { ConfirmDelete, DateRangeFilter, Notice, RowActions, RowLink, SignedAmount } from './parts'
 
 const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
-const OPTION_LIMIT = 100
 
 const TYPE_FILTERS: { value: CashType | ''; label: string }[] = [
   { value: '', label: 'Semua' },
@@ -60,10 +48,8 @@ function transactionName(transaction: CashTransaction): string {
   return `${direction} ${rupiah(transaction.amount)} tanggal ${shortDate(transaction.date)}`
 }
 
-function CashForm({ transaction, accounts, isLoadingAccounts, onUpdated }: {
+function CashForm({ transaction, onUpdated }: {
   transaction: CashTransaction | null
-  accounts: Account[]
-  isLoadingAccounts: boolean
   onUpdated?: (message: string) => void
 }) {
   const [values, setValues] = useState<CashFormValues>(() =>
@@ -72,7 +58,6 @@ function CashForm({ transaction, accounts, isLoadingAccounts, onUpdated }: {
   const recordTransaction = useRecordCashTransaction()
   const updateTransaction = useUpdateCashTransaction()
   const mutation = transaction ? updateTransaction : recordTransaction
-  const groups = accountGroups(accounts, values.type)
 
   const update =
     (key: keyof CashFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -119,22 +104,25 @@ function CashForm({ transaction, accounts, isLoadingAccounts, onUpdated }: {
             value={values.amount}
             onChange={update('amount')}
           />
-          <SelectField
+          <SearchSelect
+            {...postableAccountOptions}
             id="cash-account"
             label="Akun lawan"
+            placeholder="Cari kode atau nama akun"
             required
-            disabled={isLoadingAccounts}
-            hint="Kas keluar biasanya ke akun Beban, kas masuk ke akun Pendapatan"
+            initial={transaction ? { value: transaction.accountId, label: accountText(transaction) } : null}
+            hint="Hanya akun rincian. Kas keluar biasanya ke akun Beban, kas masuk ke akun Pendapatan"
             value={values.accountId}
-            onChange={update('accountId')}
-          >
-            <AccountOptions groups={groups} placeholder={isLoadingAccounts ? 'Memuat akun...' : 'Pilih akun'} />
-          </SelectField>
+            onChange={(accountId) => setValues((current) => ({ ...current, accountId }))}
+          />
           <SearchSelect
             {...projectOptions}
             id="cash-project"
             label="Proyek (opsional)"
             placeholder="Cari proyek"
+            initial={
+              transaction?.projectId ? { value: transaction.projectId, label: cashProjectName(transaction) } : null
+            }
             hint="Kas keluar proyek dihitung sebagai realisasi anggaran"
             allowEmpty
             emptyLabel="Tanpa proyek, kantor pusat"
@@ -182,11 +170,7 @@ export function CashTab() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useSearchParam(CASH_PARAM)
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
-  const accounts = useAccounts()
   const deleteTransaction = useDeleteCashTransaction()
-  const projectItems = projects.data?.items ?? []
-  const accountItems = accounts.data?.items ?? []
   const isRangeValid = isDateRangeValid(range.dateFrom, range.dateTo)
 
   const transactions = useCashTransactionList(
@@ -206,9 +190,6 @@ export function CashTab() {
     apply(value)
     setPage(1)
   }
-
-  const projectName = (id: string | null) =>
-    id === null ? 'Kantor pusat' : (projectItems.find((project) => project.id === id)?.name ?? id.slice(0, 8))
 
   const startEdit = (transaction: CashTransaction) => {
     setIsCreating(false)
@@ -291,38 +272,22 @@ export function CashTab() {
       {focusedId !== '' ? (
         <CashFocusPanel
           id={focusedId}
-          accounts={accountItems}
-          projectName={projectName}
           isEditing={editing?.id === focusedId}
           onEdit={startEdit}
           onClose={() => setFocusedId('')}
         />
       ) : null}
-      {isCreating ? (
-        <CashForm
-          transaction={null}
-          accounts={accountItems}
-          isLoadingAccounts={accounts.isPending}
-        />
-      ) : null}
+      {isCreating ? <CashForm transaction={null} /> : null}
       {editing ? (
         <CashForm
           key={editing.id}
           transaction={editing}
-          accounts={accountItems}
-          isLoadingAccounts={accounts.isPending}
           onUpdated={(message) => {
             setEditing(null)
             setNotice(message)
           }}
         />
       ) : null}
-      {accounts.isError ? (
-        <Notice>
-          <ErrorNote message="Daftar akun gagal dimuat, jadi nama akun dan pilihan akun belum tersedia." />
-        </Notice>
-      ) : null}
-
       {deleteTransaction.isError ? (
         <Notice>
           <ErrorNote message={errorMessage(deleteTransaction.error)} />
@@ -349,8 +314,8 @@ export function CashTab() {
             columns={[
               { header: 'Tanggal', cell: (row) => shortDate(row.date) },
               { header: 'Keterangan', cell: (row) => row.note || '-' },
-              { header: 'Proyek', cell: (row) => projectName(row.projectId) },
-              { header: 'Akun lawan', cell: (row) => accountLabel(accountItems, row.accountId) },
+              { header: 'Proyek', cell: (row) => cashProjectName(row) },
+              { header: 'Akun lawan', cell: (row) => accountText(row) },
               {
                 header: 'Jenis',
                 cell: (row) => <Chip tone={CASH_TYPE_TONE[row.type]}>{CASH_TYPE_LABEL[row.type]}</Chip>,

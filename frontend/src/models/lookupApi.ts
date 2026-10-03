@@ -139,3 +139,12 @@ export function propertyUnitOptions(
     filter,
   )
 }
+
+// Akun daun saja (tanpa akun anak), karena kas dan jurnal dicatat di akun
+// rincian. Backend yang menyaring lewat postable=true, jadi semua akun daun
+// bisa dicari, bukan hanya yang masuk 100 data pertama.
+export const postableAccountOptions = source<Account>(
+  '/master/accounts',
+  (account) => ({ value: account.id, label: `${account.code} ${account.name}`, hint: ACCOUNT_TYPE_LABEL[account.type] }),
+  { postable: 'true' },
+)

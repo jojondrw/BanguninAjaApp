@@ -13,7 +13,6 @@ import {
   type BudgetFormValues,
 } from '../../models/accounting'
 import type { Budget } from '../../models/finance'
-import type { Project } from '../../models/project'
 import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
@@ -26,20 +25,14 @@ import { amountHint } from './financeTabs'
 import { ConfirmDelete, Notice, RowActions } from './parts'
 
 const PAGE_SIZE = 10
-const OPTION_LIMIT = 100
 const FULL_PERCENT = 100
 
-function projectOf(projects: Project[], id: string): Project | undefined {
-  return projects.find((project) => project.id === id)
+function budgetName(budget: Budget): string {
+  return `${budget.projectName || 'proyek'} tahun ${budget.year}`
 }
 
-function budgetName(projects: Project[], budget: Budget): string {
-  return `${projectOf(projects, budget.projectId)?.name ?? 'proyek'} tahun ${budget.year}`
-}
-
-function BudgetForm({ budget, projects, thisYear, onUpdated }: {
+function BudgetForm({ budget, thisYear, onUpdated }: {
   budget: Budget | null
-  projects: Project[]
   thisYear: number
   onUpdated?: (message: string) => void
 }) {
@@ -55,7 +48,7 @@ function BudgetForm({ budget, projects, thisYear, onUpdated }: {
       setValues((current) => ({ ...current, [key]: event.target.value }))
 
   const savedMessage = (saved: Budget, verb: string) =>
-    `Anggaran ${budgetName(projects, saved)} ${verb}, nilai ${rupiah(saved.value)}.`
+    `Anggaran ${budgetName(saved)} ${verb}, nilai ${rupiah(saved.value)}.`
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -76,7 +69,7 @@ function BudgetForm({ budget, projects, thisYear, onUpdated }: {
       <form onSubmit={submit} className="space-y-4">
         {budget ? (
           <p className="text-sm text-slate-600">
-            Mengubah anggaran <span className="font-medium text-slate-900">{budgetName(projects, budget)}</span>.
+            Mengubah anggaran <span className="font-medium text-slate-900">{budgetName(budget)}</span>.
           </p>
         ) : null}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -86,6 +79,7 @@ function BudgetForm({ budget, projects, thisYear, onUpdated }: {
             label="Proyek"
             placeholder="Cari nama atau kode proyek"
             required
+            initial={budget ? { value: budget.projectId, label: budget.projectName } : null}
             value={values.projectId}
             onChange={(projectId) => setValues((current) => ({ ...current, projectId }))}
           />
@@ -161,9 +155,9 @@ export function BudgetsTab() {
   const [editing, setEditing] = useState<Budget | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const projects = useProjects({ pageSize: OPTION_LIMIT })
+  // Satu baris cukup untuk tahu apakah sudah ada proyek sama sekali.
+  const projects = useProjects({ pageSize: 1 })
   const deleteBudget = useDeleteBudget()
-  const projectItems = projects.data?.items ?? []
 
   const budgets = useBudgetList({
     projectId: projectId === '' ? undefined : projectId,
@@ -173,7 +167,7 @@ export function BudgetsTab() {
   })
 
   const emptyMessage =
-    projects.isSuccess && projectItems.length === 0
+    projects.isSuccess && projects.data.totalItems === 0
       ? 'Belum ada proyek. Buat proyek dulu di menu Proyek, lalu susun anggarannya di sini.'
       : projectId === '' && yearDraft === ''
         ? 'Belum ada anggaran. Tambahkan lewat tombol Tambah anggaran.'
@@ -189,7 +183,7 @@ export function BudgetsTab() {
     setNotice(null)
     deleteBudget.mutate(budget.id, {
       onSuccess: () => {
-        setNotice(`Anggaran ${budgetName(projectItems, budget)} dihapus.`)
+        setNotice(`Anggaran ${budgetName(budget)} dihapus.`)
         if (editing?.id === budget.id) {
           setEditing(null)
         }
@@ -251,12 +245,11 @@ export function BudgetsTab() {
         />
       </Toolbar>
 
-      {isCreating ? <BudgetForm budget={null} projects={projectItems} thisYear={thisYear} /> : null}
+      {isCreating ? <BudgetForm budget={null} thisYear={thisYear} /> : null}
       {editing ? (
         <BudgetForm
           key={editing.id}
           budget={editing}
-          projects={projectItems}
           thisYear={thisYear}
           onUpdated={(message) => {
             setEditing(null)
@@ -291,7 +284,7 @@ export function BudgetsTab() {
                     to={`/proyek/${row.projectId}?tab=keuangan`}
                     className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline"
                   >
-                    {projectOf(projectItems, row.projectId)?.name ?? row.projectId.slice(0, 8)}
+                    {row.projectName || '-'}
                   </Link>
                 ),
               },
@@ -316,7 +309,7 @@ export function BudgetsTab() {
                   <RowActions>
                     <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
                     <ConfirmDelete
-                      subject={`anggaran ${budgetName(projectItems, row)}`}
+                      subject={`anggaran ${budgetName(row)}`}
                       isConfirming={confirmingId === row.id}
                       isPending={deleteBudget.isPending && deleteBudget.variables === row.id}
                       onAsk={() => setConfirmingId(row.id)}

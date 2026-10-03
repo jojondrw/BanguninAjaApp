@@ -8,7 +8,6 @@ import type {
   CashTransactionFilter,
   CashTransactionRequest,
 } from './finance'
-import type { Account, UnitOfMeasure } from './master'
 import type {
   BudgetItemPage,
   Permit,
@@ -18,6 +17,7 @@ import type {
   ProjectFilter,
   ProjectPhase,
   ProjectRequest,
+  ProjectSummary,
 } from './project'
 
 const MAX_PAGE_SIZE = 100
@@ -25,6 +25,8 @@ const MAX_PAGE_SIZE = 100
 export const projectApi = {
   list: (filter: ProjectFilter = {}) =>
     request<Page<Project>>(`/projects${toQueryString({ ...filter })}`),
+
+  summary: () => request<ProjectSummary>('/projects/summary'),
 
   get: (id: string) => request<Project>(`/projects/${id}`),
 
@@ -44,9 +46,19 @@ export const projectApi = {
     request<BudgetItemPage>(`/projects/${id}/budget-items${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
 }
 
+// Jumlah anggaran dan realisasinya untuk semua anggaran yang cocok, dihitung
+// backend dalam satu kueri.
+export interface BudgetTotals {
+  budget: number
+  realized: number
+}
+
 export const financeApi = {
   budgets: (projectId?: string) =>
     request<Page<Budget>>(`/finance/budgets${toQueryString({ projectId, pageSize: 100 })}`),
+
+  budgetSummary: (filter: { projectId?: string; year?: number } = {}) =>
+    request<BudgetTotals>(`/finance/budgets/summary${toQueryString({ ...filter })}`),
 
   cashFlow: (filter: CashFlowFilter = {}) =>
     request<CashFlow>(`/finance/cash-flow${toQueryString({ ...filter })}`),
@@ -56,14 +68,6 @@ export const financeApi = {
 
   createCashTransaction: (body: CashTransactionRequest) =>
     request<CashTransaction>('/finance/cash-transactions', { method: 'POST', body }),
-}
-
-export const masterApi = {
-  accounts: () =>
-    request<Page<Account>>(`/master/accounts${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
-
-  unitsOfMeasure: () =>
-    request<Page<UnitOfMeasure>>(`/master/units-of-measure${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
 }
 
 export interface SiteEvaluateRequest {

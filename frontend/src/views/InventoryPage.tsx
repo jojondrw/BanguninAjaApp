@@ -2,10 +2,10 @@ import { useState } from 'react'
 
 import {
   useLowStockMaterials,
-  useMaterialOptions,
+  useMaterials,
   useStockMovementCount,
   useUnitsOfMeasure,
-  useWarehouseOptions,
+  useWarehouses,
 } from '../controllers/useInventory'
 import { number } from '../shared/format'
 import { firstDayOfMonth, todayDate } from '../shared/localDate'
@@ -32,8 +32,8 @@ const TABS: { value: InventoryTab; label: string }[] = [
 export function InventoryPage() {
   const [today] = useState(todayDate)
   const [tab, setTab] = useState<InventoryTab>('stock')
-  const materials = useMaterialOptions()
-  const warehouses = useWarehouseOptions()
+  const materials = useMaterials({ pageSize: 1 })
+  const warehouses = useWarehouses({ pageSize: 1 })
   const units = useUnitsOfMeasure()
   const lowStock = useLowStockMaterials(1)
   const movementsThisMonth = useStockMovementCount({ dateFrom: firstDayOfMonth(today), dateTo: today })
@@ -85,7 +85,7 @@ export function InventoryPage() {
 
       {tab === 'catalog' ? (
         <div className="grid gap-6">
-          <MaterialsCard lookups={lookups} />
+          <MaterialsCard />
           <WarehousesCard />
         </div>
       ) : null}

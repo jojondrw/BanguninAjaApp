@@ -5,8 +5,9 @@ import {
   type ComparisonFilter,
   type ComparisonRequest,
 } from '../models/location'
+import { projectApi } from '../models/erpApi'
 import { comparisonApi, dimensionApi, regionApi, savedLocationApi } from '../models/locationApi'
-import { DATA_QUERY, SAVED_LOCATIONS_KEY } from './useErp'
+import { DATA_QUERY, PROJECTS_KEY, SAVED_LOCATIONS_KEY } from './useErp'
 
 export const COMPARISONS_KEY = 'location-comparisons'
 const DIMENSIONS_KEY = 'scoring-dimensions'
@@ -55,6 +56,20 @@ export function useRegionNames(ids: string[]) {
       queryFn: () => regionApi.get(id),
       ...DATA_QUERY,
       staleTime: TEN_MINUTES,
+    })),
+    combine: (results) =>
+      new Map(results.flatMap((result) => (result.data ? [[result.data.id, result.data.name] as const] : []))),
+  })
+}
+
+// Nama proyek per id. Kuncinya sama dengan kepala proyek di halaman proyek,
+// jadi proyek yang sudah pernah dibuka tidak diambil ulang.
+export function useProjectNames(ids: string[]) {
+  return useQueries({
+    queries: [...new Set(ids)].map((id) => ({
+      queryKey: [PROJECTS_KEY, 'detail', id],
+      queryFn: () => projectApi.get(id),
+      ...DATA_QUERY,
     })),
     combine: (results) =>
       new Map(results.flatMap((result) => (result.data ? [[result.data.id, result.data.name] as const] : []))),

@@ -6,10 +6,9 @@ import {
   usePurchaseOrder,
   usePurchaseOrders,
   usePurchaseRequest,
-  useUnitsOfMeasure,
   useUpdatePurchaseOrderStatus,
 } from '../../controllers/useProcurement'
-import { materialOptions, projectOptions, vendorOptions } from '../../models/lookupApi'
+import { materialOptions, projectOptions, unitOfMeasureOptions, vendorOptions } from '../../models/lookupApi'
 import {
   ORDER_NUMBER_MAX_LENGTH,
   ORDER_STATUS_LABEL,
@@ -29,7 +28,7 @@ import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
 import { ToolbarInput } from '../components/RecordControls'
 import { useLookupLabel } from '../components/searchSelectLogic'
-import { OPTION_LIMIT, PAGE_SIZE, codeOf, type OrderPrefill } from './lookup'
+import { OPTION_LIMIT, PAGE_SIZE, type OrderPrefill } from './lookup'
 import { ConfirmAction, Facts } from './parts'
 import { PurchaseOrderFormCard } from './PurchaseOrderForm'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
@@ -68,10 +67,8 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
   const order = usePurchaseOrder(id)
   const sourceRequest = usePurchaseRequest(order.data?.purchaseRequestId ?? null)
   const receipts = useGoodsReceipts({ purchaseOrderId: id, pageSize: OPTION_LIMIT })
-  const units = useUnitsOfMeasure()
   const updateStatus = useUpdatePurchaseOrderStatus()
   const deleteOrder = useDeletePurchaseOrder()
-  const unitItems = units.data?.items ?? []
   const vendorName = useLookupLabel(ALL_VENDORS, order.data?.vendorId) ?? '-'
   const projectName = useLookupLabel(projectOptions, order.data?.projectId) ?? '-'
 
@@ -248,7 +245,7 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
           columns={[
             { header: 'Material', cell: (row) => <LookupName source={materialOptions} value={row.materialId} /> },
             { header: 'Jumlah', align: 'right', cell: (row) => number(row.quantity) },
-            { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },
+            { header: 'Satuan', cell: (row) => <LookupName source={unitOfMeasureOptions} value={row.unitOfMeasureId} /> },
             { header: 'Harga satuan', align: 'right', cell: (row) => rupiah(row.unitPrice) },
             { header: 'Subtotal', align: 'right', cell: (row) => rupiah(row.total) },
             { header: 'Diterima', align: 'right', cell: (row) => number(row.receivedQuantity) },

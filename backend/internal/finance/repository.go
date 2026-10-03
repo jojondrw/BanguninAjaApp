@@ -18,16 +18,22 @@ const (
 
 	cashColumns = "cash_transaction.id, cash_transaction.date, cash_transaction.type, cash_transaction.account_id, " +
 		"cash_transaction.project_id, cash_transaction.amount, cash_transaction.note, cash_transaction.created_at, " +
-		"cash_transaction.updated_at, journal_entry.id AS journal_entry_id"
+		"cash_transaction.updated_at, journal_entry.id AS journal_entry_id, " +
+		"(SELECT account.code FROM account WHERE account.id = cash_transaction.account_id) AS account_code, " +
+		"(SELECT account.name FROM account WHERE account.id = cash_transaction.account_id) AS account_name, " +
+		"(SELECT project.name FROM project WHERE project.id = cash_transaction.project_id) AS project_name"
 	cashJournalJoin = "LEFT JOIN journal_entry ON journal_entry.cash_transaction_id = cash_transaction.id"
 
 	budgetColumns = "budget.id, budget.project_id, budget.year, budget.value, budget.note, budget.created_at, budget.updated_at, " +
+		"(SELECT project.name FROM project WHERE project.id = budget.project_id) AS project_name, " +
 		"COALESCE((SELECT SUM(cash_transaction.amount) FROM cash_transaction " +
 		"WHERE cash_transaction.project_id = budget.project_id AND cash_transaction.type = ? " +
 		"AND cash_transaction.date >= make_date(budget.year::int, 1, 1) AND cash_transaction.date < make_date((budget.year + 1)::int, 1, 1)), 0) AS realized"
 	journalColumns = "journal_entry.id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.source, " +
 		"journal_entry.cash_transaction_id, journal_entry.created_at, " +
 		"(SELECT COALESCE(SUM(journal_line.debit), 0) FROM journal_line WHERE journal_line.journal_entry_id = journal_entry.id) AS total"
+	journalLineColumns = "journal_line.id, journal_line.account_id, journal_line.debit, journal_line.kredit AS credit, " +
+		"account.code AS account_code, account.name AS account_name"
 	ledgerColumns = "journal_entry.id AS journal_entry_id, journal_entry.number, journal_entry.date, journal_entry.note, journal_entry.cash_transaction_id, " +
 		"journal_line.id AS line_id, journal_line.debit, journal_line.kredit AS credit, " +
 		"SUM(journal_line.debit - journal_line.kredit) OVER (ORDER BY journal_entry.date, journal_entry.number, journal_line.id) AS running_balance"
@@ -74,14 +80,15 @@ type LedgerFilter struct {
 }
 
 type BudgetRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Year      int
-	Value     int64
-	Note      string
-	Realized  int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	ProjectName string
+	Year        int
+	Value       int64
+	Note        string
+	Realized    int64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type CashTransactionRow struct {
@@ -93,6 +100,9 @@ type CashTransactionRow struct {
 	Amount         int64
 	Note           string
 	JournalEntryID *uuid.UUID
+	AccountCode    string
+	AccountName    string
+	ProjectName    string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -112,6 +122,15 @@ type JournalEntryRow struct {
 	CashTransactionID *uuid.UUID
 	Total             int64
 	CreatedAt         time.Time
+}
+
+type JournalLineRow struct {
+	ID          uuid.UUID
+	AccountID   uuid.UUID
+	AccountCode string
+	AccountName string
+	Debit       int64
+	Credit      int64
 }
 
 type LedgerRow struct {
@@ -163,7 +182,7 @@ type Repository interface {
 
 	ListJournalEntries(ctx context.Context, filter JournalEntryFilter) ([]JournalEntryRow, int64, error)
 	FindJournalEntryRow(ctx context.Context, id uuid.UUID) (JournalEntryRow, error)
-	ListJournalLines(ctx context.Context, journalEntryID uuid.UUID) ([]JournalLine, error)
+	ListJournalLines(ctx context.Context, journalEntryID uuid.UUID) ([]JournalLineRow, error)
 	CreateJournalEntry(ctx context.Context, entry *JournalEntry) error
 	CreateJournalLines(ctx context.Context, lines []JournalLine) error
 
@@ -370,12 +389,15 @@ func (r *gormRepository) FindJournalEntryRow(ctx context.Context, id uuid.UUID) 
 	return row, database.Translate(err)
 }
 
-func (r *gormRepository) ListJournalLines(ctx context.Context, journalEntryID uuid.UUID) ([]JournalLine, error) {
-	var lines []JournalLine
+func (r *gormRepository) ListJournalLines(ctx context.Context, journalEntryID uuid.UUID) ([]JournalLineRow, error) {
+	var lines []JournalLineRow
 	err := r.db.WithContext(ctx).
-		Where("journal_entry_id = ?", journalEntryID).
-		Order("created_at ASC, id ASC").
-		Find(&lines).Error
+		Model(&JournalLine{}).
+		Joins("JOIN account ON account.id = journal_line.account_id").
+		Select(journalLineColumns).
+		Where("journal_line.journal_entry_id = ?", journalEntryID).
+		Order("journal_line.created_at ASC, journal_line.id ASC").
+		Scan(&lines).Error
 	return lines, database.Translate(err)
 }
 

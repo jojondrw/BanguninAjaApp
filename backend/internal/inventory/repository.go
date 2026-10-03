@@ -53,6 +53,7 @@ type StockMovementFilter struct {
 	MaterialID  *uuid.UUID
 	WarehouseID *uuid.UUID
 	Type        string
+	Reference   string
 	DateFrom    *time.Time
 	DateTo      *time.Time
 	Offset      int
@@ -342,6 +343,9 @@ func (f StockMovementFilter) apply(db *gorm.DB) *gorm.DB {
 	}
 	if f.Type != "" {
 		db = db.Where("stock_movement.type = ?", f.Type)
+	}
+	if f.Reference != "" {
+		db = db.Where("stock_movement.reference = ?", f.Reference)
 	}
 	if f.DateFrom != nil {
 		db = db.Where("stock_movement.date >= ?", *f.DateFrom)

@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { useLedger } from '../../controllers/useFinance'
-import { useAccounts } from '../../controllers/useProjectWorkspace'
+import { useLedger, useLedgerAccount } from '../../controllers/useFinance'
 import {
   CASH_ACCOUNT_CODE,
   NORMAL_BALANCE,
@@ -86,9 +85,8 @@ export function LedgerTab() {
   const [accountId, setAccountId] = useSearchParam(ACCOUNT_PARAM)
   const [range, setRange] = useState({ dateFrom: '', dateTo: '' })
   const [page, setPage] = useState(1)
-  const accounts = useAccounts()
-  const accountItems = accounts.data?.items ?? []
-  const account = accountItems.find((item) => item.id === accountId)
+  const selectedAccount = useLedgerAccount(accountId)
+  const account = selectedAccount.data?.id === accountId ? selectedAccount.data : undefined
   const isRangeValid = isDateRangeValid(range.dateFrom, range.dateTo)
 
   const ledger = useLedger(
@@ -132,10 +130,10 @@ export function LedgerTab() {
         />
       </Toolbar>
 
-      {accounts.isError ? (
+      {accountId !== '' && selectedAccount.isError ? (
         <div className="mb-4 space-y-3">
-          <ErrorNote message="Daftar akun gagal dimuat." />
-          <Button variant="subtle" onClick={() => accounts.refetch()}>
+          <ErrorNote message={errorMessage(selectedAccount.error)} />
+          <Button variant="subtle" onClick={() => selectedAccount.refetch()}>
             Muat ulang akun
           </Button>
         </div>

@@ -113,6 +113,7 @@ type Service interface {
 	ConvertLead(ctx context.Context, id uuid.UUID, request CustomerRequest) (LeadConversionResponse, error)
 
 	ListContracts(ctx context.Context, query ContractQuery) (pagination.Page[ContractResponse], error)
+	SummarizeContracts(ctx context.Context, query ContractSummaryQuery) (ContractSummaryResponse, error)
 	GetContract(ctx context.Context, id uuid.UUID) (ContractResponse, error)
 	CreateContract(ctx context.Context, request ContractRequest) (ContractResponse, error)
 	UpdateContract(ctx context.Context, id uuid.UUID, request ContractRequest) (ContractResponse, error)
@@ -318,6 +319,14 @@ func (s *service) ConvertLead(ctx context.Context, id uuid.UUID, request Custome
 		return nil
 	})
 	return response, err
+}
+
+func (s *service) SummarizeContracts(ctx context.Context, query ContractSummaryQuery) (ContractSummaryResponse, error) {
+	totals, err := s.repository.SummarizeContracts(ctx, query.ProjectID)
+	if err != nil {
+		return ContractSummaryResponse{}, apperror.Internal(err)
+	}
+	return newContractSummaryResponse(totals), nil
 }
 
 func (s *service) ListContracts(ctx context.Context, query ContractQuery) (pagination.Page[ContractResponse], error) {

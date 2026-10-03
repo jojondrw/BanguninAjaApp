@@ -5,7 +5,6 @@ import { inventoryApi } from '../models/inventoryApi'
 import {
   receiptNeedsMovementCheck,
   toGoodsReceiptRequest,
-  toInputDate,
   toPurchaseOrderRequest,
   toPurchaseRequestRequest,
   toVendorRequest,
@@ -28,6 +27,9 @@ import { procurementApi } from '../models/procurementApi'
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
 const PROCUREMENT_KEY = 'procurement'
+
+// Gudang proyek yang ditampilkan sebagai petunjuk di formulir penerimaan.
+export const PROJECT_WAREHOUSE_LIMIT = 5
 
 // Kunci yang sama dengan controllers/useInventory.ts, supaya stok masuk dari
 // penerimaan barang langsung terlihat di halaman Persediaan.
@@ -55,8 +57,7 @@ export function useVendors(filter: VendorFilter = {}) {
   })
 }
 
-// Dipakai untuk pilihan vendor di formulir dan untuk menampilkan nama vendor
-// di tabel pesanan, karena respons pesanan hanya membawa vendorId.
+// Dipakai halaman Tagihan untuk nama vendor di tabel utang.
 export function useVendorOptions() {
   return useVendors({ pageSize: MAX_PAGE_SIZE })
 }
@@ -104,10 +105,12 @@ export function usePurchaseOrders(filter: PurchaseOrderFilter = {}) {
   })
 }
 
-// Dipakai untuk nomor pesanan di tabel penerimaan dan pilihan pesanan di
-// penyaring, karena respons penerimaan hanya membawa purchaseOrderId.
-export function usePurchaseOrderOptions() {
-  return usePurchaseOrders({ pageSize: MAX_PAGE_SIZE })
+export function usePurchaseOrderSummary(projectId?: string) {
+  return useQuery({
+    queryKey: [PROCUREMENT_KEY, 'purchase-order-summary', projectId ?? 'all'],
+    queryFn: () => procurementApi.purchaseOrderSummary(projectId),
+    ...DATA_QUERY,
+  })
 }
 
 export function usePurchaseOrder(id: string | null) {
@@ -136,45 +139,39 @@ export function useGoodsReceipt(id: string | null) {
   })
 }
 
-export function useMaterials() {
-  return useQuery({
-    queryKey: ['inventory', 'materials', 'options'],
-    queryFn: () => procurementApi.materials(MAX_PAGE_SIZE),
-    ...DATA_QUERY,
-  })
-}
-
-export function useUnitsOfMeasure() {
-  return useQuery({
-    queryKey: ['master', 'units-of-measure', 'options'],
-    queryFn: () => procurementApi.unitsOfMeasure(MAX_PAGE_SIZE),
-    staleTime: Infinity,
-    retry: 0,
-  })
-}
-
-// Kunci dan filternya sama dengan useWarehouseOptions di useInventory, jadi
-// datanya berbagi cache dengan halaman Persediaan.
-export function useWarehouseOptions() {
-  const filter = { pageSize: MAX_PAGE_SIZE }
+// Gudang milik proyek pesanan, untuk gudang bawaan di formulir penerimaan.
+// totalItems dipakai untuk memilih otomatis kalau proyeknya punya tepat satu.
+export function useProjectWarehouses(projectId: string | undefined) {
+  const filter = { projectId, pageSize: PROJECT_WAREHOUSE_LIMIT }
 
   return useQuery({
     queryKey: [...WAREHOUSES_KEY, filter],
     queryFn: () => inventoryApi.warehouses(filter),
+    enabled: projectId !== undefined,
     ...DATA_QUERY,
   })
 }
 
-// Mutasi masuk di gudang dan tanggal penerimaan. Yang referensinya nomor
-// penerimaan dipilah di receiptStockLines. Penerimaan yang semua barisnya
+// Hanya butuh tahu apakah sudah ada gudang sama sekali.
+export function useWarehouseCount() {
+  const filter = { pageSize: 1 }
+
+  return useQuery({
+    queryKey: [...WAREHOUSES_KEY, filter],
+    queryFn: () => inventoryApi.warehouses(filter),
+    select: (page) => page.totalItems,
+    ...DATA_QUERY,
+  })
+}
+
+// Mutasi masuk di gudang penerimaan yang referensinya nomor penerimaan ini,
+// jadi paling banyak satu per baris barang. Penerimaan yang semua barisnya
 // sudah dicatat otomatis tidak perlu mengambil mutasi sama sekali.
 export function useReceiptStockMovements(receipt: GoodsReceiptDetail | undefined) {
-  const day = toInputDate(receipt?.date ?? null)
   const filter: StockMovementFilter = {
     type: 'in',
     warehouseId: receipt?.warehouseId,
-    dateFrom: day,
-    dateTo: day,
+    reference: receipt?.number,
     pageSize: MAX_PAGE_SIZE,
   }
 

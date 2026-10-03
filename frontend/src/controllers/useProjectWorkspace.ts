@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { financeApi, masterApi, projectApi } from '../models/erpApi'
+import { financeApi, projectApi } from '../models/erpApi'
 import {
   lastMonthsRange,
   toCashTransactionRequest,
@@ -133,22 +133,6 @@ export function useCreateCashTransaction(projectId: string) {
         queryClient.invalidateQueries({ queryKey: [JOURNAL_KEY] }),
         queryClient.invalidateQueries({ queryKey: [LEDGER_KEY] }),
       ]),
-  })
-}
-
-export function useAccounts() {
-  return useQuery({
-    queryKey: [MASTER_KEY, 'accounts'],
-    queryFn: masterApi.accounts,
-    ...DATA_QUERY,
-  })
-}
-
-export function useUnitsOfMeasure() {
-  return useQuery({
-    queryKey: [MASTER_KEY, 'units-of-measure'],
-    queryFn: masterApi.unitsOfMeasure,
-    ...DATA_QUERY,
   })
 }
 

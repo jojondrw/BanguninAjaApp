@@ -1,9 +1,10 @@
 import { type FormEvent, useState } from 'react'
 
-import { useBuildingProfiles, useProjects } from '../../controllers/useErp'
+import { useBuildingProfiles } from '../../controllers/useErp'
 import {
   useCreateComparison,
   useDimensions,
+  useProjectNames,
   useRegionNames,
   useSavedLocationDetails,
   useUpdateComparison,
@@ -20,8 +21,6 @@ import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { ROW_BUTTON } from './buttons'
 import { ComparisonGrid, type LocationNames } from './ComparisonGrid'
-
-const PROJECT_OPTION_LIMIT = 100
 
 export const COMPARISON_RESULT_ID = 'hasil-perbandingan'
 
@@ -50,7 +49,7 @@ function pickMoreMessage(count: number): string {
 export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onDropMany, onSaved }: ComparisonResultProps) {
   const details = useSavedLocationDetails(selectedIds)
   const dimensions = useDimensions()
-  const projects = useProjects({ pageSize: PROJECT_OPTION_LIMIT })
+  const projectNames = useProjectNames(details.locations.flatMap((location) => (location.projectId ? [location.projectId] : [])))
   const profiles = useBuildingProfiles()
   const regionNames = useRegionNames(details.locations.flatMap((location) => (location.regionId ? [location.regionId] : [])))
 
@@ -63,7 +62,7 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
 
   const names: LocationNames = {
     project: (id) =>
-      id ? (projects.data?.items.find((project) => project.id === id)?.name ?? 'Proyek lain') : 'Tanpa proyek',
+      id ? (projectNames.get(id) ?? 'Memuat proyek...') : 'Tanpa proyek',
     profile: (id) => profiles.data?.find((profile) => profile.id === id)?.name ?? '-',
     region: (id) => (id ? (regionNames.get(id) ?? 'Memuat wilayah...') : '-'),
   }
