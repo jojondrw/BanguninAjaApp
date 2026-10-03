@@ -385,7 +385,11 @@ export function ReceivableForm({ record, fromInvoice, onSaved, onCancel }: Recei
               ? 'Faktur pelanggan ini yang belum dicatat sebagai piutang'
               : 'Hanya faktur pelanggan yang belum dicatat sebagai piutang'
           }
-          initial={knownOption(values.invoiceId, record?.invoiceNumber ?? fromInvoice?.number)}
+          initial={
+            record
+              ? knownOption(record.invoiceId, record.invoiceNumber)
+              : knownOption(fromInvoice?.id, fromInvoice?.number)
+          }
           value={values.invoiceId}
           onChange={changeInvoice}
         />
