@@ -1,20 +1,20 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { useBillingRecord, useDeleteBilling, usePayBilling } from '../../controllers/useBilling'
 import {
   BILLING_KIND_NOUN,
   dueNote,
-  paidPercent,
   type BillingKind,
   type BillingRecord,
   type BillingRecordOf,
 } from '../../models/billing'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiah, shortDate } from '../../shared/format'
-import { Bar, Card, LoadFailed, Loading } from '../components/Data'
-import { BUTTON_BASE, Button, ErrorNote, Field, SuccessNote } from '../components/Form'
+import { Card, LoadFailed, Loading } from '../components/Data'
+import { BUTTON_BASE, Button, ErrorNote, SuccessNote } from '../components/Form'
 import { FormPanel } from '../components/RecordControls'
 import { StatusChip } from './BillingCells'
+import { PaymentForm, PaymentHistory } from './BillingPayments'
 
 export interface DetailField {
   label: string
@@ -27,84 +27,6 @@ interface EditControls {
 }
 
 const DANGER_BUTTON = 'bg-red-600 text-white shadow-button hover:bg-red-700 disabled:bg-red-600/55'
-
-function PaymentForm({ record, noun, pay }: {
-  record: BillingRecord
-  noun: string
-  pay: ReturnType<typeof usePayBilling>
-}) {
-  const [amount, setAmount] = useState(String(record.outstanding))
-  const [isConfirming, setIsConfirming] = useState(false)
-  const isSettled = record.outstanding === 0
-  const value = Number(amount)
-
-  // Tombol pertama hanya memeriksa isian lewat validasi peramban, pencatatan
-  // baru terjadi setelah dikonfirmasi di tempat yang sama.
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setIsConfirming(true)
-  }
-
-  const confirm = () =>
-    pay.mutate({ id: record.id, amount: value }, { onSettled: () => setIsConfirming(false) })
-
-  return (
-    <form onSubmit={submit}>
-      <fieldset disabled={isSettled} className="space-y-3">
-        <legend className="mb-3 text-sm font-semibold text-slate-900">Catat pembayaran</legend>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field
-            id="billing-payment-amount"
-            label="Nominal pembayaran"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={record.outstanding}
-            step={1}
-            required
-            disabled={isConfirming}
-            hint={
-              isSettled
-                ? `Sudah lunas, tidak ada sisa ${noun} yang perlu dibayar`
-                : `Terisi sisa ${rupiah(record.outstanding)}. Boleh dibayar sebagian.`
-            }
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
-        </div>
-
-        {isConfirming ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5">
-            <p className="mr-auto text-[13px] text-amber-900">
-              Catat pembayaran {rupiah(value)}? Pembayaran yang sudah dicatat tidak bisa dibatalkan.
-            </p>
-            <Button isPending={pay.isPending} pendingLabel="Mencatat pembayaran" onClick={confirm}>
-              Ya, catat pembayaran
-            </Button>
-            {pay.isPending ? null : (
-              <Button variant="subtle" onClick={() => setIsConfirming(false)}>
-                Batal
-              </Button>
-            )}
-          </div>
-        ) : (
-          <Button type="submit">Catat pembayaran</Button>
-        )}
-      </fieldset>
-
-      <div className="mt-3">
-        {pay.isError ? <ErrorNote message={errorMessage(pay.error)} /> : null}
-        {pay.isSuccess ? (
-          <SuccessNote
-            message={`Pembayaran ${rupiah(pay.variables.amount)} tercatat. ${
-              pay.data.status === 'paid' ? `Sekarang ${noun} ini lunas.` : `Sisa ${rupiah(pay.data.outstanding)}.`
-            }`}
-          />
-        ) : null}
-      </div>
-    </form>
-  )
-}
 
 function DeleteAction({ kind, record, label, onDeleted }: {
   kind: BillingKind
@@ -170,13 +92,15 @@ function DetailList({ fields }: { fields: DetailField[] }) {
 }
 
 // Rincian dibaca ulang dari GET /billing/<kind>/:id supaya status, sisa, dan
-// keterlambatan selalu hasil hitungan server terbaru.
-export function BillingDetail<K extends BillingKind>({ kind, id, today, heading, fields, renderEdit, onDeleted }: {
+// keterlambatan selalu hasil hitungan server terbaru. linkedTo menyebut
+// catatan pasangan (faktur atau piutang) yang ikut terbayar.
+export function BillingDetail<K extends BillingKind>({ kind, id, today, heading, fields, linkedTo, renderEdit, onDeleted }: {
   kind: K
   id: string
   today: string
   heading: (record: BillingRecordOf[K]) => string
   fields: (record: BillingRecordOf[K]) => DetailField[]
+  linkedTo?: (record: BillingRecordOf[K]) => string | null
   renderEdit: (record: BillingRecordOf[K], controls: EditControls) => ReactNode
   onDeleted: (message: string) => void
 }) {
@@ -263,23 +187,17 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
         ]}
       />
 
-      <section className="mt-6 border-t border-slate-100 pt-5" aria-labelledby="billing-history-title">
-        <h3 id="billing-history-title" className="text-sm font-semibold text-slate-900">
-          Riwayat pembayaran
-        </h3>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-700 tabular-nums">
-            {rupiah(data.paidAmount)} dari {rupiah(data.amount)} sudah dibayar
-          </p>
-          <Bar percent={paidPercent(data)} />
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Server baru menyimpan total yang sudah dibayar, belum rincian tanggal dan nominal tiap pembayaran.
-        </p>
-      </section>
+      <PaymentHistory kind={kind} record={data} />
 
       <section className="mt-6 border-t border-slate-100 pt-5">
-        <PaymentForm key={data.outstanding} record={data} noun={noun} pay={pay} />
+        <PaymentForm
+          key={data.outstanding}
+          record={data}
+          noun={noun}
+          today={today}
+          linkedTo={linkedTo?.(data) ?? null}
+          pay={pay}
+        />
       </section>
     </Card>
   )

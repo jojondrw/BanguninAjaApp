@@ -113,13 +113,13 @@ Gotchas seen on Derick's laptop:
 
 | # | Task | Notes | Priority |
 |---|---|---|---|
-| N3 | On-chain payment simulation | Derick's. Plugs into `/tagihan` (billing). Billing has no per-payment history table yet (only a running paid total) — the simulation will likely need one | P1 |
+| N3 | On-chain payment simulation | Derick's. Plugs into `/tagihan` (billing). The per-payment history table now exists (`billing_payment`, G6): write one row per payment through the existing `POST /api/billing/<kind>/:id/payments` path, adding a new `method` value to the DTO `oneof` (no DB constraint to change) and using `reference` for the tx hash | P1 |
 | G1 | ~~Receiving goods doesn't move stock~~ | ✅ #37 — a goods receipt posts `in` stock movements in the same transaction; lines whose order unit ≠ stock unit are skipped and reported (no conversion data) | done |
 | G2 | ~~Cash transactions don't post journal entries~~ | ✅ #38 — every cash transaction keeps one `KAS-<year>-<n>` journal in sync; `cmd/migrate` backfills old ones | done |
 | G3 | ~~Receivables/payables unlinked; invoice + receivable double-count~~ | ✅ #36 — receivables link to project/contract/invoice (one receivable per invoice), payables to project/PO | done |
 | G4 | ~~Leads not linked to their customer~~ | ✅ #35 — `POST /api/sales/leads/:id/convert` | done |
 | G5 | ~~Dropdowns capped at 100 records~~ | ✅ #39 — `SearchSelect` (server-side search) in 45 places, backend names in procurement lists. Left: account selects in cash/journal forms and unit-of-measure selects (need a `postable` filter on accounts), names in billing/finance tables, and KPI totals that sum the first 100 rows | mostly done |
-| G6 | Invoice payments and the linked receivable's payments aren't synced | Billing data model; pairs naturally with N3 (payment history) | P3 |
+| G6 | ~~Invoice payments and the linked receivable's payments aren't synced~~ | ✅ `billing_payment` history (date, amount, method, reference, note, who), `GET .../payments`, `lastPaidAt`; a linked invoice + receivable share one payment row and both balances move together (invoice locked first); linking rule + idempotent backfill in `cmd/migrate`. Billing tables now use backend names and `SearchSelect` filters. Left: pairs whose totals already differed before G6 keep separate rows and need a manual fix | done |
 
 ---
 

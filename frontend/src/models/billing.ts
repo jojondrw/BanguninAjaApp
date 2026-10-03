@@ -5,6 +5,9 @@ import { toApiDate } from '../shared/localDate'
 export type BillingKind = 'invoices' | 'receivables' | 'payables'
 export type BillingStatus = 'not_due' | 'due' | 'paid' | 'overdue'
 export type PartyType = 'customer' | 'vendor'
+// Mengikuti oneof di PaymentRequest backend. Daftarnya sengaja terbuka untuk
+// metode baru nanti.
+export type PaymentMethod = 'transfer' | 'tunai' | 'cek' | 'lainnya'
 
 // Bagian yang sama di ketiga respons: nominal, pembayaran, dan tenggat.
 export interface BillingBalance {
@@ -18,17 +21,21 @@ export interface BillingBalance {
 
 export interface BillingRecord extends BillingBalance {
   id: string
+  // Tanggal pembayaran terakhir dari riwayat, null kalau belum pernah dibayar.
+  lastPaidAt: string | null
   createdAt: string
   updatedAt: string
 }
 
 // receivableId terisi kalau faktur ini sudah dicatat sebagai piutang. Satu
-// faktur hanya boleh menjadi satu piutang.
+// faktur hanya boleh menjadi satu piutang. partyName digabung backend dari
+// pelanggan atau vendor sesuai partyType.
 export interface Invoice extends BillingRecord {
   number: string
   note: string
   partyType: PartyType
   partyId: string
+  partyName: string | null
   projectId: string | null
   projectName: string | null
   receivableId: string | null
@@ -115,10 +122,32 @@ export interface PayableRequest {
   amount: number
 }
 
-// Backend hanya menerima nominal. Belum ada tanggal, metode, atau referensi
-// per pembayaran, dan belum ada riwayatnya.
+// Tanggal kosong berarti hari ini (WIB) dan metode kosong berarti transfer.
 export interface PaymentRequest {
   amount: number
+  paidAt?: string
+  method?: PaymentMethod
+  reference?: string
+  note?: string
+}
+
+// Satu baris riwayat. Pembayaran faktur yang tertaut piutang tercatat sekali
+// dengan invoiceId dan receivableId sekaligus.
+export interface BillingPayment {
+  id: string
+  invoiceId: string | null
+  invoiceNumber: string | null
+  receivableId: string | null
+  receivableReference: string | null
+  payableId: string | null
+  amount: number
+  paidAt: string
+  method: PaymentMethod
+  reference: string
+  note: string
+  createdBy: string | null
+  createdByName: string | null
+  createdAt: string
 }
 
 export interface BillingRecordOf {
@@ -145,6 +174,17 @@ export const INVOICE_NOTE_MAX_LENGTH = 200
 export const REFERENCE_MAX_LENGTH = 60
 export const INVOICE_SEARCH_MAX_LENGTH = 200
 export const REFERENCE_SEARCH_MAX_LENGTH = 60
+export const PAYMENT_REFERENCE_MAX_LENGTH = 60
+export const PAYMENT_NOTE_MAX_LENGTH = 200
+
+export const PAYMENT_METHODS: PaymentMethod[] = ['transfer', 'tunai', 'cek', 'lainnya']
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  transfer: 'Transfer bank',
+  tunai: 'Tunai',
+  cek: 'Cek atau giro',
+  lainnya: 'Lainnya',
+}
 
 export const BILLING_STATUSES: BillingStatus[] = ['overdue', 'due', 'not_due', 'paid']
 export const PARTY_TYPES: PartyType[] = ['customer', 'vendor']
@@ -301,7 +341,8 @@ export function receivableFormOf(receivable: Receivable): ReceivableFormValues {
 }
 
 // Isian awal "Catat sebagai piutang" dari faktur pelanggan. Nominal memakai
-// sisa faktur, karena bagian yang sudah dibayar tidak lagi terutang.
+// nilai penuh faktur, karena backend menyalin total yang sudah dibayar ke
+// piutang supaya sisa keduanya sama.
 export function receivableFormFromInvoice(invoice: Invoice): ReceivableFormValues {
   return {
     customerId: invoice.partyId,
@@ -310,7 +351,7 @@ export function receivableFormFromInvoice(invoice: Invoice): ReceivableFormValue
     invoiceId: invoice.id,
     reference: invoice.number,
     dueDate: toDateInput(invoice.dueDate),
-    amount: String(invoice.outstanding > 0 ? invoice.outstanding : invoice.amount),
+    amount: String(invoice.amount),
   }
 }
 
@@ -363,6 +404,28 @@ export function toPayableRequest(values: PayableFormValues): PayableRequest {
     reference: values.reference.trim(),
     dueDate: toApiDate(values.dueDate),
     amount: toAmount(values.amount),
+  }
+}
+
+export interface PaymentFormValues {
+  amount: string
+  paidAt: string
+  method: PaymentMethod
+  reference: string
+  note: string
+}
+
+export function paymentFormOf(record: BillingBalance, today: string): PaymentFormValues {
+  return { amount: String(record.outstanding), paidAt: today, method: 'transfer', reference: '', note: '' }
+}
+
+export function toPaymentRequest(values: PaymentFormValues): PaymentRequest {
+  return {
+    amount: toAmount(values.amount),
+    paidAt: toApiDate(values.paidAt),
+    method: values.method,
+    reference: values.reference.trim(),
+    note: values.note.trim(),
   }
 }
 

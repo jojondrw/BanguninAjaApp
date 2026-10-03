@@ -61,6 +61,10 @@ func (f *fakeRepository) SaveInvoice(_ context.Context, invoice *Invoice) error 
 	return nil
 }
 
+func (f *fakeRepository) CreatePayment(context.Context, *Payment) error {
+	return nil
+}
+
 func (f *fakeRepository) DeleteInvoice(context.Context, uuid.UUID) error {
 	f.deleteCalled = true
 	return nil
@@ -78,7 +82,7 @@ func TestPaymentSettlesInvoice(t *testing.T) {
 	today := time.Date(2026, 9, 23, 0, 0, 0, 0, time.UTC)
 	repository := &fakeRepository{invoice: Invoice{Amount: 1000, PaidAmount: 400, DueDate: today.AddDate(0, 0, -3)}}
 
-	invoice, err := fixedService(repository, today).PayInvoice(context.Background(), uuid.New(), PaymentRequest{Amount: 600})
+	invoice, err := fixedService(repository, today).PayInvoice(context.Background(), uuid.New(), PaymentRequest{Amount: 600}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,7 +94,7 @@ func TestPaymentSettlesInvoice(t *testing.T) {
 func TestPaymentCannotExceedOutstanding(t *testing.T) {
 	repository := &fakeRepository{invoice: Invoice{Amount: 1000, PaidAmount: 900}}
 
-	_, err := fixedService(repository, time.Now()).PayInvoice(context.Background(), uuid.New(), PaymentRequest{Amount: 200})
+	_, err := fixedService(repository, time.Now()).PayInvoice(context.Background(), uuid.New(), PaymentRequest{Amount: 200}, nil)
 	if !errors.Is(err, errPaymentOverdrawn) {
 		t.Fatalf("got %v, want errPaymentOverdrawn", err)
 	}

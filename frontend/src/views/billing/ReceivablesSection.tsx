@@ -8,22 +8,22 @@ import {
   type BillingStatus,
   type Invoice,
 } from '../../models/billing'
+import { customerOptions, projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { ReceivableForm } from './BillingForms'
-import type { Directory } from './directory'
 
 const PAGE_SIZE = 10
 
 // draftInvoice datang dari tombol "Catat sebagai piutang" di rincian faktur.
 // Formulir langsung terbuka dengan isian dari faktur itu.
-export function ReceivablesSection({ directory, today, draftInvoice }: {
-  directory: Directory
+export function ReceivablesSection({ today, draftInvoice }: {
   today: string
   draftInvoice: Invoice | null
 }) {
@@ -89,49 +89,42 @@ export function ReceivablesSection({ directory, today, draftInvoice }: {
               </option>
             ))}
           </FilterSelect>
-          <FilterSelect
+          <SearchSelect
+            {...customerOptions}
             id="receivable-filter-customer"
             label="Saring menurut pelanggan"
+            compact
+            allowEmpty
+            emptyLabel="Semua pelanggan"
+            className="w-52"
             value={customerId}
-            onChange={(event) => filterChanged(setCustomerId)(event.target.value)}
-          >
-            <option value="">Semua pelanggan</option>
-            {directory.customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </FilterSelect>
-          <FilterSelect
+            onChange={(value) => filterChanged(setCustomerId)(value)}
+          />
+          <SearchSelect
+            {...projectOptions}
             id="receivable-filter-project"
             label="Saring menurut proyek"
+            compact
+            allowEmpty
+            emptyLabel="Semua proyek"
+            className="w-52"
             value={projectId}
-            onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-          >
-            <option value="">Semua proyek</option>
-            {directory.projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={(value) => filterChanged(setProjectId)(value)}
+          />
           <FormToggle isOpen={isFormOpen} openLabel="Catat piutang" onToggle={toggleForm} />
         </Toolbar>
 
         {isFormOpen ? (
           <FormPanel>
-            {directory.isLoading ? (
-              <Loading label="Mengambil daftar pelanggan..." />
-            ) : (
-              <>
-                {draft ? (
-                  <p className="mb-4 text-sm text-slate-600">
-                    Isian diambil dari faktur {draft.number}. Periksa lalu simpan untuk mencatatnya sebagai piutang.
-                  </p>
-                ) : null}
-                <ReceivableForm directory={directory} fromInvoice={draft ?? undefined} />
-              </>
-            )}
+            {draft ? (
+              <p className="mb-4 text-sm text-slate-600">
+                Isian diambil dari faktur {draft.number}.{' '}
+                {draft.paidAmount > 0
+                  ? `Pembayaran faktur ${rupiah(draft.paidAmount)} ikut tercatat di piutang ini.`
+                  : 'Periksa lalu simpan untuk mencatatnya sebagai piutang.'}
+              </p>
+            ) : null}
+            <ReceivableForm fromInvoice={draft ?? undefined} />
           </FormPanel>
         ) : null}
 
@@ -212,10 +205,10 @@ export function ReceivablesSection({ directory, today, draftInvoice }: {
             { label: 'Kontrak penjualan', value: receivable.contractNumber ?? 'Tidak ditautkan' },
             { label: 'Faktur', value: receivable.invoiceNumber ?? 'Tidak ditautkan' },
           ]}
+          linkedTo={(receivable) => (receivable.invoiceNumber ? `faktur ${receivable.invoiceNumber}` : null)}
           renderEdit={(receivable, controls) => (
             <ReceivableForm
               record={receivable}
-              directory={directory}
               onSaved={controls.onSaved}
               onCancel={controls.onCancel}
             />

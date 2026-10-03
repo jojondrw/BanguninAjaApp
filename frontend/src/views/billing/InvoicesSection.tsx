@@ -11,15 +11,16 @@ import {
   type Invoice,
   type PartyType,
 } from '../../models/billing'
+import { projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
+import { SearchSelect } from '../components/SearchSelect'
 import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { InvoiceForm } from './BillingForms'
-import { partyName, type Directory } from './directory'
 
 const PAGE_SIZE = 10
 const NO_PROJECT = 'Tanpa proyek'
@@ -46,8 +47,7 @@ function ReceivableStatus({ invoice, onRecord }: { invoice: Invoice; onRecord: (
   )
 }
 
-export function InvoicesSection({ directory, today, onRecordReceivable }: {
-  directory: Directory
+export function InvoicesSection({ today, onRecordReceivable }: {
   today: string
   onRecordReceivable: (invoice: Invoice) => void
 }) {
@@ -118,29 +118,23 @@ export function InvoicesSection({ directory, today, onRecordReceivable }: {
               </option>
             ))}
           </FilterSelect>
-          <FilterSelect
+          <SearchSelect
+            {...projectOptions}
             id="invoice-filter-project"
             label="Saring menurut proyek"
+            compact
+            allowEmpty
+            emptyLabel="Semua proyek"
+            className="w-52"
             value={projectId}
-            onChange={(event) => filterChanged(setProjectId)(event.target.value)}
-          >
-            <option value="">Semua proyek</option>
-            {directory.projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={(value) => filterChanged(setProjectId)(value)}
+          />
           <FormToggle isOpen={isFormOpen} openLabel="Buat faktur" onToggle={() => setIsFormOpen((open) => !open)} />
         </Toolbar>
 
         {isFormOpen ? (
           <FormPanel>
-            {directory.isLoading ? (
-              <Loading label="Mengambil pelanggan, vendor, dan proyek..." />
-            ) : (
-              <InvoiceForm directory={directory} />
-            )}
+            <InvoiceForm />
           </FormPanel>
         ) : null}
 
@@ -175,7 +169,7 @@ export function InvoicesSection({ directory, today, onRecordReceivable }: {
                   header: 'Ditagihkan kepada',
                   cell: (row) => (
                     <span className="flex flex-col">
-                      <span>{partyName(directory, row.partyType, row.partyId)}</span>
+                      <span>{row.partyName ?? '-'}</span>
                       <span className="text-xs text-slate-500">{PARTY_TYPE_LABEL[row.partyType]}</span>
                     </span>
                   ),
@@ -223,16 +217,16 @@ export function InvoicesSection({ directory, today, onRecordReceivable }: {
             { label: 'Nomor faktur', value: invoice.number },
             {
               label: 'Ditagihkan kepada',
-              value: `${partyName(directory, invoice.partyType, invoice.partyId)} (${PARTY_TYPE_LABEL[invoice.partyType].toLowerCase()})`,
+              value: `${invoice.partyName ?? '-'} (${PARTY_TYPE_LABEL[invoice.partyType].toLowerCase()})`,
             },
             { label: 'Proyek', value: invoice.projectName ?? NO_PROJECT },
             { label: 'Catatan', value: invoice.note || '-' },
             { label: 'Piutang', value: <ReceivableStatus invoice={invoice} onRecord={onRecordReceivable} /> },
           ]}
+          linkedTo={(invoice) => (invoice.receivableReference ? `piutang ${invoice.receivableReference}` : null)}
           renderEdit={(invoice, controls) => (
             <InvoiceForm
               record={invoice}
-              directory={directory}
               onSaved={controls.onSaved}
               onCancel={controls.onCancel}
             />

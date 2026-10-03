@@ -59,8 +59,25 @@ func (Payable) TableName() string {
 	return "payable"
 }
 
+type Payment struct {
+	entity.Base
+	InvoiceID    *uuid.UUID `gorm:"type:uuid;index:idx_billing_payment_invoice"`
+	ReceivableID *uuid.UUID `gorm:"type:uuid;index:idx_billing_payment_receivable"`
+	PayableID    *uuid.UUID `gorm:"type:uuid;index:idx_billing_payment_payable"`
+	Amount       int64      `gorm:"not null"`
+	PaidAt       time.Time  `gorm:"type:date;not null"`
+	Method       string     `gorm:"type:varchar(20);not null"`
+	Reference    string     `gorm:"type:varchar(60);not null;default:''"`
+	Note         string     `gorm:"type:varchar(200);not null;default:''"`
+	CreatedBy    *uuid.UUID `gorm:"type:uuid;index:idx_billing_payment_created_by"`
+}
+
+func (Payment) TableName() string {
+	return "billing_payment"
+}
+
 func Entities() []any {
-	return []any{&Invoice{}, &Receivable{}, &Payable{}}
+	return []any{&Invoice{}, &Receivable{}, &Payable{}, &Payment{}}
 }
 
 func Indexes() []string {
@@ -90,5 +107,13 @@ func Constraints() []string {
 		database.Check("invoice", "amount", "amount >= 0 AND paid_amount >= 0 AND paid_amount <= amount"),
 		database.Check("receivable", "amount", "amount >= 0 AND paid_amount >= 0 AND paid_amount <= amount"),
 		database.Check("payable", "amount", "amount >= 0 AND paid_amount >= 0 AND paid_amount <= amount"),
+		database.ForeignKey("billing_payment", "invoice_id", "invoice", database.DeleteCascade),
+		database.ForeignKey("billing_payment", "receivable_id", "receivable", database.DeleteCascade),
+		database.ForeignKey("billing_payment", "payable_id", "payable", database.DeleteCascade),
+		database.ForeignKey("billing_payment", "created_by", "users", database.DeleteSetNull),
+		database.Check("billing_payment", "parent", "num_nonnulls(invoice_id, receivable_id, payable_id) >= 1 AND "+
+			"(payable_id IS NULL OR (invoice_id IS NULL AND receivable_id IS NULL))"),
+		database.Check("billing_payment", "amount", "amount > 0"),
+		database.Check("billing_payment", "method", "method <> ''"),
 	}
 }

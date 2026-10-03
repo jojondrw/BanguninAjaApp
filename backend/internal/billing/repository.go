@@ -15,11 +15,21 @@ const (
 	settledStatus = "paid"
 
 	invoiceColumns = "invoice.*, project.name AS project_name, " +
-		"receivable.id AS receivable_id, receivable.reference AS receivable_reference"
+		"receivable.id AS receivable_id, receivable.reference AS receivable_reference, " +
+		"COALESCE(customer.name, vendor.name) AS party_name, " +
+		"(SELECT MAX(billing_payment.paid_at) FROM billing_payment WHERE billing_payment.invoice_id = invoice.id) AS last_paid_at"
 	receivableColumns = "receivable.*, customer.name AS customer_name, project.name AS project_name, " +
-		"contract.number AS contract_number, invoice.number AS invoice_number"
+		"contract.number AS contract_number, invoice.number AS invoice_number, " +
+		"(SELECT MAX(billing_payment.paid_at) FROM billing_payment WHERE billing_payment.receivable_id = receivable.id) AS last_paid_at"
 	payableColumns = "payable.*, vendor.name AS vendor_name, project.name AS project_name, " +
-		"purchase_order.number AS purchase_order_number"
+		"purchase_order.number AS purchase_order_number, " +
+		"(SELECT MAX(billing_payment.paid_at) FROM billing_payment WHERE billing_payment.payable_id = payable.id) AS last_paid_at"
+	paymentColumns = "billing_payment.*, invoice.number AS invoice_number, " +
+		"receivable.reference AS receivable_reference, users.name AS created_by_name"
+
+	invoicePaymentColumn    = "invoice_id"
+	receivablePaymentColumn = "receivable_id"
+	payablePaymentColumn    = "payable_id"
 )
 
 var partyTables = map[string]string{
@@ -32,6 +42,8 @@ type InvoiceRow struct {
 	ProjectName         *string
 	ReceivableID        *uuid.UUID
 	ReceivableReference *string
+	PartyName           *string
+	LastPaidAt          *time.Time
 }
 
 type ReceivableRow struct {
@@ -40,6 +52,7 @@ type ReceivableRow struct {
 	ProjectName    *string
 	ContractNumber *string
 	InvoiceNumber  *string
+	LastPaidAt     *time.Time
 }
 
 type PayableRow struct {
@@ -47,6 +60,21 @@ type PayableRow struct {
 	VendorName          string
 	ProjectName         *string
 	PurchaseOrderNumber *string
+	LastPaidAt          *time.Time
+}
+
+type PaymentRow struct {
+	Payment
+	InvoiceNumber       *string
+	ReceivableReference *string
+	CreatedByName       *string
+}
+
+type PaymentFilter struct {
+	Column   string
+	ParentID uuid.UUID
+	Offset   int
+	Limit    int
 }
 
 type ContractRef struct {
@@ -112,6 +140,7 @@ type Repository interface {
 
 	ListReceivables(ctx context.Context, filter ReceivableFilter) ([]ReceivableRow, int64, error)
 	FindReceivableRow(ctx context.Context, id uuid.UUID) (ReceivableRow, error)
+	FindReceivable(ctx context.Context, id uuid.UUID) (Receivable, error)
 	FindReceivableByInvoice(ctx context.Context, invoiceID uuid.UUID) (Receivable, error)
 	LockReceivable(ctx context.Context, id uuid.UUID) (Receivable, error)
 	CreateReceivable(ctx context.Context, receivable *Receivable) error
@@ -128,6 +157,11 @@ type Repository interface {
 	ProjectExists(ctx context.Context, id uuid.UUID) (bool, error)
 	FindContract(ctx context.Context, id uuid.UUID) (ContractRef, error)
 	FindPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrderRef, error)
+
+	CreatePayment(ctx context.Context, payment *Payment) error
+	ListPayments(ctx context.Context, filter PaymentFilter) ([]PaymentRow, int64, error)
+	LinkPayments(ctx context.Context, invoiceID, receivableID uuid.UUID) error
+	BackfillPayments(ctx context.Context) (int64, error)
 }
 
 type gormRepository struct {
@@ -194,6 +228,12 @@ func (r *gormRepository) FindReceivableRow(ctx context.Context, id uuid.UUID) (R
 	var row ReceivableRow
 	err := r.receivableRows(ctx).Select(receivableColumns).Where("receivable.id = ?", id).Take(&row).Error
 	return row, database.Translate(err)
+}
+
+func (r *gormRepository) FindReceivable(ctx context.Context, id uuid.UUID) (Receivable, error) {
+	var receivable Receivable
+	err := r.db.WithContext(ctx).Where("id = ?", id).Take(&receivable).Error
+	return receivable, database.Translate(err)
 }
 
 func (r *gormRepository) FindReceivableByInvoice(ctx context.Context, invoiceID uuid.UUID) (Receivable, error) {
@@ -264,11 +304,57 @@ func (r *gormRepository) FindPurchaseOrder(ctx context.Context, id uuid.UUID) (P
 	return order, database.Translate(err)
 }
 
+func (r *gormRepository) CreatePayment(ctx context.Context, payment *Payment) error {
+	return database.Translate(r.db.WithContext(ctx).Create(payment).Error)
+}
+
+func (r *gormRepository) ListPayments(ctx context.Context, filter PaymentFilter) ([]PaymentRow, int64, error) {
+	base := r.db.WithContext(ctx).
+		Model(&Payment{}).
+		Where("billing_payment."+filter.Column+" = ?", filter.ParentID)
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]PaymentRow, 0, filter.Limit)
+	err := base.Session(&gorm.Session{}).
+		Joins("LEFT JOIN invoice ON invoice.id = billing_payment.invoice_id").
+		Joins("LEFT JOIN receivable ON receivable.id = billing_payment.receivable_id").
+		Joins("LEFT JOIN users ON users.id = billing_payment.created_by").
+		Select(paymentColumns).
+		Order("billing_payment.paid_at DESC, billing_payment.created_at DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
+}
+
+func (r *gormRepository) LinkPayments(ctx context.Context, invoiceID, receivableID uuid.UUID) error {
+	err := r.db.WithContext(ctx).Exec(linkPaymentsStatement, invoiceID, receivableID, invoiceID, receivableID).Error
+	return database.Translate(err)
+}
+
+func (r *gormRepository) BackfillPayments(ctx context.Context) (int64, error) {
+	var inserted int64
+	for _, statement := range backfillStatements {
+		result := r.db.WithContext(ctx).Exec(statement, map[string]any{"method": backfillMethod, "note": backfillNote})
+		if result.Error != nil {
+			return inserted, database.Translate(result.Error)
+		}
+		inserted += result.RowsAffected
+	}
+	return inserted, nil
+}
+
 func (r *gormRepository) invoiceRows(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).
 		Model(&Invoice{}).
 		Joins("LEFT JOIN project ON project.id = invoice.project_id").
-		Joins("LEFT JOIN receivable ON receivable.invoice_id = invoice.id")
+		Joins("LEFT JOIN receivable ON receivable.invoice_id = invoice.id").
+		Joins("LEFT JOIN customer ON invoice.party_type = 'customer' AND customer.id = invoice.party_id").
+		Joins("LEFT JOIN vendor ON invoice.party_type = 'vendor' AND vendor.id = invoice.party_id")
 }
 
 func (r *gormRepository) receivableRows(ctx context.Context) *gorm.DB {
