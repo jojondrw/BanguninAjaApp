@@ -6,6 +6,7 @@ import type {
   BillingRecordOf,
   BillingRequestOf,
   PaymentRequest,
+  ReconciliationPair,
 } from './billing'
 import { toQueryString, type Page } from './common'
 
@@ -40,4 +41,8 @@ export const billingApi = {
   // Riwayat pembayaran, terbaru dulu.
   payments: (kind: BillingKind, id: string, page: number, pageSize: number) =>
     request<Page<BillingPayment>>(`/billing/${kind}/${id}/payments${toQueryString({ page, pageSize })}`),
+
+  // Pasangan faktur-piutang tertaut yang total bayarnya tidak sama.
+  reconciliation: (page: number, pageSize: number) =>
+    request<Page<ReconciliationPair>>(`/billing/reconciliation${toQueryString({ page, pageSize })}`),
 }

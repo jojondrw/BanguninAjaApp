@@ -458,3 +458,19 @@ export function billingTotals(items: BillingBalance[], totalItems: number): Bill
     isPartial: totalItems > items.length,
   }
 }
+
+// Pasangan faktur dan piutang tertaut yang total bayarnya berbeda. Terjadi pada
+// data sebelum riwayat pembayaran bersama ada, dan perlu dibetulkan manual.
+// Bentuknya mengikuti ReconciliationResponse di backend.
+export interface ReconciliationPair {
+  invoiceId: string
+  invoiceNumber: string
+  invoiceAmount: number
+  invoicePaidAmount: number
+  receivableId: string
+  receivableReference: string
+  receivableAmount: number
+  receivablePaidAmount: number
+  customerName: string | null
+  difference: number
+}
