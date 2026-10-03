@@ -203,6 +203,7 @@ func (s *service) ListStockMovements(ctx context.Context, query StockMovementQue
 		MaterialID:  query.MaterialID,
 		WarehouseID: query.WarehouseID,
 		Type:        query.Type,
+		Reference:   query.Reference,
 		DateFrom:    query.DateFrom,
 		DateTo:      query.DateTo,
 		Offset:      query.Offset(),
