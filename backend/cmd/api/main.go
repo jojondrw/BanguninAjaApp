@@ -21,19 +21,19 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/location"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/master"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/news"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/regulation"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/site"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/cookie"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/news"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/site"
 )
 
 const (
@@ -100,8 +100,9 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	api := router.Group("/api")
-	auth.NewModule(db, tokens, refreshCookie).RegisterRoutes(api)
+	authModule := auth.NewModule(db, tokens, refreshCookie)
+	api := router.Group("/api", middleware.Authorization(tokens, authModule.Subjects()))
+	authModule.RegisterRoutes(api)
 	master.NewModule(db, tokens).RegisterRoutes(api)
 	project.NewModule(db, tokens).RegisterRoutes(api)
 	inventory.NewModule(db, tokens).RegisterRoutes(api)
@@ -115,8 +116,8 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	location.NewModule(db, tokens).RegisterRoutes(api)
 	reporting.NewModule(db, tokens).RegisterRoutes(api)
 	regulation.NewModule(db, tokens).RegisterRoutes(api)
-        news.NewModule(db, tokens).RegisterRoutes(api)
-        site.NewModule(db, tokens, cfg.Score).RegisterRoutes(api)
+	news.NewModule(db, tokens).RegisterRoutes(api)
+	site.NewModule(db, tokens, cfg.Score).RegisterRoutes(api)
 
 	return router
 }

@@ -69,7 +69,7 @@ Semua endpoint berada di bawah `/api/auth`.
 | POST | `/login` | tidak | Membalas access token di body dan menaruh refresh token di cookie |
 | POST | `/refresh` | tidak | Membaca cookie, mencabut token lama, membalas access token baru |
 | POST | `/logout` | tidak | Mencabut refresh token dan menghapus cookie |
-| GET | `/me` | ya | Membalas profil pemilik access token |
+| GET | `/me` | ya | Membalas profil pemilik access token, termasuk peran dan hak akses |
 
 ### POST /api/auth/register
 
@@ -77,7 +77,9 @@ Semua endpoint berada di bawah `/api/auth`.
 { "name": "Jonathan", "email": "jonathan@example.com", "password": "rahasia123" }
 ```
 
-Balasan 201 berisi `id`, `name`, `email`, `createdAt`.
+Balasan 201 berisi `id`, `name`, `email`, `active`, `role`, `permissions`, `createdAt`.
+Pendaftar pertama di sistem kosong otomatis menjadi `admin`, pendaftar berikutnya
+menjadi `pengamat` sampai admin mengubah perannya.
 
 ### POST /api/auth/login
 
@@ -92,7 +94,12 @@ Balasan 200:
   "data": {
     "accessToken": "...",
     "accessTokenExpiresAt": "2026-09-18T10:15:00Z",
-    "user": { "id": "...", "name": "...", "email": "...", "createdAt": "..." }
+    "user": {
+      "id": "...", "name": "...", "email": "...", "active": true,
+      "role": { "code": "keuangan", "name": "Keuangan" },
+      "permissions": { "finance": "write", "billing": "write", "projects": "read" },
+      "createdAt": "..."
+    }
   }
 }
 ```
@@ -119,12 +126,109 @@ bisa dipakai menebak status sesi orang lain.
 | `invalid_refresh_token` | 401 | Cookie hilang, kedaluwarsa, atau sudah dicabut |
 | `missing_access_token` | 401 | Header Authorization kosong |
 | `invalid_access_token` | 401 | Access token rusak atau kedaluwarsa |
+| `account_inactive` | 401 / 403 | Akun dinonaktifkan admin. 403 saat login, 401 di refresh, `/me`, dan semua endpoint modul |
+| `user_not_found` | 401 | Pemilik access token sudah tidak ada |
+| `forbidden` | 403 | Peran tidak punya akses baca atau ubah ke modul yang diminta |
 | `email_already_used` | 409 | Email sudah dipakai akun lain |
+| `unknown_role` | 422 | Kode peran di `PATCH /api/users/:id/role` tidak ada di matriks |
+| `last_admin` | 422 | Perubahan akan meninggalkan sistem tanpa admin aktif |
 | `internal_error` | 500 | Kesalahan tak terduga di server |
 
 Email yang tidak terdaftar dan kata sandi yang salah sengaja dibalas dengan kode
 dan pesan yang sama, supaya halaman login tidak bisa dipakai memeriksa email mana
 saja yang punya akun.
+
+## Peran dan hak akses
+
+Hak akses ditentukan per peran, bukan per orang. Matriksnya hanya ada di satu
+tempat, `backend/internal/shared/access/matrix.go`, dan dipakai bersama oleh
+middleware, `/api/auth/me`, seeding peran, dan tes. Frontend membaca hasilnya dari
+`permissions` di profil, jadi tidak menyimpan salinan matriks.
+
+Setiap modul punya tiga tingkat: tidak ada, `read` (GET/HEAD/OPTIONS), dan
+`write` (POST/PUT/PATCH/DELETE, sudah termasuk read).
+
+| Modul | Prefix API | admin | manajer_proyek | keuangan | pengadaan | penjualan | sdm | pengamat |
+|---|---|---|---|---|---|---|---|---|
+| `projects` | `/projects` | write | write | read | read | read | read | read |
+| `locations` | `/locations`, `/site`, `/scoring`, `/regulation`, `/news` | write | write | - | - | - | - | read |
+| `finance` | `/finance` | write | read | write | - | - | - | read |
+| `billing` | `/billing` | write | - | write | - | read | - | read |
+| `sales` | `/sales` | write | - | read | - | write | - | read |
+| `procurement` | `/procurement` | write | read | read | write | - | - | read |
+| `inventory` | `/inventory`, `/assets`, `/equipment` | write | write | - | write | - | - | read |
+| `hr` | `/hr` | write | - | - | - | - | write | read |
+| `master` | `/master` | write | read | read | read | read | read | read |
+| `reports` | `/reports` | write | write | write | read | read | read | read |
+| `users` | `/users` | write | - | - | - | - | - | - |
+
+Keputusan yang melebihi daftar awal:
+
+1. `projects: read` diberikan ke semua peran karena proyek adalah dimensi bersama.
+   Hampir setiap formulir (karyawan, gudang, PO, unit, faktur) memilih proyek lewat
+   `SearchSelect`, dan tanpa akses baca pilihan itu gagal.
+2. `master: read` diberikan ke semua peran karena satuan, akun, dan wilayah dipakai
+   sebagai pilihan di banyak modul. Mengubah data master hanya untuk admin.
+3. `manajer_proyek` mendapat `finance: read` supaya tab Keuangan di ruang kerja
+   proyek (anggaran dan realisasi per proyek) dan Ringkasan bisa dibuka.
+4. `penjualan` mendapat `billing: read` untuk seluruh modul Tagihan, karena izin
+   dibaca per prefix dan piutang berada di bawah `/billing`.
+5. `reports`: peran yang mengelola uang dan proyek boleh membuat laporan, peran
+   lain hanya membaca.
+
+### Penegakan
+
+`middleware.Authorization` dipasang sekali di grup `/api` pada `cmd/api/main.go`.
+Urutannya:
+
+1. Ambil segmen pertama setelah `/api` dari rute yang cocok (`c.FullPath()`).
+   Segmen `auth` dilewati tanpa pemeriksaan, jadi login, refresh, logout, dan
+   `/auth/me` tetap seperti sebelumnya.
+2. Baca access token. Kalau kosong atau rusak, balas 401 seperti middleware
+   autentikasi. User id disimpan di context, sehingga `middleware.Authentication`
+   milik modul tidak mengurai token dua kali.
+3. Ambil peran dan status aktif user lewat satu query berindeks
+   (`users` primary key, `LEFT JOIN role` primary key). Hasilnya disimpan 30 detik
+   di memori per user id (`access.Directory`) dan langsung dihapus saat admin
+   mengubah peran atau status aktif user itu.
+4. User nonaktif dibalas 401 `account_inactive`. User tanpa peran tidak punya
+   akses ke modul mana pun.
+5. Kalau peran tidak punya tingkat yang dibutuhkan, balas 403 `forbidden`
+   dengan pesan seperti "Peran Anda tidak punya akses mengubah data modul Keuangan".
+
+Prefix baru yang belum terdaftar di matriks hanya bisa dipakai admin sampai
+didaftarkan. Ini sengaja, supaya modul baru tidak terbuka untuk semua orang.
+
+### Kelola pengguna (khusus admin)
+
+| Method | Path | Body | Keterangan |
+|---|---|---|---|
+| GET | `/api/users` | - | Query `search` (nama atau email), `role`, `active`, `page`, `pageSize` |
+| PATCH | `/api/users/:id/role` | `{ "role": "keuangan" }` | Mengganti peran |
+| PATCH | `/api/users/:id/active` | `{ "active": false }` | Menonaktifkan atau mengaktifkan lagi |
+
+Kedua PATCH membalas baris pengguna yang sudah berubah: `id`, `name`, `email`,
+`active`, `role`, `createdAt`. Menonaktifkan akun langsung mencabut semua refresh
+tokennya, jadi akun itu tidak bisa login maupun refresh lagi.
+
+Perubahan yang akan meninggalkan sistem tanpa admin aktif ditolak 422
+`last_admin`, misalnya admin terakhir menurunkan perannya sendiri atau
+menonaktifkan dirinya. Pemeriksaan dan perubahannya berjalan dalam satu transaksi
+dengan advisory lock, jadi dua admin yang saling menurunkan pada saat bersamaan
+tidak bisa membuat sistem kehilangan admin.
+
+### Bootstrap dan migrasi
+
+`cmd/migrate` dan `cmd/seed` meng-upsert ketujuh peran berdasarkan `code`.
+Setelah itu `cmd/migrate` memberi peran `admin` ke semua user yang `role_id`-nya
+masih kosong, supaya tim yang sudah terdaftar sebelum fitur ini tetap punya akses
+penuh. Keduanya idempoten: menjalankan migrasi dua kali tidak mengubah apa pun
+pada putaran kedua.
+
+Pendaftaran baru menghitung jumlah user di dalam transaksi yang memegang advisory
+lock. Sistem kosong menghasilkan `admin`, selebihnya `pengamat`. Kalau tabel
+`role` belum diisi, pendaftaran gagal dengan 500 supaya migrasi yang terlewat
+langsung ketahuan.
 
 ## Kata sandi
 
