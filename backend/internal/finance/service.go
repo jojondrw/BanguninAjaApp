@@ -27,21 +27,28 @@ var (
 	errCashTransactionNotFound  = apperror.NotFound("cash_transaction_not_found", "Transaksi kas tidak ditemukan")
 	errCashTransactionReference = apperror.Unprocessable("cash_transaction_reference_not_found", "Akun atau proyek tidak ditemukan")
 	errInvalidDateRange         = apperror.Unprocessable("invalid_date_range", "Tanggal selesai tidak boleh lebih awal dari tanggal mulai")
+	errCashAccountMissing       = apperror.Unprocessable("cash_account_not_found", "Akun Kas (kode 1110) tidak ada di bagan akun, jadi jurnal transaksi kas tidak bisa dibuat. Tambahkan akun itu lewat Master akun")
+	errCashCounterIsCash        = apperror.Unprocessable("cash_counter_account_invalid", "Akun lawan tidak boleh akun Kas itu sendiri")
+	errCashJournalConflict      = apperror.Conflict("cash_journal_conflict", "Jurnal otomatis transaksi kas ini bentrok dengan jurnal lain. Coba simpan lagi")
 
-	errJournalNotFound     = apperror.NotFound("journal_entry_not_found", "Jurnal tidak ditemukan")
-	errJournalNumberUsed   = apperror.Conflict("journal_number_used", "Nomor jurnal sudah dipakai")
-	errJournalAccount      = apperror.Unprocessable("account_not_found", "Akun tidak ditemukan")
-	errJournalSingleSided  = apperror.Unprocessable("journal_line_single_sided", "Setiap baris jurnal hanya boleh berisi debit atau kredit, dan nilainya lebih dari nol")
-	errJournalUnbalanced   = apperror.Unprocessable("journal_unbalanced", "Total debit dan total kredit jurnal harus sama")
-	errJournalLineRejected = apperror.Unprocessable("journal_line_invalid", "Baris jurnal ditolak karena nilainya tidak valid")
+	errJournalNotFound       = apperror.NotFound("journal_entry_not_found", "Jurnal tidak ditemukan")
+	errJournalNumberUsed     = apperror.Conflict("journal_number_used", "Nomor jurnal sudah dipakai")
+	errJournalAccount        = apperror.Unprocessable("account_not_found", "Akun tidak ditemukan")
+	errJournalSingleSided    = apperror.Unprocessable("journal_line_single_sided", "Setiap baris jurnal hanya boleh berisi debit atau kredit, dan nilainya lebih dari nol")
+	errJournalUnbalanced     = apperror.Unprocessable("journal_unbalanced", "Total debit dan total kredit jurnal harus sama")
+	errJournalLineRejected   = apperror.Unprocessable("journal_line_invalid", "Baris jurnal ditolak karena nilainya tidak valid")
+	errJournalSourceReserved = apperror.Unprocessable("journal_source_reserved", "Sumber \"kas\" khusus untuk jurnal otomatis dari transaksi kas. Pakai sumber lain")
+	errJournalNumberReserved = apperror.Unprocessable("journal_number_reserved", "Nomor berawalan KAS- khusus untuk jurnal otomatis dari transaksi kas. Pakai nomor lain")
 )
 
 var (
 	budgetReadErrors  = database.ErrorMap{NotFound: errBudgetNotFound}
 	budgetWriteErrors = database.ErrorMap{NotFound: errBudgetNotFound, Duplicate: errBudgetYearUsed, Referenced: errBudgetProjectMissing}
 
-	cashReadErrors  = database.ErrorMap{NotFound: errCashTransactionNotFound}
-	cashWriteErrors = database.ErrorMap{NotFound: errCashTransactionNotFound, Referenced: errCashTransactionReference}
+	cashReadErrors    = database.ErrorMap{NotFound: errCashTransactionNotFound}
+	cashWriteErrors   = database.ErrorMap{NotFound: errCashTransactionNotFound, Referenced: errCashTransactionReference}
+	cashAccountErrors = database.ErrorMap{NotFound: errCashAccountMissing}
+	cashJournalErrors = database.ErrorMap{Duplicate: errCashJournalConflict, Referenced: errCashTransactionReference}
 
 	journalReadErrors  = database.ErrorMap{NotFound: errJournalNotFound}
 	journalWriteErrors = database.ErrorMap{Duplicate: errJournalNumberUsed, Referenced: errJournalAccount, Invalid: errJournalLineRejected}
@@ -141,37 +148,47 @@ func (s *service) ListCashTransactions(ctx context.Context, query CashTransactio
 }
 
 func (s *service) GetCashTransaction(ctx context.Context, id uuid.UUID) (CashTransactionResponse, error) {
-	transaction, err := s.repository.FindCashTransaction(ctx, id)
+	row, err := s.repository.FindCashTransactionRow(ctx, id)
 	if err != nil {
 		return CashTransactionResponse{}, cashReadErrors.Resolve(err)
 	}
-	return newCashTransactionResponse(transaction), nil
+	return newCashTransactionResponse(row), nil
 }
 
 func (s *service) CreateCashTransaction(ctx context.Context, request CashTransactionRequest) (CashTransactionResponse, error) {
-	var transaction CashTransaction
-	applyCashTransactionRequest(&transaction, request)
-	if err := s.repository.CreateCashTransaction(ctx, &transaction); err != nil {
-		return CashTransactionResponse{}, cashWriteErrors.Resolve(err)
+	var row CashTransactionRow
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		recorded, err := recordCashTransaction(ctx, repository, request)
+		row = recorded
+		return err
+	})
+	if err != nil {
+		return CashTransactionResponse{}, apperror.From(err)
 	}
-	return newCashTransactionResponse(transaction), nil
+	return newCashTransactionResponse(row), nil
 }
 
 func (s *service) UpdateCashTransaction(ctx context.Context, id uuid.UUID, request CashTransactionRequest) (CashTransactionResponse, error) {
-	transaction, err := s.repository.FindCashTransaction(ctx, id)
+	var row CashTransactionRow
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		rewritten, err := rewriteCashTransaction(ctx, repository, id, request)
+		row = rewritten
+		return err
+	})
 	if err != nil {
-		return CashTransactionResponse{}, cashReadErrors.Resolve(err)
+		return CashTransactionResponse{}, apperror.From(err)
 	}
-
-	applyCashTransactionRequest(&transaction, request)
-	if err := s.repository.SaveCashTransaction(ctx, &transaction); err != nil {
-		return CashTransactionResponse{}, cashWriteErrors.Resolve(err)
-	}
-	return newCashTransactionResponse(transaction), nil
+	return newCashTransactionResponse(row), nil
 }
 
 func (s *service) DeleteCashTransaction(ctx context.Context, id uuid.UUID) error {
-	return cashReadErrors.Resolve(s.repository.DeleteCashTransaction(ctx, id))
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		return removeCashTransaction(ctx, repository, id)
+	})
+	if err != nil {
+		return apperror.From(err)
+	}
+	return nil
 }
 
 func (s *service) SummarizeCashFlow(ctx context.Context, query CashFlowQuery) (CashFlowResponse, error) {
@@ -224,7 +241,7 @@ func (s *service) GetJournalEntry(ctx context.Context, id uuid.UUID) (JournalEnt
 }
 
 func (s *service) RecordJournalEntry(ctx context.Context, request JournalEntryRequest) (JournalEntryDetailResponse, error) {
-	if err := validateJournalLines(request.Lines); err != nil {
+	if err := validateManualJournal(request); err != nil {
 		return JournalEntryDetailResponse{}, err
 	}
 
@@ -291,6 +308,16 @@ func recordJournalEntry(ctx context.Context, repository Repository, entry *Journ
 	return journalWriteErrors.Resolve(repository.CreateJournalLines(ctx, newJournalLines(entry.ID, requests)))
 }
 
+func validateManualJournal(request JournalEntryRequest) error {
+	if strings.EqualFold(strings.TrimSpace(request.Source), cashJournalSource) {
+		return errJournalSourceReserved
+	}
+	if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(request.Number)), cashJournalNumberPrefix) {
+		return errJournalNumberReserved
+	}
+	return validateJournalLines(request.Lines)
+}
+
 func validateJournalLines(lines []JournalLineRequest) error {
 	var debit, credit int64
 	for _, line := range lines {
@@ -351,13 +378,14 @@ func newCashFlowResponse(from, to time.Time, rows []CashFlowRow, balance int64) 
 func ledgerLines(rows []LedgerRow, opening int64) []LedgerLineResponse {
 	return pagination.Map(rows, func(row LedgerRow) LedgerLineResponse {
 		return LedgerLineResponse{
-			JournalEntryID: row.JournalEntryID,
-			Number:         row.Number,
-			Date:           row.Date,
-			Note:           row.Note,
-			Debit:          row.Debit,
-			Credit:         row.Credit,
-			Balance:        opening + row.RunningBalance,
+			JournalEntryID:    row.JournalEntryID,
+			Number:            row.Number,
+			Date:              row.Date,
+			Note:              row.Note,
+			CashTransactionID: row.CashTransactionID,
+			Debit:             row.Debit,
+			Credit:            row.Credit,
+			Balance:           opening + row.RunningBalance,
 		}
 	})
 }

@@ -37,10 +37,11 @@ func (CashTransaction) TableName() string {
 
 type JournalEntry struct {
 	entity.Base
-	Number string    `gorm:"type:varchar(40);not null;uniqueIndex:uq_journal_number"`
-	Date   time.Time `gorm:"type:date;not null;index:idx_journal_date"`
-	Note   string    `gorm:"type:varchar(200)"`
-	Source string    `gorm:"type:varchar(40)"`
+	Number            string     `gorm:"type:varchar(40);not null;uniqueIndex:uq_journal_number"`
+	Date              time.Time  `gorm:"type:date;not null;index:idx_journal_date"`
+	Note              string     `gorm:"type:varchar(200)"`
+	Source            string     `gorm:"type:varchar(40)"`
+	CashTransactionID *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_journal_cash_transaction"`
 }
 
 func (JournalEntry) TableName() string {
@@ -67,6 +68,7 @@ func Indexes() []string {
 	return []string{
 		`CREATE INDEX IF NOT EXISTS idx_journal_detail_account_journal ON journal_line (account_id, journal_entry_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_cash_transaction_project_date ON cash_transaction (project_id, date DESC)`,
+		`CREATE SEQUENCE IF NOT EXISTS ` + cashJournalSequence,
 	}
 }
 
@@ -75,12 +77,14 @@ func Constraints() []string {
 		database.ForeignKey("budget", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("cash_transaction", "account_id", "account", database.DeleteRestrict),
 		database.ForeignKey("cash_transaction", "project_id", "project", database.DeleteSetNull),
+		database.ForeignKey("journal_entry", "cash_transaction_id", "cash_transaction", database.DeleteCascade),
 		database.ForeignKey("journal_line", "journal_entry_id", "journal_entry", database.DeleteCascade),
 		database.ForeignKey("journal_line", "account_id", "account", database.DeleteRestrict),
 		database.Check("budget", "value", "value >= 0"),
 		database.Check("budget", "year", "year BETWEEN 2000 AND 2100"),
 		database.Check("cash_transaction", "type", "type IN ('in','out')"),
 		database.Check("cash_transaction", "amount", "amount > 0"),
+		database.Check("journal_entry", "cash_source", "cash_transaction_id IS NULL OR source = 'kas'"),
 		database.Check("journal_line", "value", "debit >= 0 AND kredit >= 0"),
 		database.Check("journal_line", "single_sided", "(debit = 0) <> (kredit = 0)"),
 		database.Unique("budget", "project_year", "project_id, year"),

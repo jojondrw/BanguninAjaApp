@@ -1,4 +1,6 @@
+import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link, type To } from 'react-router-dom'
 
 import type { CashType } from '../../models/finance'
 import type { AccountGroup } from '../../models/master'
@@ -60,6 +62,28 @@ export function ConfirmDelete({ subject, isConfirming, isPending, onAsk, onCance
 
 export function RowActions({ children }: { children: ReactNode }) {
   return <span className="inline-flex items-center justify-end gap-1">{children}</span>
+}
+
+// Tautan antar tab dengan bentuk yang sama seperti RowAction. Ikonnya
+// menandai bahwa tautan ini pindah ke tab lain, bukan aksi di baris itu.
+export function RowLink({ to, label, icon: Icon, description }: {
+  to: To
+  label: string
+  icon: LucideIcon
+  description?: string
+}) {
+  return (
+    <Link
+      to={to}
+      aria-label={description}
+      title={description}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap text-navy-600
+                 transition-[background-color,color,transform] hover:bg-navy-50 motion-safe:active:scale-95"
+    >
+      <Icon aria-hidden="true" strokeWidth={1.8} className="size-4" />
+      {label}
+    </Link>
+  )
 }
 
 // Tanda dan warna dipakai bersamaan, supaya arah kas tetap terbaca tanpa warna.

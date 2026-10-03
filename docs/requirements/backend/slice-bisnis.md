@@ -324,28 +324,65 @@ Semua di bawah `/api/finance`.
 |---|---|---|
 | GET, POST | `/budgets` | Filter `projectId`, `year`. Berisi `realized`, `remaining`, dan `absorption` dalam persen |
 | GET, PUT, DELETE | `/budgets/:id` | |
-| GET, POST | `/cash-transactions` | Filter `type`, `accountId`, `projectId`, `dateFrom`, `dateTo` |
-| GET, PUT, DELETE | `/cash-transactions/:id` | |
+| GET, POST | `/cash-transactions` | Filter `type`, `accountId`, `projectId`, `dateFrom`, `dateTo`. Berisi `journalEntryId` |
+| GET, PUT, DELETE | `/cash-transactions/:id` | Ikut mengubah atau menghapus jurnal otomatisnya |
 | GET | `/cash-flow` | Kas masuk dan keluar per bulan, bawaan enam bulan terakhir. Filter `projectId`, `dateFrom`, `dateTo` |
-| GET, POST | `/journal-entries` | Filter `search`, `accountId`, `dateFrom`, `dateTo` |
+| GET, POST | `/journal-entries` | Filter `search`, `accountId`, `dateFrom`, `dateTo`. Berisi `cashTransactionId`, `null` untuk jurnal manual |
 | GET | `/journal-entries/:id` | Berisi baris debit dan kredit |
-| GET | `/ledger` | Buku besar satu akun. Wajib `accountId`, filter `dateFrom`, `dateTo` |
+| GET | `/ledger` | Buku besar satu akun. Wajib `accountId`, filter `dateFrom`, `dateTo`. Tiap baris berisi `cashTransactionId` |
 
 Realisasi anggaran adalah jumlah kas keluar proyek itu pada tahun anggaran,
 dihitung saat dibaca. Arus kas juga dijumlahkan dari `cash_transaction`, bulan
 tanpa transaksi tetap muncul dengan nilai nol, dan `balance` adalah saldo kas
 sampai akhir periode.
 
-Jurnal tidak bisa diubah maupun dihapus. Salah catat diperbaiki dengan jurnal
-balik. Buku besar memakai saldo debit dikurangi kredit: saldo awal dihitung
-dari semua baris sebelum `dateFrom`, lalu saldo berjalan dihitung dengan window
-function sebelum paginasi supaya tetap benar di halaman mana pun.
+Jurnal yang dicatat lewat `POST /journal-entries` tidak bisa diubah maupun
+dihapus. Salah catat diperbaiki dengan jurnal balik. Buku besar memakai saldo
+debit dikurangi kredit: saldo awal dihitung dari semua baris sebelum
+`dateFrom`, lalu saldo berjalan dihitung dengan window function sebelum
+paginasi supaya tetap benar di halaman mana pun.
+
+### Jurnal otomatis dari transaksi kas
+
+Setiap transaksi kas punya tepat satu jurnal sistem, jadi buku besar akun Kas
+ikut mencatat setiap kas masuk dan keluar.
+
+| Hal | Aturan |
+|---|---|
+| Akun Kas | Dicari dari bagan akun lewat kode `1110`, bukan UUID. Kalau tidak ada, transaksi kas ditolak dengan `cash_account_not_found` |
+| Baris jurnal | `in`: debit Kas, kredit akun lawan. `out`: debit akun lawan, kredit Kas. Nilainya sama dengan `amount` |
+| Kepala jurnal | Tanggal sama dengan transaksi, `source = "kas"`, keterangan dari `note` transaksi atau "Kas masuk"/"Kas keluar" bila kosong, `cash_transaction_id` menunjuk transaksinya |
+| Nomor | `KAS-<tahun tanggal transaksi>-<urutan 6 digit>`, contoh `KAS-2026-000123`. Urutan diambil dari sequence `journal_entry_cash_number_seq`, jadi unik tanpa kunci dan aman saat dua transaksi dicatat bersamaan. Sequence tidak ikut rollback, jadi nomor bisa melompat. Nomor tidak berubah saat transaksi diubah, termasuk saat tahunnya pindah |
+| Buat | Transaksi kas, kepala jurnal, dan barisnya ditulis dalam satu transaksi database |
+| Ubah | Dalam satu transaksi: tanggal dan keterangan jurnal ditulis ulang, baris lama dihapus, baris baru ditulis. Id dan nomor jurnal tetap. Transaksi lama yang belum punya jurnal langsung dibuatkan |
+| Hapus | Dalam satu transaksi: baris jurnal, jurnal, lalu transaksi kas dihapus. Foreign key `journal_entry.cash_transaction_id` juga `ON DELETE CASCADE` sebagai pengaman |
+| Jurnal manual | `source` "kas" (tanpa beda huruf besar kecil) dan nomor berawalan `KAS-` ditolak supaya tidak bisa menyamar atau bentrok dengan nomor sistem. Tidak ada endpoint untuk mengubah atau menghapus jurnal, termasuk jurnal sistem; jurnal sistem hanya berubah lewat transaksi kasnya |
+
+`journal_entry.cash_transaction_id` nullable dengan unique index
+`uq_journal_cash_transaction` (banyak `NULL` boleh, satu transaksi kas hanya
+satu jurnal) dan check `chk_journal_entry_cash_source` yang mewajibkan jurnal
+bertaut kas bersumber `kas`. Kolom tautan dipilih ketimbang mencocokkan nomor
+atau keterangan, karena tautan tetap utuh walau tanggal, nominal, atau catatan
+transaksi diubah.
+
+`cmd/migrate` menjalankan isi ulang (backfill) setelah semua tabel, index, dan
+constraint siap: setiap transaksi kas yang belum punya jurnal dibuatkan dalam
+satu transaksi database, urut tanggal lalu waktu catat. Transaksi yang sudah
+bertaut dilewati lewat `NOT EXISTS`, dan unique index menjaga tidak ada jurnal
+ganda, jadi migrate aman dijalankan berulang. Kalau tidak ada transaksi yang
+perlu diisi, akun Kas tidak diperiksa, sehingga migrate di database kosong
+(sebelum seed) tetap jalan.
 
 | Aturan | Kode error |
 |---|---|
 | Satu proyek satu anggaran per tahun | `budget_year_used` |
 | Jurnal minimal dua baris, tiap baris hanya debit atau kredit | `journal_line_single_sided` |
 | Total debit harus sama dengan total kredit | `journal_unbalanced` |
+| Akun Kas kode 1110 wajib ada untuk mencatat transaksi kas | `cash_account_not_found` |
+| Akun lawan transaksi kas bukan akun Kas itu sendiri | `cash_counter_account_invalid` |
+| Jurnal otomatis bentrok dengan unique index (seharusnya tidak terjadi) | `cash_journal_conflict` |
+| Jurnal manual tidak boleh bersumber `kas` | `journal_source_reserved` |
+| Nomor jurnal manual tidak boleh berawalan `KAS-` | `journal_number_reserved` |
 
 ## Billing
 

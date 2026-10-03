@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
+
+	"gorm.io/gorm"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
@@ -107,5 +110,14 @@ func run() error {
 		}
 	}
 
+	return backfill(db)
+}
+
+func backfill(db *gorm.DB) error {
+	posted, err := finance.PostMissingCashJournals(context.Background(), finance.NewRepository(db))
+	if err != nil {
+		return err
+	}
+	slog.Info("cash journals ready", slog.Int("posted", posted))
 	return nil
 }

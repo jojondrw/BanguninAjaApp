@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom'
 import { useLedger } from '../../controllers/useFinance'
 import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
+  CASH_ACCOUNT_CODE,
   NORMAL_BALANCE,
   allAccountGroups,
   isDateRangeValid,
   ledgerRows,
   type LedgerPage,
 } from '../../models/accounting'
-import { ACCOUNT_TYPE_LABEL } from '../../models/master'
+import { ACCOUNT_TYPE_LABEL, type Account } from '../../models/master'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { Card, Empty, Loading, Table } from '../components/Data'
@@ -61,6 +62,20 @@ function LedgerSummary({ ledger, dateFrom, dateTo }: { ledger: LedgerPage; dateF
   )
 }
 
+// Akun Kas diisi jurnal otomatis dari setiap transaksi kas, jadi buku besarnya
+// memuat mutasi kas di samping jurnal manual yang memakai akun Kas.
+function ledgerDescription(account: Account | undefined): string {
+  if (!account) {
+    return 'Mutasi satu akun dari semua jurnal, termasuk jurnal otomatis dari transaksi kas, urut tanggal, dengan saldo berjalan.'
+  }
+  const normalSide = NORMAL_BALANCE[account.type] === 'D' ? 'debit (D)' : 'kredit (K)'
+  const base = `Akun ${ACCOUNT_TYPE_LABEL[account.type].toLowerCase()}, normalnya bersaldo ${normalSide}. Saldo berjalan = saldo awal + debit − kredit.`
+  if (account.code !== CASH_ACCOUNT_CODE) {
+    return base
+  }
+  return `${base} Setiap transaksi di tab Kas ikut tercatat di sini lewat jurnal otomatisnya (kas masuk di debit, kas keluar di kredit), ditambah jurnal manual yang memakai akun Kas.`
+}
+
 function emphasis(text: string) {
   return <span className="font-semibold text-slate-900">{text}</span>
 }
@@ -85,16 +100,10 @@ export function LedgerTab() {
     isRangeValid,
   )
 
-  const normalSide = account ? NORMAL_BALANCE[account.type] : null
-
   return (
     <Card
       title={account ? `Buku besar ${account.code} ${account.name}` : 'Buku besar'}
-      description={
-        account && normalSide
-          ? `Akun ${ACCOUNT_TYPE_LABEL[account.type].toLowerCase()}, normalnya bersaldo ${normalSide === 'D' ? 'debit (D)' : 'kredit (K)'}. Saldo berjalan = saldo awal + debit − kredit.`
-          : 'Mutasi satu akun dari semua jurnal, urut tanggal, dengan saldo berjalan.'
-      }
+      description={ledgerDescription(account)}
     >
       <Toolbar>
         <FilterSelect
@@ -133,7 +142,7 @@ export function LedgerTab() {
       ) : null}
 
       {accountId === '' ? (
-        <Empty message="Pilih akun untuk melihat mutasi dan saldonya. Buku besar diisi dari jurnal di tab Jurnal, bukan dari transaksi kas." />
+        <Empty message="Pilih akun untuk melihat mutasi dan saldonya. Buku besar diisi dari semua jurnal, termasuk jurnal otomatis dari setiap transaksi kas." />
       ) : null}
       {accountId !== '' && !isRangeValid ? (
         <ErrorNote message="Tanggal sampai tidak boleh lebih awal dari tanggal dari." />
