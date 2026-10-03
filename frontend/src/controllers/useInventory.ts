@@ -22,11 +22,9 @@ import {
   type WarehouseFilter,
   type WarehouseFormValues,
 } from '../models/inventory'
-import { assetApi, inventoryApi, unitOfMeasureApi } from '../models/inventoryApi'
+import { assetApi, inventoryApi } from '../models/inventoryApi'
 
 const ONE_MINUTE = 60_000
-const TEN_MINUTES = 600_000
-const MAX_PAGE_SIZE = 100
 
 // Kunci ini juga dipakai controllers/useProcurement.ts supaya penerimaan barang
 // menyegarkan stok di halaman Inventaris. Jangan diganti sepihak.
@@ -187,16 +185,6 @@ export function useRecordStockMovement() {
       void queryClient.invalidateQueries({ queryKey: MOVEMENTS_KEY })
       void queryClient.invalidateQueries({ queryKey: LOW_STOCK_KEY })
     },
-  })
-}
-
-// Satuan adalah data master yang diisi seed dan jarang berubah.
-export function useUnitsOfMeasure() {
-  return useQuery({
-    queryKey: ['master', 'units-of-measure'],
-    queryFn: () => unitOfMeasureApi.list({ pageSize: MAX_PAGE_SIZE }),
-    staleTime: TEN_MINUTES,
-    retry: 0,
   })
 }
 

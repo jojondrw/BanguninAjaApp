@@ -27,7 +27,8 @@ import {
   SelectField,
   Toolbar,
 } from '../components/RecordControls'
-import { quantityText, unitCode, warehouseText, type Lookups } from './inventoryShared'
+import { useUnitCode } from '../procurement/lookup'
+import { quantityText, warehouseText } from './inventoryShared'
 import { materialOptions, warehouseOptions } from '../../models/lookupApi'
 import { SearchSelect } from '../components/SearchSelect'
 
@@ -46,13 +47,13 @@ function movementQuantity(movement: StockMovement): string {
   return quantityText(movement.quantity, movement.unitOfMeasureCode ?? '')
 }
 
-function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }) {
+function NewMovementForm({ today }: { today: string }) {
   const [values, setValues] = useState<MovementFormValues>(() => emptyMovementForm(today))
   const recordMovement = useRecordStockMovement()
   const needsSource = movementNeedsSource(values)
   const needsTarget = movementNeedsTarget(values)
   const [materialUnitId, setMaterialUnitId] = useState<string>()
-  const unit = values.materialId === '' ? '' : unitCode(lookups, materialUnitId)
+  const unit = useUnitCode(values.materialId === '' ? undefined : materialUnitId)
 
   const update =
     (key: keyof MovementFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -192,7 +193,7 @@ function NewMovementForm({ lookups, today }: { lookups: Lookups; today: string }
   )
 }
 
-export function MovementsCard({ lookups, today }: { lookups: Lookups; today: string }) {
+export function MovementsCard({ today }: { today: string }) {
   const [type, setType] = useState<MovementType | ''>('')
   const [page, setPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -224,7 +225,7 @@ export function MovementsCard({ lookups, today }: { lookups: Lookups; today: str
         <FormToggle isOpen={isFormOpen} openLabel="Catat mutasi" onToggle={() => setIsFormOpen((open) => !open)} />
       </Toolbar>
 
-      {isFormOpen ? <NewMovementForm lookups={lookups} today={today} /> : null}
+      {isFormOpen ? <NewMovementForm today={today} /> : null}
 
       {movements.isPending ? <Loading /> : null}
       {movements.isError ? <LoadFailed onRetry={() => movements.refetch()} /> : null}
