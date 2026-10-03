@@ -22,21 +22,40 @@ export interface BillingRecord extends BillingBalance {
   updatedAt: string
 }
 
+// receivableId terisi kalau faktur ini sudah dicatat sebagai piutang. Satu
+// faktur hanya boleh menjadi satu piutang.
 export interface Invoice extends BillingRecord {
   number: string
   note: string
   partyType: PartyType
   partyId: string
   projectId: string | null
+  projectName: string | null
+  receivableId: string | null
+  receivableReference: string | null
 }
 
+// Nama dan nomor tautan sudah digabung backend, jadi tabel tidak perlu
+// mencari pelanggan, proyek, kontrak, atau faktur sendiri.
 export interface Receivable extends BillingRecord {
   customerId: string
+  customerName: string
+  projectId: string | null
+  projectName: string | null
+  contractId: string | null
+  contractNumber: string | null
+  invoiceId: string | null
+  invoiceNumber: string | null
   reference: string
 }
 
 export interface Payable extends BillingRecord {
   vendorId: string
+  vendorName: string
+  projectId: string | null
+  projectName: string | null
+  purchaseOrderId: string | null
+  purchaseOrderNumber: string | null
   reference: string
 }
 
@@ -51,14 +70,20 @@ export interface InvoiceFilter extends PageQuery {
   partyType?: PartyType
   partyId?: string
   projectId?: string
+  // false hanya menampilkan faktur yang belum dicatat sebagai piutang.
+  recorded?: boolean
 }
 
 export interface ReceivableFilter extends PageQuery {
   customerId?: string
+  projectId?: string
+  contractId?: string
 }
 
 export interface PayableFilter extends PageQuery {
   vendorId?: string
+  projectId?: string
+  purchaseOrderId?: string
 }
 
 export interface InvoiceRequest {
@@ -73,6 +98,9 @@ export interface InvoiceRequest {
 
 export interface ReceivableRequest {
   customerId: string
+  projectId?: string
+  contractId?: string
+  invoiceId?: string
   reference: string
   dueDate: string
   amount: number
@@ -80,6 +108,8 @@ export interface ReceivableRequest {
 
 export interface PayableRequest {
   vendorId: string
+  projectId?: string
+  purchaseOrderId?: string
   reference: string
   dueDate: string
   amount: number
@@ -190,6 +220,10 @@ function toDateInput(iso: string): string {
   return iso.slice(0, 10)
 }
 
+function optionalId(value: string): string | undefined {
+  return value === '' ? undefined : value
+}
+
 export interface InvoiceFormValues {
   number: string
   note: string
@@ -228,7 +262,7 @@ export function toInvoiceRequest(values: InvoiceFormValues): InvoiceRequest {
     note: values.note.trim(),
     partyType: values.partyType,
     partyId: values.partyId,
-    projectId: values.projectId === '' ? undefined : values.projectId,
+    projectId: optionalId(values.projectId),
     dueDate: toApiDate(values.dueDate),
     amount: toAmount(values.amount),
   }
@@ -236,6 +270,9 @@ export function toInvoiceRequest(values: InvoiceFormValues): InvoiceRequest {
 
 export interface ReceivableFormValues {
   customerId: string
+  projectId: string
+  contractId: string
+  invoiceId: string
   reference: string
   dueDate: string
   amount: string
@@ -243,6 +280,9 @@ export interface ReceivableFormValues {
 
 export const EMPTY_RECEIVABLE_FORM: ReceivableFormValues = {
   customerId: '',
+  projectId: '',
+  contractId: '',
+  invoiceId: '',
   reference: '',
   dueDate: '',
   amount: '',
@@ -251,15 +291,35 @@ export const EMPTY_RECEIVABLE_FORM: ReceivableFormValues = {
 export function receivableFormOf(receivable: Receivable): ReceivableFormValues {
   return {
     customerId: receivable.customerId,
+    projectId: receivable.projectId ?? '',
+    contractId: receivable.contractId ?? '',
+    invoiceId: receivable.invoiceId ?? '',
     reference: receivable.reference,
     dueDate: toDateInput(receivable.dueDate),
     amount: String(receivable.amount),
   }
 }
 
+// Isian awal "Catat sebagai piutang" dari faktur pelanggan. Nominal memakai
+// sisa faktur, karena bagian yang sudah dibayar tidak lagi terutang.
+export function receivableFormFromInvoice(invoice: Invoice): ReceivableFormValues {
+  return {
+    customerId: invoice.partyId,
+    projectId: invoice.projectId ?? '',
+    contractId: '',
+    invoiceId: invoice.id,
+    reference: invoice.number,
+    dueDate: toDateInput(invoice.dueDate),
+    amount: String(invoice.outstanding > 0 ? invoice.outstanding : invoice.amount),
+  }
+}
+
 export function toReceivableRequest(values: ReceivableFormValues): ReceivableRequest {
   return {
     customerId: values.customerId,
+    projectId: optionalId(values.projectId),
+    contractId: optionalId(values.contractId),
+    invoiceId: optionalId(values.invoiceId),
     reference: values.reference.trim(),
     dueDate: toApiDate(values.dueDate),
     amount: toAmount(values.amount),
@@ -268,6 +328,8 @@ export function toReceivableRequest(values: ReceivableFormValues): ReceivableReq
 
 export interface PayableFormValues {
   vendorId: string
+  projectId: string
+  purchaseOrderId: string
   reference: string
   dueDate: string
   amount: string
@@ -275,6 +337,8 @@ export interface PayableFormValues {
 
 export const EMPTY_PAYABLE_FORM: PayableFormValues = {
   vendorId: '',
+  projectId: '',
+  purchaseOrderId: '',
   reference: '',
   dueDate: '',
   amount: '',
@@ -283,6 +347,8 @@ export const EMPTY_PAYABLE_FORM: PayableFormValues = {
 export function payableFormOf(payable: Payable): PayableFormValues {
   return {
     vendorId: payable.vendorId,
+    projectId: payable.projectId ?? '',
+    purchaseOrderId: payable.purchaseOrderId ?? '',
     reference: payable.reference,
     dueDate: toDateInput(payable.dueDate),
     amount: String(payable.amount),
@@ -292,6 +358,8 @@ export function payableFormOf(payable: Payable): PayableFormValues {
 export function toPayableRequest(values: PayableFormValues): PayableRequest {
   return {
     vendorId: values.vendorId,
+    projectId: optionalId(values.projectId),
+    purchaseOrderId: optionalId(values.purchaseOrderId),
     reference: values.reference.trim(),
     dueDate: toApiDate(values.dueDate),
     amount: toAmount(values.amount),

@@ -22,7 +22,12 @@ const (
 		"(SELECT COUNT(*) FROM goods_receipt_item WHERE goods_receipt_item.goods_receipt_id = goods_receipt.id) AS item_count, " +
 		"(SELECT warehouse.name FROM warehouse WHERE warehouse.id = goods_receipt.warehouse_id) AS warehouse_name, " +
 		"(SELECT purchase_order.number FROM purchase_order WHERE purchase_order.id = goods_receipt.purchase_order_id) AS purchase_order_number"
+	goodsReceiptLineColumns = "goods_receipt_item.*, purchase_order_item.material_id, material.name AS material_name, " +
+		"purchase_order_item.unit_of_measure_id, order_unit.code AS unit_of_measure_code, " +
+		"material.unit_of_measure_id AS stock_unit_of_measure_id, stock_unit.code AS stock_unit_of_measure_code"
 )
+
+type StockLedgerFactory func(db *gorm.DB) StockLedger
 
 type VendorFilter struct {
 	Search   string
@@ -83,9 +88,25 @@ type GoodsReceiptRow struct {
 	PurchaseOrderNumber string
 }
 
+type GoodsReceiptLine struct {
+	GoodsReceiptItem
+	MaterialID             uuid.UUID
+	MaterialName           string
+	UnitOfMeasureID        uuid.UUID
+	UnitOfMeasureCode      string
+	StockUnitOfMeasureID   uuid.UUID
+	StockUnitOfMeasureCode string
+}
+
 type ReceivedQuantity struct {
 	PurchaseOrderItemID uuid.UUID
 	Quantity            float64
+}
+
+type MaterialStockUnit struct {
+	ID              uuid.UUID
+	Name            string
+	UnitOfMeasureID uuid.UUID
 }
 
 type Repository interface {
@@ -119,21 +140,25 @@ type Repository interface {
 	ListGoodsReceipts(ctx context.Context, filter GoodsReceiptFilter) ([]GoodsReceiptRow, int64, error)
 	FindGoodsReceipt(ctx context.Context, id uuid.UUID) (GoodsReceipt, error)
 	CreateGoodsReceipt(ctx context.Context, receipt *GoodsReceipt) error
-	ListGoodsReceiptItems(ctx context.Context, receiptID uuid.UUID) ([]GoodsReceiptItem, error)
+	ListGoodsReceiptLines(ctx context.Context, receiptID uuid.UUID) ([]GoodsReceiptLine, error)
 	CreateGoodsReceiptItems(ctx context.Context, items []GoodsReceiptItem) error
+
+	ListMaterialStockUnits(ctx context.Context, materialIDs []uuid.UUID) ([]MaterialStockUnit, error)
+	StockLedger() StockLedger
 }
 
 type gormRepository struct {
-	db *gorm.DB
+	db     *gorm.DB
+	ledger StockLedgerFactory
 }
 
-func NewRepository(db *gorm.DB) Repository {
-	return &gormRepository{db: db}
+func NewRepository(db *gorm.DB, ledger StockLedgerFactory) Repository {
+	return &gormRepository{db: db, ledger: ledger}
 }
 
 func (r *gormRepository) Transaction(ctx context.Context, work func(Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return work(&gormRepository{db: tx})
+		return work(&gormRepository{db: tx, ledger: r.ledger})
 	})
 }
 
@@ -314,14 +339,37 @@ func (r *gormRepository) CreateGoodsReceipt(ctx context.Context, receipt *GoodsR
 	return database.Translate(r.db.WithContext(ctx).Create(receipt).Error)
 }
 
-func (r *gormRepository) ListGoodsReceiptItems(ctx context.Context, receiptID uuid.UUID) ([]GoodsReceiptItem, error) {
-	var items []GoodsReceiptItem
-	err := r.db.WithContext(ctx).Where("goods_receipt_id = ?", receiptID).Order("created_at ASC, id ASC").Find(&items).Error
-	return items, database.Translate(err)
+func (r *gormRepository) ListGoodsReceiptLines(ctx context.Context, receiptID uuid.UUID) ([]GoodsReceiptLine, error) {
+	var lines []GoodsReceiptLine
+	err := r.db.WithContext(ctx).
+		Model(&GoodsReceiptItem{}).
+		Select(goodsReceiptLineColumns).
+		Joins("JOIN purchase_order_item ON purchase_order_item.id = goods_receipt_item.purchase_order_item_id").
+		Joins("JOIN material ON material.id = purchase_order_item.material_id").
+		Joins("JOIN unit_of_measure AS order_unit ON order_unit.id = purchase_order_item.unit_of_measure_id").
+		Joins("JOIN unit_of_measure AS stock_unit ON stock_unit.id = material.unit_of_measure_id").
+		Where("goods_receipt_item.goods_receipt_id = ?", receiptID).
+		Order("goods_receipt_item.created_at ASC, goods_receipt_item.id ASC").
+		Scan(&lines).Error
+	return lines, database.Translate(err)
 }
 
 func (r *gormRepository) CreateGoodsReceiptItems(ctx context.Context, items []GoodsReceiptItem) error {
 	return database.Translate(r.db.WithContext(ctx).Create(&items).Error)
+}
+
+func (r *gormRepository) ListMaterialStockUnits(ctx context.Context, materialIDs []uuid.UUID) ([]MaterialStockUnit, error) {
+	var units []MaterialStockUnit
+	err := r.db.WithContext(ctx).
+		Table("material").
+		Select("id, name, unit_of_measure_id").
+		Where("id IN ?", materialIDs).
+		Scan(&units).Error
+	return units, database.Translate(err)
+}
+
+func (r *gormRepository) StockLedger() StockLedger {
+	return r.ledger(r.db)
 }
 
 func (r *gormRepository) locked(ctx context.Context) *gorm.DB {

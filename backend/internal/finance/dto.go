@@ -53,15 +53,16 @@ type CashTransactionQuery struct {
 }
 
 type CashTransactionResponse struct {
-	ID        uuid.UUID  `json:"id"`
-	Date      time.Time  `json:"date"`
-	Type      string     `json:"type"`
-	AccountID uuid.UUID  `json:"accountId"`
-	ProjectID *uuid.UUID `json:"projectId"`
-	Amount    int64      `json:"amount"`
-	Note      string     `json:"note"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
+	ID             uuid.UUID  `json:"id"`
+	Date           time.Time  `json:"date"`
+	Type           string     `json:"type"`
+	AccountID      uuid.UUID  `json:"accountId"`
+	ProjectID      *uuid.UUID `json:"projectId"`
+	Amount         int64      `json:"amount"`
+	Note           string     `json:"note"`
+	JournalEntryID *uuid.UUID `json:"journalEntryId"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
 }
 
 type CashFlowQuery struct {
@@ -110,13 +111,14 @@ type JournalEntryQuery struct {
 }
 
 type JournalEntryResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Number    string    `json:"number"`
-	Date      time.Time `json:"date"`
-	Note      string    `json:"note"`
-	Source    string    `json:"source"`
-	Total     int64     `json:"total"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID                uuid.UUID  `json:"id"`
+	Number            string     `json:"number"`
+	Date              time.Time  `json:"date"`
+	Note              string     `json:"note"`
+	Source            string     `json:"source"`
+	CashTransactionID *uuid.UUID `json:"cashTransactionId"`
+	Total             int64      `json:"total"`
+	CreatedAt         time.Time  `json:"createdAt"`
 }
 
 type JournalLineResponse struct {
@@ -139,13 +141,14 @@ type LedgerQuery struct {
 }
 
 type LedgerLineResponse struct {
-	JournalEntryID uuid.UUID `json:"journalEntryId"`
-	Number         string    `json:"number"`
-	Date           time.Time `json:"date"`
-	Note           string    `json:"note"`
-	Debit          int64     `json:"debit"`
-	Credit         int64     `json:"credit"`
-	Balance        int64     `json:"balance"`
+	JournalEntryID    uuid.UUID  `json:"journalEntryId"`
+	Number            string     `json:"number"`
+	Date              time.Time  `json:"date"`
+	Note              string     `json:"note"`
+	CashTransactionID *uuid.UUID `json:"cashTransactionId"`
+	Debit             int64      `json:"debit"`
+	Credit            int64      `json:"credit"`
+	Balance           int64      `json:"balance"`
 }
 
 type LedgerPage struct {
@@ -171,29 +174,31 @@ func newBudgetResponse(row BudgetRow) BudgetResponse {
 	}
 }
 
-func newCashTransactionResponse(transaction CashTransaction) CashTransactionResponse {
+func newCashTransactionResponse(row CashTransactionRow) CashTransactionResponse {
 	return CashTransactionResponse{
-		ID:        transaction.ID,
-		Date:      transaction.Date,
-		Type:      transaction.Type,
-		AccountID: transaction.AccountID,
-		ProjectID: transaction.ProjectID,
-		Amount:    transaction.Amount,
-		Note:      transaction.Note,
-		CreatedAt: transaction.CreatedAt,
-		UpdatedAt: transaction.UpdatedAt,
+		ID:             row.ID,
+		Date:           row.Date,
+		Type:           row.Type,
+		AccountID:      row.AccountID,
+		ProjectID:      row.ProjectID,
+		Amount:         row.Amount,
+		Note:           row.Note,
+		JournalEntryID: row.JournalEntryID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
 	}
 }
 
 func newJournalEntryResponse(row JournalEntryRow) JournalEntryResponse {
 	return JournalEntryResponse{
-		ID:        row.ID,
-		Number:    row.Number,
-		Date:      row.Date,
-		Note:      row.Note,
-		Source:    row.Source,
-		Total:     row.Total,
-		CreatedAt: row.CreatedAt,
+		ID:                row.ID,
+		Number:            row.Number,
+		Date:              row.Date,
+		Note:              row.Note,
+		Source:            row.Source,
+		CashTransactionID: row.CashTransactionID,
+		Total:             row.Total,
+		CreatedAt:         row.CreatedAt,
 	}
 }
 

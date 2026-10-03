@@ -1,10 +1,13 @@
+import { Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useJournalEntries, useJournalEntry } from '../../controllers/useFinance'
 import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
+  CASH_JOURNAL_LABEL,
   JOURNAL_NOTE_MAX_LENGTH,
+  isCashJournal,
   isDateRangeValid,
   journalDetailRows,
   journalTotals,
@@ -18,13 +21,18 @@ import { ErrorNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
-import { JOURNAL_PARAM, ledgerLink, useSearchParam } from './financeTabs'
+import { JOURNAL_PARAM, cashLink, ledgerLink, useSearchParam } from './financeTabs'
 import { JournalForm } from './JournalForm'
-import { DateRangeFilter, Notice } from './parts'
+import { DateRangeFilter, Notice, RowActions, RowLink } from './parts'
 
 const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
 const LINK_CLASS = 'text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline'
+const CASH_JOURNAL_TONE = 'bg-slate-100 text-slate-700'
+
+function CashJournalChip() {
+  return <Chip tone={CASH_JOURNAL_TONE}>{CASH_JOURNAL_LABEL}</Chip>
+}
 
 function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Account[]; onClose: () => void }) {
   const entry = useJournalEntry(id)
@@ -51,12 +59,13 @@ function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Ac
 
   const detail = entry.data
   const totals = journalTotals(detail.lines)
+  const origin = detail.cashTransactionId === null ? ` · sumber ${detail.source || 'tidak diisi'}` : ''
 
   return (
     <div ref={cardRef}>
       <Card
         title={`Jurnal ${detail.number}`}
-        description={`${shortDate(detail.date)} · sumber ${detail.source || 'tidak diisi'} · dicatat ${shortDate(detail.createdAt)}`}
+        description={`${shortDate(detail.date)}${origin} · dicatat ${shortDate(detail.createdAt)}`}
         action={close}
       >
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -65,8 +74,18 @@ function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Ac
           ) : (
             <Chip tone="bg-red-100 text-red-800">Tidak seimbang</Chip>
           )}
+          {detail.cashTransactionId !== null ? <CashJournalChip /> : null}
           <p className="text-sm text-slate-600">{detail.note || 'Tanpa keterangan.'}</p>
         </div>
+        {detail.cashTransactionId !== null ? (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-4 py-3">
+            <p className="text-[13px] text-slate-600">
+              Jurnal ini dibuat dan dijaga oleh transaksi kasnya. Untuk mengubah atau menghapusnya, ubah atau hapus
+              transaksi itu di tab Kas.
+            </p>
+            <RowLink to={cashLink(detail.cashTransactionId)} label="Lihat transaksi kas" icon={Wallet} />
+          </div>
+        ) : null}
         <Table
           rows={journalDetailRows(detail.lines)}
           emptyMessage="Jurnal ini tidak punya baris."
@@ -155,7 +174,7 @@ export function JournalTab() {
     <div className="space-y-6">
       <Card
         title="Jurnal umum"
-        description="Setiap jurnal minimal dua baris dengan total debit sama dengan total kredit. Jurnal yang sudah dicatat tidak bisa diubah atau dihapus; koreksi dengan jurnal pembalik."
+        description="Setiap jurnal minimal dua baris dengan total debit sama dengan total kredit. Jurnal manual tidak bisa diubah atau dihapus; koreksi dengan jurnal pembalik. Jurnal bertanda Otomatis dari kas mengikuti transaksi kasnya di tab Kas."
       >
         <Toolbar>
           <ToolbarInput
@@ -213,17 +232,30 @@ export function JournalTab() {
                 { header: 'Nomor', cell: (row) => <span className="font-medium text-slate-900">{row.number}</span> },
                 { header: 'Tanggal', cell: (row) => shortDate(row.date) },
                 { header: 'Keterangan', cell: (row) => row.note || '-' },
-                { header: 'Sumber', cell: (row) => row.source || '-' },
+                {
+                  header: 'Sumber',
+                  cell: (row) => (isCashJournal(row) ? <CashJournalChip /> : row.source || '-'),
+                },
                 { header: 'Total', align: 'right', cell: (row) => rupiah(row.total) },
                 {
                   header: 'Aksi',
                   align: 'right',
                   cell: (row) => (
-                    <RowAction
-                      label="Rincian"
-                      isActive={row.id === selectedId}
-                      onClick={() => setSelectedId(row.id === selectedId ? '' : row.id)}
-                    />
+                    <RowActions>
+                      {row.cashTransactionId !== null ? (
+                        <RowLink
+                          to={cashLink(row.cashTransactionId)}
+                          label="Transaksi kas"
+                          icon={Wallet}
+                          description={`Transaksi kas asal jurnal ${row.number}`}
+                        />
+                      ) : null}
+                      <RowAction
+                        label="Rincian"
+                        isActive={row.id === selectedId}
+                        onClick={() => setSelectedId(row.id === selectedId ? '' : row.id)}
+                      />
+                    </RowActions>
                   ),
                 },
               ]}

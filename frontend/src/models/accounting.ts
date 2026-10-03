@@ -117,8 +117,34 @@ export interface JournalEntry {
   date: string
   note: string
   source: string
+  // Terisi untuk jurnal otomatis dari transaksi kas, null untuk jurnal manual.
+  cashTransactionId: string | null
   total: number
   createdAt: string
+}
+
+// Mengikuti backend/internal/finance/cashjournal.go. Akun Kas dicari lewat
+// kodenya, sedangkan sumber dan awalan nomor di bawah khusus untuk jurnal
+// otomatis, jadi jurnal manual yang memakainya ditolak backend.
+export const CASH_ACCOUNT_CODE = '1110'
+export const CASH_JOURNAL_SOURCE = 'kas'
+export const CASH_JOURNAL_NUMBER_PREFIX = 'KAS-'
+export const CASH_JOURNAL_LABEL = 'Otomatis dari kas'
+
+export function isCashJournal(entry: Pick<JournalEntry, 'cashTransactionId'>): boolean {
+  return entry.cashTransactionId !== null
+}
+
+// Pesan yang sama dengan journal_source_reserved dan journal_number_reserved,
+// supaya formulir sudah menolak sebelum dikirim.
+export function reservedJournalReason(values: { number: string; source: string }): string | null {
+  if (values.source.trim().toLowerCase() === CASH_JOURNAL_SOURCE) {
+    return 'Sumber "kas" khusus untuk jurnal otomatis dari transaksi kas. Pakai sumber lain.'
+  }
+  if (values.number.trim().toUpperCase().startsWith(CASH_JOURNAL_NUMBER_PREFIX)) {
+    return `Nomor berawalan ${CASH_JOURNAL_NUMBER_PREFIX} khusus untuk jurnal otomatis dari transaksi kas. Pakai nomor lain.`
+  }
+  return null
 }
 
 export interface JournalLine {
@@ -260,6 +286,7 @@ export interface LedgerLine {
   number: string
   date: string
   note: string
+  cashTransactionId: string | null
   debit: number
   credit: number
   balance: number

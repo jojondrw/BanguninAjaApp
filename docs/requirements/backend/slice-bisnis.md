@@ -170,8 +170,8 @@ Semua di bawah `/api/procurement`.
 | GET, POST | `/purchase-orders` | Filter `search`, `vendorId`, `projectId`, `status`, `dateFrom`, `dateTo` |
 | GET, PUT, DELETE | `/purchase-orders/:id` | GET berisi item, jumlah yang sudah diterima, dan sisanya |
 | PATCH | `/purchase-orders/:id/status` | Hanya `sent` atau `cancelled` |
-| GET, POST | `/goods-receipts` | Filter `search`, `purchaseOrderId`, `warehouseId`, `dateFrom`, `dateTo` |
-| GET | `/goods-receipts/:id` | |
+| GET, POST | `/goods-receipts` | Filter `search`, `purchaseOrderId`, `warehouseId`, `dateFrom`, `dateTo`. POST membalas rincian yang sama dengan GET `/:id` |
+| GET | `/goods-receipts/:id` | Berisi baris beserta material, satuan pesanan, satuan stok, dan status stok per baris, ditambah `unpostedLines` |
 
 | Dokumen | Dari | Boleh ke |
 |---|---|---|
@@ -188,10 +188,47 @@ pesanan menjadi `completed` kalau semua baris sudah diterima penuh, selain itu
 dicatat supaya dua penerimaan yang bersamaan tidak melewati jumlah pesanan.
 
 Penerimaan barang tidak bisa diubah maupun dihapus, sama seperti mutasi stok.
-Penerimaan belum menambah stok gudang secara otomatis, karena stok milik slice
-`inventory` dan slice tidak boleh saling impor. Untuk sementara stok masuk
-dicatat lewat `POST /api/inventory/stock-movements` jenis `in` dengan
-`reference` berisi nomor penerimaan.
+
+### Penerimaan langsung menambah stok
+
+Dalam transaksi yang sama dengan penyimpanan penerimaan, setiap baris dengan
+jumlah diterima lebih dari nol dicatat sebagai satu mutasi `in` ke gudang
+penerimaan, bertanggal tanggal penerimaan, dengan `reference` berisi nomor
+penerimaan. Jumlah yang ditolak tidak masuk stok. Mutasi dan penambahan stok
+memakai logika yang sama dengan `POST /api/inventory/stock-movements`
+(`INSERT ... ON CONFLICT` pada stok), jadi hasilnya tidak bisa dibedakan dari
+mutasi masuk biasa.
+
+`procurement` tidak memanggil repository `inventory` secara langsung. Service
+`procurement` mendeklarasikan interface kecil `StockLedger` dengan satu method
+`RecordIncoming`. Repository `procurement` membuat ledger itu dari koneksi yang
+sedang dipakai, jadi di dalam `Transaction` ledger ikut terikat ke transaksi yang
+sama. Implementasinya, `inventory.StockLedger`, dirakit di `module.go` milik
+`procurement`, satu-satunya berkas `procurement` yang mengimpor `inventory`.
+`inventory` tidak tahu apa pun soal `procurement`, jadi tidak ada impor
+melingkar.
+
+Stok dihitung dalam satuan material (`material.unit_of_measure_id`), sedangkan
+baris pesanan punya satuannya sendiri. Tabel `unit_of_measure` tidak menyimpan
+konversi, jadi baris yang satuannya berbeda tidak ditebak: baris itu dilewati,
+`stock_skip_reason` diisi `unit_mismatch`, dan dilaporkan di `unpostedLines`
+supaya pengguna mencatatnya manual setelah jumlahnya dikonversi. Kalau mutasi
+untuk baris yang satuannya cocok gagal dicatat, seluruh penerimaan dibatalkan
+(rollback), termasuk perubahan status pesanan.
+
+Setiap baris penerimaan menyimpan `stock_movement_id` (unik, `RESTRICT` ke
+`stock_movement`) untuk mutasi yang dibuat otomatis. Status stok per baris di
+respons diturunkan dari kolom itu:
+
+| `stockStatus` | Arti |
+|---|---|
+| `posted` | Mutasi masuk dibuat otomatis, `stockMovementId` terisi, `stockPosted` bernilai `true` |
+| `skipped` | Tidak dicatat otomatis, alasan di `unpostedReason` dan baris ini muncul di `unpostedLines` (`lineId`, `materialId`, `materialName`, `reason`) |
+| `legacy` | Penerimaan dicatat sebelum fitur ini ada. Stok masuknya mungkin sudah dicatat manual, jadi tidak diisi ulang otomatis supaya tidak tercatat dua kali |
+| `none` | Tidak ada jumlah diterima, tidak ada yang perlu masuk stok |
+
+Untuk baris `legacy` dan `skipped`, frontend masih mencari mutasi manual dengan
+`reference` nomor penerimaan dan menyediakan tombol "Catat stok masuk".
 
 | Aturan | Kode error |
 |---|---|
@@ -203,6 +240,7 @@ dicatat lewat `POST /api/inventory/stock-movements` jenis `in` dengan
 | Barang hanya diterima untuk pesanan `sent` atau `partially_received` | `purchase_order_not_receivable` |
 | Baris penerimaan harus milik pesanan itu, tidak ganda, dan punya jumlah diterima atau ditolak | `goods_receipt_item_invalid`, `goods_receipt_item_duplicate`, `goods_receipt_quantity_invalid` |
 | Total diterima per baris tidak boleh melebihi jumlah pesanan | `goods_receipt_exceeds_order` |
+| Stok gagal ditambah untuk baris yang satuannya cocok. Seluruh penerimaan dibatalkan, pesan menyebut material dan sebabnya. Status mengikuti sebabnya (422 untuk aturan stok, 500 untuk kegagalan database) | `goods_receipt_stock_failed` |
 
 ## Asset
 
@@ -235,6 +273,7 @@ Semua di bawah `/api/sales`.
 | GET, PUT, DELETE | `/units/:id` | |
 | GET, POST | `/leads` | Filter `search`, `projectId`, `stage` |
 | GET, PUT, DELETE | `/leads/:id` | |
+| POST | `/leads/:id/convert` | Body sama dengan pelanggan baru. Membuat pelanggan, menautkannya ke prospek (`customerId`), dan menjadikan tahap `won` dalam satu transaksi |
 | GET, POST | `/contracts` | Filter `search`, `customerId`, `unitId`, `status`, `type`. Sudah berisi nama pelanggan dan kode unit |
 | GET, PUT, DELETE | `/contracts/:id` | |
 | PATCH | `/contracts/:id/status` | `active`, `paid`, `cancelled` |
@@ -245,6 +284,14 @@ Semua di bawah `/api/sales`.
 
 Nomor identitas pelanggan wajib diisi karena kolomnya unik. Kalau boleh kosong,
 dua pelanggan tanpa nomor identitas akan bentrok di index unik.
+
+### Prospek menjadi pelanggan
+
+Satu prospek hanya bisa menjadi satu pelanggan (`lead.customer_id` unik, FK
+`ON DELETE SET NULL`). Konversi mengunci baris prospek dengan `FOR UPDATE`,
+menolak prospek yang sudah tertaut (409 `lead_already_converted`) atau yang
+`cancelled` (422 `lead_cancelled`), dan gagal seluruhnya kalau nomor identitas
+pelanggan bentrok.
 
 ### Unit mengikuti kontrak
 
@@ -277,28 +324,65 @@ Semua di bawah `/api/finance`.
 |---|---|---|
 | GET, POST | `/budgets` | Filter `projectId`, `year`. Berisi `realized`, `remaining`, dan `absorption` dalam persen |
 | GET, PUT, DELETE | `/budgets/:id` | |
-| GET, POST | `/cash-transactions` | Filter `type`, `accountId`, `projectId`, `dateFrom`, `dateTo` |
-| GET, PUT, DELETE | `/cash-transactions/:id` | |
+| GET, POST | `/cash-transactions` | Filter `type`, `accountId`, `projectId`, `dateFrom`, `dateTo`. Berisi `journalEntryId` |
+| GET, PUT, DELETE | `/cash-transactions/:id` | Ikut mengubah atau menghapus jurnal otomatisnya |
 | GET | `/cash-flow` | Kas masuk dan keluar per bulan, bawaan enam bulan terakhir. Filter `projectId`, `dateFrom`, `dateTo` |
-| GET, POST | `/journal-entries` | Filter `search`, `accountId`, `dateFrom`, `dateTo` |
+| GET, POST | `/journal-entries` | Filter `search`, `accountId`, `dateFrom`, `dateTo`. Berisi `cashTransactionId`, `null` untuk jurnal manual |
 | GET | `/journal-entries/:id` | Berisi baris debit dan kredit |
-| GET | `/ledger` | Buku besar satu akun. Wajib `accountId`, filter `dateFrom`, `dateTo` |
+| GET | `/ledger` | Buku besar satu akun. Wajib `accountId`, filter `dateFrom`, `dateTo`. Tiap baris berisi `cashTransactionId` |
 
 Realisasi anggaran adalah jumlah kas keluar proyek itu pada tahun anggaran,
 dihitung saat dibaca. Arus kas juga dijumlahkan dari `cash_transaction`, bulan
 tanpa transaksi tetap muncul dengan nilai nol, dan `balance` adalah saldo kas
 sampai akhir periode.
 
-Jurnal tidak bisa diubah maupun dihapus. Salah catat diperbaiki dengan jurnal
-balik. Buku besar memakai saldo debit dikurangi kredit: saldo awal dihitung
-dari semua baris sebelum `dateFrom`, lalu saldo berjalan dihitung dengan window
-function sebelum paginasi supaya tetap benar di halaman mana pun.
+Jurnal yang dicatat lewat `POST /journal-entries` tidak bisa diubah maupun
+dihapus. Salah catat diperbaiki dengan jurnal balik. Buku besar memakai saldo
+debit dikurangi kredit: saldo awal dihitung dari semua baris sebelum
+`dateFrom`, lalu saldo berjalan dihitung dengan window function sebelum
+paginasi supaya tetap benar di halaman mana pun.
+
+### Jurnal otomatis dari transaksi kas
+
+Setiap transaksi kas punya tepat satu jurnal sistem, jadi buku besar akun Kas
+ikut mencatat setiap kas masuk dan keluar.
+
+| Hal | Aturan |
+|---|---|
+| Akun Kas | Dicari dari bagan akun lewat kode `1110`, bukan UUID. Kalau tidak ada, transaksi kas ditolak dengan `cash_account_not_found` |
+| Baris jurnal | `in`: debit Kas, kredit akun lawan. `out`: debit akun lawan, kredit Kas. Nilainya sama dengan `amount` |
+| Kepala jurnal | Tanggal sama dengan transaksi, `source = "kas"`, keterangan dari `note` transaksi atau "Kas masuk"/"Kas keluar" bila kosong, `cash_transaction_id` menunjuk transaksinya |
+| Nomor | `KAS-<tahun tanggal transaksi>-<urutan 6 digit>`, contoh `KAS-2026-000123`. Urutan diambil dari sequence `journal_entry_cash_number_seq`, jadi unik tanpa kunci dan aman saat dua transaksi dicatat bersamaan. Sequence tidak ikut rollback, jadi nomor bisa melompat. Nomor tidak berubah saat transaksi diubah, termasuk saat tahunnya pindah |
+| Buat | Transaksi kas, kepala jurnal, dan barisnya ditulis dalam satu transaksi database |
+| Ubah | Dalam satu transaksi: tanggal dan keterangan jurnal ditulis ulang, baris lama dihapus, baris baru ditulis. Id dan nomor jurnal tetap. Transaksi lama yang belum punya jurnal langsung dibuatkan |
+| Hapus | Dalam satu transaksi: baris jurnal, jurnal, lalu transaksi kas dihapus. Foreign key `journal_entry.cash_transaction_id` juga `ON DELETE CASCADE` sebagai pengaman |
+| Jurnal manual | `source` "kas" (tanpa beda huruf besar kecil) dan nomor berawalan `KAS-` ditolak supaya tidak bisa menyamar atau bentrok dengan nomor sistem. Tidak ada endpoint untuk mengubah atau menghapus jurnal, termasuk jurnal sistem; jurnal sistem hanya berubah lewat transaksi kasnya |
+
+`journal_entry.cash_transaction_id` nullable dengan unique index
+`uq_journal_cash_transaction` (banyak `NULL` boleh, satu transaksi kas hanya
+satu jurnal) dan check `chk_journal_entry_cash_source` yang mewajibkan jurnal
+bertaut kas bersumber `kas`. Kolom tautan dipilih ketimbang mencocokkan nomor
+atau keterangan, karena tautan tetap utuh walau tanggal, nominal, atau catatan
+transaksi diubah.
+
+`cmd/migrate` menjalankan isi ulang (backfill) setelah semua tabel, index, dan
+constraint siap: setiap transaksi kas yang belum punya jurnal dibuatkan dalam
+satu transaksi database, urut tanggal lalu waktu catat. Transaksi yang sudah
+bertaut dilewati lewat `NOT EXISTS`, dan unique index menjaga tidak ada jurnal
+ganda, jadi migrate aman dijalankan berulang. Kalau tidak ada transaksi yang
+perlu diisi, akun Kas tidak diperiksa, sehingga migrate di database kosong
+(sebelum seed) tetap jalan.
 
 | Aturan | Kode error |
 |---|---|
 | Satu proyek satu anggaran per tahun | `budget_year_used` |
 | Jurnal minimal dua baris, tiap baris hanya debit atau kredit | `journal_line_single_sided` |
 | Total debit harus sama dengan total kredit | `journal_unbalanced` |
+| Akun Kas kode 1110 wajib ada untuk mencatat transaksi kas | `cash_account_not_found` |
+| Akun lawan transaksi kas bukan akun Kas itu sendiri | `cash_counter_account_invalid` |
+| Jurnal otomatis bentrok dengan unique index (seharusnya tidak terjadi) | `cash_journal_conflict` |
+| Jurnal manual tidak boleh bersumber `kas` | `journal_source_reserved` |
+| Nomor jurnal manual tidak boleh berawalan `KAS-` | `journal_number_reserved` |
 
 ## Billing
 
@@ -306,15 +390,34 @@ Semua di bawah `/api/billing`.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId` |
+| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId`, `recorded` (`false` = belum dicatat sebagai piutang). Sudah berisi `projectName`, `receivableId`, `receivableReference` |
 | GET, PUT, DELETE | `/invoices/:id` | |
 | POST | `/invoices/:id/payments` | Body `{ "amount": 1000000 }` |
-| GET, POST | `/receivables` | Filter `search`, `status`, `customerId` |
+| GET, POST | `/receivables` | Filter `search`, `status`, `customerId`, `projectId`, `contractId`. Body opsional `projectId`, `contractId`, `invoiceId`. Sudah berisi `customerName`, `projectName`, `contractNumber`, `invoiceNumber` |
 | GET, PUT, DELETE | `/receivables/:id` | |
 | POST | `/receivables/:id/payments` | |
-| GET, POST | `/payables` | Filter `search`, `status`, `vendorId` |
+| GET, POST | `/payables` | Filter `search`, `status`, `vendorId`, `projectId`, `purchaseOrderId`. Body opsional `projectId`, `purchaseOrderId`. Sudah berisi `vendorName`, `projectName`, `purchaseOrderNumber` |
 | GET, PUT, DELETE | `/payables/:id` | |
 | POST | `/payables/:id/payments` | |
+
+### Tautan piutang dan utang ke sumbernya
+
+Piutang bisa ditautkan ke proyek, kontrak penjualan, dan faktur. Utang bisa
+ditautkan ke proyek dan pesanan pembelian. Semua tautan opsional dan nama atau
+nomornya ikut di response lewat join, jadi frontend tidak perlu mencari
+sendiri. PUT mengganti seluruh isi, jadi tautan yang tidak dikirim ikut lepas.
+
+Faktur ke pelanggan dan piutang bisa mencatat utang yang sama dua kali. Karena
+itu `receivable.invoice_id` unik: satu faktur paling banyak satu piutang, dan
+faktur menampilkan `receivableId` serta `receivableReference` kalau sudah
+dicatat.
+
+| Kolom | Foreign key | Saat data induk dihapus |
+|---|---|---|
+| `receivable.project_id`, `payable.project_id` | `project` | `SET NULL` |
+| `receivable.contract_id` | `contract` | `SET NULL` |
+| `payable.purchase_order_id` | `purchase_order` | `SET NULL` |
+| `receivable.invoice_id` | `invoice`, unik (`uq_receivable_invoice`) | `RESTRICT`, supaya faktur tidak hilang di bawah piutang yang mencatatnya. Hapus piutangnya dulu |
 
 ### Status jatuh tempo tidak dipercaya dari kolom
 
@@ -338,6 +441,12 @@ Aturan yang sama dipakai untuk cicilan di slice `sales`.
 | Jumlah tagihan tidak boleh diubah di bawah yang sudah dibayar | `amount_below_paid` |
 | Data yang sudah menerima pembayaran tidak bisa dihapus | `invoice_has_payment`, `receivable_has_payment`, `payable_has_payment` |
 | `invoice.partyId` tidak punya foreign key karena bisa menunjuk pelanggan atau vendor, jadi keberadaannya diperiksa repository | `invoice_party_not_found` |
+| Pelanggan piutang, vendor utang, dan proyek yang ditautkan harus ada (422) | `customer_not_found`, `vendor_not_found`, `project_not_found` |
+| Kontrak yang ditautkan harus ada dan milik pelanggan piutang (422) | `contract_not_found`, `contract_customer_mismatch` |
+| Pesanan pembelian yang ditautkan harus ada dan milik vendor utang (422) | `purchase_order_not_found`, `purchase_order_vendor_mismatch` |
+| Faktur yang ditautkan harus ada, ditagihkan ke pelanggan piutang, dan nilai piutang tidak melebihi nilai faktur (422) | `linked_invoice_not_found`, `invoice_customer_mismatch`, `receivable_exceeds_invoice` |
+| Satu faktur hanya satu piutang (409, "Faktur ini sudah dicatat sebagai piutang <referensi>") | `invoice_already_recorded` |
+| Faktur yang sudah dicatat sebagai piutang tidak bisa dihapus (409), dan saat diubah pelanggannya harus tetap sama serta nilainya tidak di bawah nilai piutang (422) | `invoice_has_receivable`, `invoice_receivable_mismatch` |
 
 ## HR
 
@@ -433,6 +542,4 @@ belum dikerjakan.
 1. Belum ada pembatasan akses berdasarkan peran. Tabel `role` dan
    `project_member` sudah ada, tapi semua user yang punya access token saat ini
    bisa memakai semua endpoint.
-2. Penerimaan barang belum menambah stok secara otomatis. Perlu diputuskan cara
-   slice `procurement` meminta `inventory` mencatat mutasi tanpa saling impor.
-3. Pembuatan berkas laporan di slice `reporting`.
+2. Pembuatan berkas laporan di slice `reporting`.

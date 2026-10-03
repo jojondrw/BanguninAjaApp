@@ -44,6 +44,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	leads.GET("/:id", m.controller.GetLead)
 	leads.PUT("/:id", m.controller.UpdateLead)
 	leads.DELETE("/:id", m.controller.DeleteLead)
+	leads.POST("/:id/convert", m.controller.ConvertLead)
 
 	contracts := routes.Group("/contracts")
 	contracts.GET("", m.controller.ListContracts)

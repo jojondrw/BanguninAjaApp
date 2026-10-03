@@ -23,6 +23,9 @@ const (
 	contractActive    = "active"
 	contractPaid      = "paid"
 	contractCancelled = "cancelled"
+
+	leadWon       = "won"
+	leadCancelled = "cancelled"
 )
 
 var contractTransitions = map[string][]string{
@@ -48,7 +51,9 @@ var (
 	errUnitUnknown      = apperror.Unprocessable("unit_not_found", "Unit tidak ditemukan")
 	errProjectNotFound  = apperror.Unprocessable("project_not_found", "Proyek tidak ditemukan")
 
-	errLeadNotFound = apperror.NotFound("lead_not_found", "Prospek tidak ditemukan")
+	errLeadNotFound         = apperror.NotFound("lead_not_found", "Prospek tidak ditemukan")
+	errLeadAlreadyConverted = apperror.Conflict("lead_already_converted", "Prospek ini sudah dijadikan pelanggan")
+	errLeadCancelled        = apperror.Unprocessable("lead_cancelled", "Prospek yang batal tidak bisa dijadikan pelanggan")
 
 	errContractNotFound   = apperror.NotFound("contract_not_found", "Kontrak tidak ditemukan")
 	errContractNumberUsed = apperror.Conflict("contract_number_used", "Nomor kontrak sudah dipakai")
@@ -105,6 +110,7 @@ type Service interface {
 	CreateLead(ctx context.Context, request LeadRequest) (LeadResponse, error)
 	UpdateLead(ctx context.Context, id uuid.UUID, request LeadRequest) (LeadResponse, error)
 	DeleteLead(ctx context.Context, id uuid.UUID) error
+	ConvertLead(ctx context.Context, id uuid.UUID, request CustomerRequest) (LeadConversionResponse, error)
 
 	ListContracts(ctx context.Context, query ContractQuery) (pagination.Page[ContractResponse], error)
 	GetContract(ctx context.Context, id uuid.UUID) (ContractResponse, error)
@@ -280,6 +286,38 @@ func (s *service) UpdateLead(ctx context.Context, id uuid.UUID, request LeadRequ
 
 func (s *service) DeleteLead(ctx context.Context, id uuid.UUID) error {
 	return leadReadErrors.Resolve(s.repository.DeleteLead(ctx, id))
+}
+
+func (s *service) ConvertLead(ctx context.Context, id uuid.UUID, request CustomerRequest) (LeadConversionResponse, error) {
+	var response LeadConversionResponse
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		lead, err := repository.LockLead(ctx, id)
+		if err != nil {
+			return leadReadErrors.Resolve(err)
+		}
+		if lead.CustomerID != nil {
+			return errLeadAlreadyConverted
+		}
+		if lead.Stage == leadCancelled {
+			return errLeadCancelled
+		}
+
+		var customer Customer
+		applyCustomerRequest(&customer, request)
+		if err := repository.CreateCustomer(ctx, &customer); err != nil {
+			return customerWriteErrors.Resolve(err)
+		}
+
+		lead.CustomerID = &customer.ID
+		lead.Stage = leadWon
+		if err := repository.SaveLead(ctx, &lead); err != nil {
+			return leadWriteErrors.Resolve(err)
+		}
+
+		response = LeadConversionResponse{Lead: newLeadResponse(lead), Customer: newCustomerResponse(customer)}
+		return nil
+	})
+	return response, err
 }
 
 func (s *service) ListContracts(ctx context.Context, query ContractQuery) (pagination.Page[ContractResponse], error) {

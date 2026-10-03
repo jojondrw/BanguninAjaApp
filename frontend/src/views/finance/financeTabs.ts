@@ -17,6 +17,7 @@ export const DEFAULT_FINANCE_TAB: FinanceTab = 'ringkasan'
 export const TAB_PARAM = 'tab'
 export const JOURNAL_PARAM = 'jurnal'
 export const ACCOUNT_PARAM = 'akun'
+export const CASH_PARAM = 'transaksi'
 
 export function toFinanceTab(value: string | null): FinanceTab {
   return FINANCE_TABS.find((tab) => tab.value === value)?.value ?? DEFAULT_FINANCE_TAB
@@ -30,6 +31,11 @@ export function ledgerLink(accountId: string) {
 
 export function journalLink(journalEntryId: string) {
   return { search: `?${new URLSearchParams({ [TAB_PARAM]: 'jurnal', [JOURNAL_PARAM]: journalEntryId })}` }
+}
+
+// Dari jurnal otomatis kembali ke transaksi kas asalnya.
+export function cashLink(cashTransactionId: string) {
+  return { search: `?${new URLSearchParams({ [TAB_PARAM]: 'kas', [CASH_PARAM]: cashTransactionId })}` }
 }
 
 // Satu parameter query sebagai state. replace dipakai supaya tombol kembali

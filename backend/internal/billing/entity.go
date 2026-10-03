@@ -28,12 +28,15 @@ func (Invoice) TableName() string {
 
 type Receivable struct {
 	entity.Base
-	CustomerID uuid.UUID `gorm:"type:uuid;not null;index:idx_receivable_customer"`
-	Reference  string    `gorm:"type:varchar(60);not null"`
-	DueDate    time.Time `gorm:"type:date;not null;index:idx_receivable_due_date"`
-	Amount     int64     `gorm:"not null;default:0"`
-	PaidAmount int64     `gorm:"not null;default:0"`
-	Status     string    `gorm:"type:varchar(20);not null;index:idx_receivable_status"`
+	CustomerID uuid.UUID  `gorm:"type:uuid;not null;index:idx_receivable_customer"`
+	ProjectID  *uuid.UUID `gorm:"type:uuid;index:idx_receivable_project"`
+	ContractID *uuid.UUID `gorm:"type:uuid;index:idx_receivable_contract"`
+	InvoiceID  *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_receivable_invoice_id"`
+	Reference  string     `gorm:"type:varchar(60);not null"`
+	DueDate    time.Time  `gorm:"type:date;not null;index:idx_receivable_due_date"`
+	Amount     int64      `gorm:"not null;default:0"`
+	PaidAmount int64      `gorm:"not null;default:0"`
+	Status     string     `gorm:"type:varchar(20);not null;index:idx_receivable_status"`
 }
 
 func (Receivable) TableName() string {
@@ -42,12 +45,14 @@ func (Receivable) TableName() string {
 
 type Payable struct {
 	entity.Base
-	VendorID   uuid.UUID `gorm:"type:uuid;not null;index:idx_payable_vendor"`
-	Reference  string    `gorm:"type:varchar(60);not null"`
-	DueDate    time.Time `gorm:"type:date;not null;index:idx_payable_due_date"`
-	Amount     int64     `gorm:"not null;default:0"`
-	PaidAmount int64     `gorm:"not null;default:0"`
-	Status     string    `gorm:"type:varchar(20);not null;index:idx_payable_status"`
+	VendorID        uuid.UUID  `gorm:"type:uuid;not null;index:idx_payable_vendor"`
+	ProjectID       *uuid.UUID `gorm:"type:uuid;index:idx_payable_project"`
+	PurchaseOrderID *uuid.UUID `gorm:"type:uuid;index:idx_payable_purchase_order"`
+	Reference       string     `gorm:"type:varchar(60);not null"`
+	DueDate         time.Time  `gorm:"type:date;not null;index:idx_payable_due_date"`
+	Amount          int64      `gorm:"not null;default:0"`
+	PaidAmount      int64      `gorm:"not null;default:0"`
+	Status          string     `gorm:"type:varchar(20);not null;index:idx_payable_status"`
 }
 
 func (Payable) TableName() string {
@@ -72,7 +77,12 @@ func Constraints() []string {
 	return []string{
 		database.ForeignKey("invoice", "project_id", "project", database.DeleteSetNull),
 		database.ForeignKey("receivable", "customer_id", "customer", database.DeleteRestrict),
+		database.ForeignKey("receivable", "project_id", "project", database.DeleteSetNull),
+		database.ForeignKey("receivable", "contract_id", "contract", database.DeleteSetNull),
+		database.ForeignKey("receivable", "invoice_id", "invoice", database.DeleteRestrict),
 		database.ForeignKey("payable", "vendor_id", "vendor", database.DeleteRestrict),
+		database.ForeignKey("payable", "project_id", "project", database.DeleteSetNull),
+		database.ForeignKey("payable", "purchase_order_id", "purchase_order", database.DeleteSetNull),
 		database.Check("invoice", "party_type", "party_type IN ('customer','vendor')"),
 		database.Check("invoice", "status", statuses),
 		database.Check("receivable", "status", statuses),

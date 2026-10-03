@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useProjects } from '../controllers/useErp'
 import { useVendorOptions } from '../controllers/useProcurement'
 import { useCustomers } from '../controllers/useSales'
-import type { BillingKind } from '../models/billing'
+import type { BillingKind, Invoice } from '../models/billing'
 import { todayDate } from '../shared/localDate'
 import { AppShell } from './components/AppShell'
 import { ErrorNote } from './components/Form'
@@ -24,10 +24,23 @@ const TABS: { value: BillingKind; label: string }[] = [
 
 export function BillingPage() {
   const [tab, setTab] = useState<BillingKind>('invoices')
+  const [draftInvoice, setDraftInvoice] = useState<Invoice | null>(null)
   const [today] = useState(todayDate)
   const customers = useCustomers({ pageSize: OPTION_LIMIT })
   const vendors = useVendorOptions()
   const projects = useProjects({ pageSize: OPTION_LIMIT })
+
+  const changeTab = (next: BillingKind) => {
+    setDraftInvoice(null)
+    setTab(next)
+  }
+
+  // "Catat sebagai piutang" di rincian faktur pindah ke tab Piutang dengan
+  // formulir yang sudah terisi dari faktur itu.
+  const recordReceivable = (invoice: Invoice) => {
+    setDraftInvoice(invoice)
+    setTab('receivables')
+  }
 
   const directory: Directory = {
     customers: customers.data?.items ?? [],
@@ -42,7 +55,7 @@ export function BillingPage() {
       <BillingKpis />
 
       <div className="mt-6 mb-4">
-        <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian tagihan" />
+        <SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian tagihan" />
       </div>
 
       {directory.isError ? (
@@ -51,8 +64,12 @@ export function BillingPage() {
         </div>
       ) : null}
 
-      {tab === 'invoices' ? <InvoicesSection directory={directory} today={today} /> : null}
-      {tab === 'receivables' ? <ReceivablesSection directory={directory} today={today} /> : null}
+      {tab === 'invoices' ? (
+        <InvoicesSection directory={directory} today={today} onRecordReceivable={recordReceivable} />
+      ) : null}
+      {tab === 'receivables' ? (
+        <ReceivablesSection directory={directory} today={today} draftInvoice={draftInvoice} />
+      ) : null}
       {tab === 'payables' ? <PayablesSection directory={directory} today={today} /> : null}
     </AppShell>
   )

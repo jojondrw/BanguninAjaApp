@@ -7,6 +7,7 @@ import {
   RECEIPT_CONDITION_LABEL,
   RECEIPT_CONDITION_TONE,
   RECEIPT_NUMBER_MAX_LENGTH,
+  receiptStockNotice,
 } from '../../models/procurement'
 import { number, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
@@ -93,7 +94,7 @@ export function ReceiptsSection() {
                           result.order
                             ? `, pesanan ${result.order.number} sekarang ${ORDER_STATUS_LABEL[result.order.status]}`
                             : ''
-                        }. Stok gudang belum bertambah, catat stok masuk dari rincian penerimaan.`,
+                        }. ${receiptStockNotice(result.receipt)}`,
                       )
                     }}
                   />
@@ -104,7 +105,7 @@ export function ReceiptsSection() {
 
       <Card
         title="Penerimaan barang"
-        description="Bukti barang datang dari vendor. Menyimpan penerimaan mengubah status pesanan menjadi Diterima sebagian atau Selesai. Stok gudang dicatat terpisah dari rincian penerimaan."
+        description="Bukti barang datang dari vendor. Menyimpan penerimaan mengubah status pesanan menjadi Diterima sebagian atau Selesai dan menambah stok gudang penerima secara otomatis."
       >
         <Toolbar>
           <ToolbarInput

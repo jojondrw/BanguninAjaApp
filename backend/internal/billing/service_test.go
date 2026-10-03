@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 )
 
@@ -16,6 +17,7 @@ type fakeRepository struct {
 	invoice             Invoice
 	paidMeanwhile       *Invoice
 	saved               *Invoice
+	recordedAs          *Receivable
 	partyExists         bool
 	deleteCalled        bool
 	inTransaction       bool
@@ -38,6 +40,20 @@ func (f *fakeRepository) LockInvoice(context.Context, uuid.UUID) (Invoice, error
 
 func (f *fakeRepository) FindInvoice(context.Context, uuid.UUID) (Invoice, error) {
 	return f.invoice, nil
+}
+
+func (f *fakeRepository) FindInvoiceRow(context.Context, uuid.UUID) (InvoiceRow, error) {
+	if f.saved != nil {
+		return InvoiceRow{Invoice: *f.saved}, nil
+	}
+	return InvoiceRow{Invoice: f.invoice}, nil
+}
+
+func (f *fakeRepository) FindReceivableByInvoice(context.Context, uuid.UUID) (Receivable, error) {
+	if f.recordedAs == nil {
+		return Receivable{}, database.ErrNotFound
+	}
+	return *f.recordedAs, nil
 }
 
 func (f *fakeRepository) SaveInvoice(_ context.Context, invoice *Invoice) error {
@@ -194,6 +210,14 @@ func (f *ledgerRepository) SaveReceivable(_ context.Context, receivable *Receiva
 	return nil
 }
 
+func (f *ledgerRepository) FindReceivableRow(context.Context, uuid.UUID) (ReceivableRow, error) {
+	return ReceivableRow{Receivable: *f.savedReceivable}, nil
+}
+
+func (f *ledgerRepository) PartyExists(context.Context, string, uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 func (f *ledgerRepository) LockPayable(context.Context, uuid.UUID) (Payable, error) {
 	f.lockedInTransaction = f.inTransaction
 	return f.payable, nil
@@ -229,7 +253,7 @@ func TestStatusIsRecomputedWhenRead(t *testing.T) {
 	today := time.Date(2026, 9, 23, 0, 0, 0, 0, time.UTC)
 	stale := Invoice{Amount: 1000, DueDate: today.AddDate(0, 0, -40), Status: duedate.NotDue}
 
-	response := newInvoiceResponse(stale, today)
+	response := newInvoiceResponse(InvoiceRow{Invoice: stale}, today)
 	if response.Status != duedate.Overdue || response.DaysOverdue != 40 {
 		t.Fatalf("got status %s days %d", response.Status, response.DaysOverdue)
 	}

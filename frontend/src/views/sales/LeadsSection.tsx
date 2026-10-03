@@ -374,10 +374,13 @@ export function LeadsSection() {
           customer={null}
           initial={leadToCustomerForm(panel.lead)}
           title={`Jadikan pelanggan: ${panel.lead.name}`}
+          convertLeadId={panel.lead.id}
           onCancel={() => setPanel(null)}
           onSaved={(saved) => {
             setPanel(null)
-            setNotice(`${saved.name} sudah terdaftar sebagai pelanggan. Buat kontraknya di bagian Kontrak.`)
+            setNotice(
+              `${saved.name} sudah terdaftar sebagai pelanggan dan prospeknya ditandai berhasil. Buat kontraknya di bagian Kontrak.`,
+            )
           }}
         />
       ) : null}
@@ -444,7 +447,10 @@ export function LeadsSection() {
                           onClick={() => advance(row, next)}
                         />
                       ) : null}
-                      {row.stage === 'won' && !isAsking ? (
+                      {row.customerId && !isAsking ? (
+                        <span className="text-xs font-medium text-green-700">Sudah jadi pelanggan</span>
+                      ) : null}
+                      {!row.customerId && (row.stage === 'negotiating' || row.stage === 'won') && !isAsking ? (
                         <RowAction
                           label="Jadikan pelanggan"
                           isActive={panel?.kind === 'convert' && panel.lead.id === row.id}
