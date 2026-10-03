@@ -16,15 +16,16 @@ import {
   type Contract,
   type Installment,
   type InstallmentFormValues,
+  type InstallmentSummary,
 } from '../../models/sales'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiah, shortDate } from '../../shared/format'
 import { LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
-import { Chip, ToolbarInput } from '../components/RecordControls'
+import { Chip, Pager, ToolbarInput } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from './RowActions'
-import { amountHint, refusalText } from './salesShared'
+import { amountHint, PAGE_SIZE, pageAfterRemoval, refusalText } from './salesShared'
 
 type RowIntent = { id: string; action: 'pay' | 'delete' }
 
@@ -39,10 +40,10 @@ function StatusCell({ installment }: { installment: Installment }) {
   )
 }
 
-function InstallmentForm({ contract, installment, items, onSaved, onCancel }: {
+function InstallmentForm({ contract, installment, summary, onSaved, onCancel }: {
   contract: Contract
   installment: Installment | null
-  items: Installment[]
+  summary: InstallmentSummary | undefined
   onSaved: (message: string) => void
   onCancel: () => void
 }) {
@@ -54,12 +55,11 @@ function InstallmentForm({ contract, installment, items, onSaved, onCancel }: {
   const saving = installment ? updateInstallment : createInstallment
 
   // Batas sisa mengikuti ensureWithinContract di backend: angsuran yang sedang
-  // diubah tidak ikut dihitung.
-  const scheduledElsewhere = items
-    .filter((item) => item.id !== installment?.id)
-    .reduce((total, item) => total + item.amount, 0)
+  // diubah tidak ikut dihitung. Totalnya dari ringkasan semua angsuran, bukan
+  // dari halaman tabel yang sedang tampil.
+  const scheduledElsewhere = (summary?.total ?? 0) - (installment?.amount ?? 0)
   const room = Math.max(0, contract.value - scheduledElsewhere)
-  const nextNumber = items.reduce((highest, item) => Math.max(highest, item.installmentNumber), 0) + 1
+  const nextNumber = (summary?.lastNumber ?? 0) + 1
 
   const update = (key: keyof InstallmentFormValues) => (event: ChangeEvent<HTMLInputElement>) =>
     setValues((current) => ({ ...current, [key]: event.target.value }))
@@ -147,10 +147,13 @@ function InstallmentForm({ contract, installment, items, onSaved, onCancel }: {
 // - jadwal bisa ditambah, diubah, dan dihapus selama kontrak Draf atau Aktif,
 //   dan hanya untuk angsuran yang belum lunas;
 // - pembayaran hanya bisa dicatat saat kontrak Aktif.
-export function InstallmentSchedule({ contract, installments }: {
+export function InstallmentSchedule({ contract, summary, enabled }: {
   contract: Contract
-  installments: ReturnType<typeof useInstallments>
+  summary: InstallmentSummary | undefined
+  enabled: boolean
 }) {
+  const [page, setPage] = useState(1)
+  const installments = useInstallments({ contractId: contract.id, page, pageSize: PAGE_SIZE }, enabled)
   const [intent, setIntent] = useState<RowIntent | null>(null)
   const [paidDate, setPaidDate] = useState(todayInput)
   const [editing, setEditing] = useState<Installment | null>(null)
@@ -192,6 +195,7 @@ export function InstallmentSchedule({ contract, installments }: {
     deleteInstallment.mutate(installment, {
       onSuccess: () => {
         setNotice(`Angsuran ke-${installment.installmentNumber} berhasil dihapus.`)
+        setPage((current) => pageAfterRemoval(current, items.length))
         if (editing?.id === installment.id) {
           setEditing(null)
         }
@@ -285,21 +289,30 @@ export function InstallmentSchedule({ contract, installments }: {
       {installments.isPending ? <Loading /> : null}
       {installments.isError ? <LoadFailed onRetry={() => installments.refetch()} /> : null}
       {installments.data ? (
-        <Table
-          rows={items}
-          emptyMessage="Kontrak ini belum punya jadwal cicilan."
-          columns={[
-            { header: 'Ke', cell: (row) => row.installmentNumber },
-            { header: 'Jatuh tempo', cell: (row) => shortDate(row.dueDate) },
-            { header: 'Nominal', align: 'right', cell: (row) => rupiah(row.amount) },
-            { header: 'Status', cell: (row) => <StatusCell installment={row} /> },
-            { header: 'Dibayar', cell: (row) => (row.paidDate ? shortDate(row.paidDate) : 'Belum') },
-            { header: 'Aksi', align: 'right', cell: actionCell },
-          ]}
-        />
+        <>
+          <Table
+            rows={items}
+            emptyMessage="Kontrak ini belum punya jadwal cicilan."
+            columns={[
+              { header: 'Ke', cell: (row) => row.installmentNumber },
+              { header: 'Jatuh tempo', cell: (row) => shortDate(row.dueDate) },
+              { header: 'Nominal', align: 'right', cell: (row) => rupiah(row.amount) },
+              { header: 'Status', cell: (row) => <StatusCell installment={row} /> },
+              { header: 'Dibayar', cell: (row) => (row.paidDate ? shortDate(row.paidDate) : 'Belum') },
+              { header: 'Aksi', align: 'right', cell: actionCell },
+            ]}
+          />
+          <Pager
+            page={installments.data.page}
+            totalPages={installments.data.totalPages}
+            totalItems={installments.data.totalItems}
+            unit="angsuran"
+            onChange={setPage}
+          />
+        </>
       ) : null}
 
-      {contract.status === 'draft' && items.length > 0 ? (
+      {contract.status === 'draft' && (summary?.count ?? 0) > 0 ? (
         <p className="mt-3 text-xs text-slate-500">Pembayaran bisa dicatat setelah kontrak diaktifkan.</p>
       ) : null}
 
@@ -308,7 +321,7 @@ export function InstallmentSchedule({ contract, installments }: {
           key={editing?.id ?? 'new'}
           contract={contract}
           installment={editing}
-          items={items}
+          summary={summary}
           onCancel={() => setEditing(null)}
           onSaved={(message) => {
             setEditing(null)
