@@ -19,6 +19,7 @@ const OverviewPage = lazy(() => import('./views/OverviewPage').then((module) => 
 const ProcurementPage = lazy(() => import('./views/ProcurementPage').then((module) => ({ default: module.ProcurementPage })))
 const ProjectsPage = lazy(() => import('./views/ProjectsPage').then((module) => ({ default: module.ProjectsPage })))
 const ProjectWorkspacePage = lazy(() => import('./views/ProjectWorkspacePage').then((module) => ({ default: module.ProjectWorkspacePage })))
+const ReportsPage = lazy(() => import('./views/ReportsPage').then((module) => ({ default: module.ReportsPage })))
 const SalesPage = lazy(() => import('./views/SalesPage').then((module) => ({ default: module.SalesPage })))
 
 const queryClient = new QueryClient({
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
                 <Route path="/sdm" element={<RequireSession><HrPage /></RequireSession>} />
                 <Route path="/inventaris" element={<RequireSession><InventoryPage /></RequireSession>} />
+                <Route path="/laporan" element={<RequireSession><ReportsPage /></RequireSession>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
