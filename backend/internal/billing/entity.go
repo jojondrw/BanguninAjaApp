@@ -31,7 +31,7 @@ type Receivable struct {
 	CustomerID uuid.UUID  `gorm:"type:uuid;not null;index:idx_receivable_customer"`
 	ProjectID  *uuid.UUID `gorm:"type:uuid;index:idx_receivable_project"`
 	ContractID *uuid.UUID `gorm:"type:uuid;index:idx_receivable_contract"`
-	InvoiceID  *uuid.UUID `gorm:"type:uuid"`
+	InvoiceID  *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_receivable_invoice_id"`
 	Reference  string     `gorm:"type:varchar(60);not null"`
 	DueDate    time.Time  `gorm:"type:date;not null;index:idx_receivable_due_date"`
 	Amount     int64      `gorm:"not null;default:0"`
@@ -80,7 +80,6 @@ func Constraints() []string {
 		database.ForeignKey("receivable", "project_id", "project", database.DeleteSetNull),
 		database.ForeignKey("receivable", "contract_id", "contract", database.DeleteSetNull),
 		database.ForeignKey("receivable", "invoice_id", "invoice", database.DeleteRestrict),
-		database.Unique("receivable", "invoice", "invoice_id"),
 		database.ForeignKey("payable", "vendor_id", "vendor", database.DeleteRestrict),
 		database.ForeignKey("payable", "project_id", "project", database.DeleteSetNull),
 		database.ForeignKey("payable", "purchase_order_id", "purchase_order", database.DeleteSetNull),
