@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { useBudgets, useCashFlow, useCashTransactions, useProjects } from '../../controllers/useErp'
+import { useBudgets, useCashFlow, useCashTransactions } from '../../controllers/useErp'
 import { monthLabel, rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table } from '../components/Data'
 
@@ -8,10 +8,6 @@ export function FinanceSummaryTab() {
   const cashFlow = useCashFlow()
   const budgets = useBudgets()
   const transactions = useCashTransactions(8)
-  const projects = useProjects({ pageSize: 100 })
-
-  const projectName = (id: string) =>
-    projects.data?.items.find((project) => project.id === id)?.name ?? id.slice(0, 8)
 
   return (
     <div className="grid gap-6">
@@ -30,7 +26,7 @@ export function FinanceSummaryTab() {
                     to={`/proyek/${row.projectId}?tab=keuangan`}
                     className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline"
                   >
-                    {projectName(row.projectId)}
+                    {row.projectName || '-'}
                   </Link>
                 ),
               },

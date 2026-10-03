@@ -1,7 +1,7 @@
 import { toApiDate } from '../shared/localDate'
 import type { Page } from './common'
 import type { Budget, CashTransaction, CashTransactionRequest, CashType } from './finance'
-import { ACCOUNT_TYPE_LABEL, type Account, type AccountGroup, type AccountType } from './master'
+import type { AccountType } from './master'
 
 // Batas di bawah mengikuti tag binding di backend/internal/finance/dto.go.
 export const BUDGET_YEAR_MIN = 2000
@@ -150,6 +150,8 @@ export function reservedJournalReason(values: { number: string; source: string }
 export interface JournalLine {
   id: string
   accountId: string
+  accountCode: string
+  accountName: string
   debit: number
   credit: number
 }
@@ -347,33 +349,10 @@ export const NORMAL_BALANCE: Record<AccountType, Exclude<BalanceSide, ''>> = {
   revenue: 'K',
 }
 
-const ACCOUNT_TYPE_ORDER: AccountType[] = ['asset', 'liability', 'equity', 'revenue', 'expense']
-
-function groupAccounts(accounts: Account[]): AccountGroup[] {
-  const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code))
-  return ACCOUNT_TYPE_ORDER.map((type) => ({
-    type,
-    label: ACCOUNT_TYPE_LABEL[type],
-    accounts: sorted.filter((account) => account.type === type),
-  })).filter((group) => group.accounts.length > 0)
-}
-
-// Akun induk (yang punya anak) hanya untuk pengelompokan, jadi jurnal dicatat
-// di akun rinciannya.
-export function postableAccountGroups(accounts: Account[]): AccountGroup[] {
-  const parents = new Set(accounts.map((account) => account.parentId).filter((id) => id !== null))
-  return groupAccounts(accounts.filter((account) => !parents.has(account.id)))
-}
-
-// Buku besar menawarkan semua akun, termasuk induk, supaya baris yang terlanjur
-// dicatat langsung ke akun induk lewat API tetap bisa diperiksa.
-export function allAccountGroups(accounts: Account[]): AccountGroup[] {
-  return groupAccounts(accounts)
-}
-
-export function accountLabel(accounts: Account[], id: string): string {
-  const account = accounts.find((item) => item.id === id)
-  return account ? `${account.code} ${account.name}` : '-'
+// Kode dan nama akun yang dikirim backend bersama transaksi kas atau baris
+// jurnal. Kosong hanya pada jawaban simpan, yang tidak memuat nama akun.
+export function accountText(item: { accountCode?: string; accountName?: string }): string {
+  return item.accountCode ? `${item.accountCode} ${item.accountName ?? ''}`.trim() : '-'
 }
 
 // Tanggal "YYYY-MM-DD" bisa dibandingkan sebagai teks.
