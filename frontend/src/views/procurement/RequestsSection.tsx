@@ -3,10 +3,8 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 import {
   useCreatePurchaseRequest,
   useDeletePurchaseRequest,
-  useMaterials,
   usePurchaseRequest,
   usePurchaseRequests,
-  useUnitsOfMeasure,
   useUpdatePurchaseRequest,
   useUpdatePurchaseRequestStatus,
 } from '../../controllers/useProcurement'
@@ -25,7 +23,7 @@ import {
   type PurchaseRequestStatus,
   type PurchaseRequestStatusChange,
 } from '../../models/procurement'
-import { materialOptions, projectOptions } from '../../models/lookupApi'
+import { materialOptions, projectOptions, unitOfMeasureOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
@@ -36,7 +34,7 @@ import { ToolbarInput } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
 import { useLookupLabel } from '../components/searchSelectLogic'
 import { MaterialLinesEditor } from './MaterialLines'
-import { PAGE_SIZE, codeOf } from './lookup'
+import { PAGE_SIZE, useMaterialLookups } from './lookup'
 import { ConfirmAction, Facts, TextAreaField } from './parts'
 
 const REQUEST_FILTERS: { value: PurchaseRequestStatus | ''; label: string }[] = [
@@ -99,7 +97,6 @@ function PurchaseRequestFormCard({ editing, onSaved, onCancel }: {
   )
   const createRequest = useCreatePurchaseRequest()
   const updateRequest = useUpdatePurchaseRequest()
-  const units = useUnitsOfMeasure()
   const isEditing = editing !== null
   const title = editing ? `Ubah permintaan ${editing.number}` : 'Permintaan pembelian baru'
   const isSaving = createRequest.isPending || updateRequest.isPending
@@ -128,22 +125,6 @@ function PurchaseRequestFormCard({ editing, onSaved, onCancel }: {
       Batal ubah
     </Button>
   ) : undefined
-
-  if (units.isPending) {
-    return (
-      <Card title={title} action={cancelAction}>
-        <Loading label="Mengambil satuan..." />
-      </Card>
-    )
-  }
-
-  if (units.isError) {
-    return (
-      <Card title={title} action={cancelAction}>
-        <LoadFailed onRetry={() => units.refetch()} />
-      </Card>
-    )
-  }
 
   return (
     <Card
@@ -199,7 +180,6 @@ function PurchaseRequestFormCard({ editing, onSaved, onCancel }: {
         <MaterialLinesEditor
           idPrefix="pr"
           lines={values.items}
-          units={units.data.items}
           showPrice={false}
           onChange={(items) => setValues((current) => ({ ...current, items }))}
         />
@@ -230,12 +210,9 @@ function PurchaseRequestDetailCard({ id, onDeleted, onCreateOrder }: {
   const [confirming, setConfirming] = useState<RequestConfirm | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const request = usePurchaseRequest(id)
-  const materials = useMaterials()
-  const units = useUnitsOfMeasure()
+  const materials = useMaterialLookups(request.data?.items.map((item) => item.materialId) ?? [])
   const updateStatus = useUpdatePurchaseRequestStatus()
   const deleteRequest = useDeletePurchaseRequest()
-  const materialItems = materials.data?.items ?? []
-  const unitItems = units.data?.items ?? []
   const projectName = useLookupLabel(projectOptions, request.data?.projectId) ?? '-'
 
   if (request.isPending) {
@@ -367,7 +344,11 @@ function PurchaseRequestDetailCard({ id, onDeleted, onCreateOrder }: {
           </Button>
         ) : null}
         {detail.status === 'approved' ? (
-          <Button onClick={() => onCreateOrder(purchaseOrderFormFromRequest(detail, materialItems), detail.number)}>
+          <Button
+            isPending={materials.isPending}
+            pendingLabel="Mengambil harga material"
+            onClick={() => onCreateOrder(purchaseOrderFormFromRequest(detail, materials.byId), detail.number)}
+          >
             Buat PO dari permintaan
           </Button>
         ) : null}
@@ -410,7 +391,7 @@ function PurchaseRequestDetailCard({ id, onDeleted, onCreateOrder }: {
         columns={[
           { header: 'Material', cell: (row) => <LookupName source={materialOptions} value={row.materialId} /> },
           { header: 'Jumlah', align: 'right', cell: (row) => number(row.quantity) },
-          { header: 'Satuan', cell: (row) => codeOf(unitItems, row.unitOfMeasureId) },
+          { header: 'Satuan', cell: (row) => <LookupName source={unitOfMeasureOptions} value={row.unitOfMeasureId} /> },
         ]}
       />
     </Card>

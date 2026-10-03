@@ -119,6 +119,7 @@ export interface StockMovementFilter {
   materialId?: string
   warehouseId?: string
   type?: MovementType
+  reference?: string
   dateFrom?: string
   dateTo?: string
   page?: number
