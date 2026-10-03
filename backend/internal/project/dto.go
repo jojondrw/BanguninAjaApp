@@ -29,6 +29,21 @@ type ProjectQuery struct {
 	RegionID *uuid.UUID `form:"regionId,parser=encoding.TextUnmarshaler"`
 }
 
+type ProjectSummaryResponse struct {
+	Count           int64               `json:"count"`
+	ByStatus        ProjectStatusCounts `json:"byStatus"`
+	ContractValue   int64               `json:"contractValue"`
+	AverageProgress int64               `json:"averageProgress"`
+}
+
+type ProjectStatusCounts struct {
+	Planning  int64 `json:"planning"`
+	Ongoing   int64 `json:"ongoing"`
+	OnHold    int64 `json:"on_hold"`
+	Completed int64 `json:"completed"`
+	Cancelled int64 `json:"cancelled"`
+}
+
 type ProjectResponse struct {
 	ID            uuid.UUID  `json:"id"`
 	Code          string     `json:"code"`
@@ -114,6 +129,21 @@ type PermitResponse struct {
 	Status     string     `json:"status"`
 	CreatedAt  time.Time  `json:"createdAt"`
 	UpdatedAt  time.Time  `json:"updatedAt"`
+}
+
+func newProjectSummaryResponse(totals ProjectTotals) ProjectSummaryResponse {
+	return ProjectSummaryResponse{
+		Count: totals.Count,
+		ByStatus: ProjectStatusCounts{
+			Planning:  totals.Planning,
+			Ongoing:   totals.Ongoing,
+			OnHold:    totals.OnHold,
+			Completed: totals.Completed,
+			Cancelled: totals.Cancelled,
+		},
+		ContractValue:   totals.ContractValue,
+		AverageProgress: totals.AverageProgress,
+	}
 }
 
 func newProjectResponse(project Project) ProjectResponse {

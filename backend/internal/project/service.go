@@ -64,6 +64,7 @@ var (
 
 type Service interface {
 	ListProjects(ctx context.Context, query ProjectQuery) (pagination.Page[ProjectResponse], error)
+	SummarizeProjects(ctx context.Context) (ProjectSummaryResponse, error)
 	GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse, error)
 	CreateProject(ctx context.Context, request ProjectRequest) (ProjectResponse, error)
 	UpdateProject(ctx context.Context, id uuid.UUID, request ProjectRequest) (ProjectResponse, error)
@@ -106,6 +107,14 @@ func (s *service) ListProjects(ctx context.Context, query ProjectQuery) (paginat
 		return pagination.Page[ProjectResponse]{}, apperror.Internal(err)
 	}
 	return pagination.New(pagination.Map(projects, newProjectResponse), query.Query, total), nil
+}
+
+func (s *service) SummarizeProjects(ctx context.Context) (ProjectSummaryResponse, error) {
+	totals, err := s.repository.SummarizeProjects(ctx)
+	if err != nil {
+		return ProjectSummaryResponse{}, apperror.Internal(err)
+	}
+	return newProjectSummaryResponse(totals), nil
 }
 
 func (s *service) GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse, error) {

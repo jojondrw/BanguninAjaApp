@@ -24,6 +24,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	projects := router.Group("/projects", middleware.Authentication(m.tokens))
 	projects.GET("", m.controller.ListProjects)
 	projects.POST("", m.controller.CreateProject)
+	projects.GET("/summary", m.controller.SummarizeProjects)
 	projects.GET("/:id", m.controller.GetProject)
 	projects.PUT("/:id", m.controller.UpdateProject)
 	projects.PATCH("/:id/status", m.controller.UpdateProjectStatus)

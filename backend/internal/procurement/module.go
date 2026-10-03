@@ -63,6 +63,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	orders := routes.Group("/purchase-orders")
 	orders.GET("", m.controller.ListPurchaseOrders)
 	orders.POST("", m.controller.CreatePurchaseOrder)
+	orders.GET("/summary", m.controller.SummarizePurchaseOrders)
 	orders.GET("/:id", m.controller.GetPurchaseOrder)
 	orders.PUT("/:id", m.controller.UpdatePurchaseOrder)
 	orders.PATCH("/:id/status", m.controller.UpdatePurchaseOrderStatus)
