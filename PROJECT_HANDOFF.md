@@ -1,6 +1,6 @@
 # PROJECT HANDOFF — BanguninAja
 
-**Last updated:** 2026-10-03 · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
+**Last updated:** 2026-10-03 (G1–G5) · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
 
 > Written to be handed to a teammate **and their own AI agent**. It states decisions and current state; the repo plus this doc should be enough for an agent to derive concrete tasks.
 
@@ -114,11 +114,12 @@ Gotchas seen on Derick's laptop:
 | # | Task | Notes | Priority |
 |---|---|---|---|
 | N3 | On-chain payment simulation | Derick's. Plugs into `/tagihan` (billing). Billing has no per-payment history table yet (only a running paid total) — the simulation will likely need one | P1 |
-| G1 | Receiving goods doesn't move stock | `/pengadaan` offers a manual "Catat stok masuk" per receipt; automatic posting would be a backend change in procurement | P3 |
-| G2 | Cash transactions don't post journal entries | Cash and the ledger are separate books; the UI says so | P3 |
-| G3 | Receivables/payables have no project, contract, or PO link; an invoice and a receivable can record the same debt twice | Billing data model | P3 |
-| G4 | Leads aren't linked to the customer created from them | Sales data model | P3 |
-| G5 | Dropdowns (materials, warehouses, parent assets, active employees) and some name lookups in procurement/billing tables still load at most 100 records | Stock tables already get names from the backend (#34); the rest needs searchable selects or joins | P3 |
+| G1 | ~~Receiving goods doesn't move stock~~ | ✅ #37 — a goods receipt posts `in` stock movements in the same transaction; lines whose order unit ≠ stock unit are skipped and reported (no conversion data) | done |
+| G2 | ~~Cash transactions don't post journal entries~~ | ✅ #38 — every cash transaction keeps one `KAS-<year>-<n>` journal in sync; `cmd/migrate` backfills old ones | done |
+| G3 | ~~Receivables/payables unlinked; invoice + receivable double-count~~ | ✅ #36 — receivables link to project/contract/invoice (one receivable per invoice), payables to project/PO | done |
+| G4 | ~~Leads not linked to their customer~~ | ✅ #35 — `POST /api/sales/leads/:id/convert` | done |
+| G5 | ~~Dropdowns capped at 100 records~~ | ✅ #39 — `SearchSelect` (server-side search) in 45 places, backend names in procurement lists. Left: account selects in cash/journal forms and unit-of-measure selects (need a `postable` filter on accounts), names in billing/finance tables, and KPI totals that sum the first 100 rows | mostly done |
+| G6 | Invoice payments and the linked receivable's payments aren't synced | Billing data model; pairs naturally with N3 (payment history) | P3 |
 
 ---
 
