@@ -46,6 +46,17 @@ export function useBillingRecord<K extends BillingKind>(kind: K, id: string | nu
   })
 }
 
+// Pilihan faktur di formulir piutang: faktur pelanggan yang belum dicatat
+// sebagai piutang, dipersempit ke satu pelanggan kalau sudah dipilih.
+export function useUnrecordedInvoices(customerId: string) {
+  return useBillingList('invoices', {
+    partyType: 'customer',
+    partyId: customerId === '' ? undefined : customerId,
+    recorded: false,
+    pageSize: MAX_PAGE_SIZE,
+  })
+}
+
 // Backend belum punya endpoint ringkasan, jadi KPI dihitung dari 100 catatan
 // pertama tiap jenis. Urutan backend menurut jatuh tempo terlama dulu, jadi
 // yang paling mendesak selalu ikut terhitung.

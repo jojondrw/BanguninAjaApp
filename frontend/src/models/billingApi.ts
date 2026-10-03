@@ -8,11 +8,20 @@ import type {
 } from './billing'
 import { toQueryString, type Page } from './common'
 
+// Filter boolean seperti recorded dikirim sebagai teks "true" atau "false".
+function billingQuery(filter: Record<string, string | number | boolean | undefined>): string {
+  const params: Record<string, string | number | undefined> = {}
+  for (const [key, value] of Object.entries(filter)) {
+    params[key] = typeof value === 'boolean' ? String(value) : value
+  }
+  return toQueryString(params)
+}
+
 // Faktur, piutang, dan utang memakai bentuk endpoint yang sama di bawah
 // /billing/<kind>, jadi satu set pemanggil cukup untuk ketiganya.
 export const billingApi = {
   list: <K extends BillingKind>(kind: K, filter: BillingFilterOf[K] = {}) =>
-    request<Page<BillingRecordOf[K]>>(`/billing/${kind}${toQueryString({ ...filter })}`),
+    request<Page<BillingRecordOf[K]>>(`/billing/${kind}${billingQuery({ ...filter })}`),
 
   get: <K extends BillingKind>(kind: K, id: string) => request<BillingRecordOf[K]>(`/billing/${kind}/${id}`),
 

@@ -6,25 +6,34 @@ import {
   BILLING_STATUS_LABEL,
   REFERENCE_SEARCH_MAX_LENGTH,
   type BillingStatus,
+  type Invoice,
 } from '../../models/billing'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
-import { BalanceCell, DueDateCell, StatusChip } from './BillingCells'
+import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { ReceivableForm } from './BillingForms'
-import { customerName, type Directory } from './directory'
+import type { Directory } from './directory'
 
 const PAGE_SIZE = 10
 
-export function ReceivablesSection({ directory, today }: { directory: Directory; today: string }) {
+// draftInvoice datang dari tombol "Catat sebagai piutang" di rincian faktur.
+// Formulir langsung terbuka dengan isian dari faktur itu.
+export function ReceivablesSection({ directory, today, draftInvoice }: {
+  directory: Directory
+  today: string
+  draftInvoice: Invoice | null
+}) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<BillingStatus | ''>('')
   const [customerId, setCustomerId] = useState('')
+  const [projectId, setProjectId] = useState('')
   const [page, setPage] = useState(1)
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [draft, setDraft] = useState(draftInvoice)
+  const [isFormOpen, setIsFormOpen] = useState(draftInvoice !== null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -32,10 +41,18 @@ export function ReceivablesSection({ directory, today }: { directory: Directory;
     search: search.trim() === '' ? undefined : search.trim(),
     status: status === '' ? undefined : status,
     customerId: customerId === '' ? undefined : customerId,
+    projectId: projectId === '' ? undefined : projectId,
     page,
     pageSize: PAGE_SIZE,
   })
-  const isFiltered = search.trim() !== '' || status !== '' || customerId !== ''
+  const isFiltered = search.trim() !== '' || status !== '' || customerId !== '' || projectId !== ''
+
+  const toggleForm = () => {
+    if (isFormOpen) {
+      setDraft(null)
+    }
+    setIsFormOpen((open) => !open)
+  }
 
   const filterChanged = <T,>(apply: (value: T) => void) => (value: T) => {
     apply(value)
@@ -85,7 +102,20 @@ export function ReceivablesSection({ directory, today }: { directory: Directory;
               </option>
             ))}
           </FilterSelect>
-          <FormToggle isOpen={isFormOpen} openLabel="Catat piutang" onToggle={() => setIsFormOpen((open) => !open)} />
+          <FilterSelect
+            id="receivable-filter-project"
+            label="Saring menurut proyek"
+            value={projectId}
+            onChange={(event) => filterChanged(setProjectId)(event.target.value)}
+          >
+            <option value="">Semua proyek</option>
+            {directory.projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </FilterSelect>
+          <FormToggle isOpen={isFormOpen} openLabel="Catat piutang" onToggle={toggleForm} />
         </Toolbar>
 
         {isFormOpen ? (
@@ -93,7 +123,14 @@ export function ReceivablesSection({ directory, today }: { directory: Directory;
             {directory.isLoading ? (
               <Loading label="Mengambil daftar pelanggan..." />
             ) : (
-              <ReceivableForm directory={directory} />
+              <>
+                {draft ? (
+                  <p className="mb-4 text-sm text-slate-600">
+                    Isian diambil dari faktur {draft.number}. Periksa lalu simpan untuk mencatatnya sebagai piutang.
+                  </p>
+                ) : null}
+                <ReceivableForm directory={directory} fromInvoice={draft ?? undefined} />
+              </>
             )}
           </FormPanel>
         ) : null}
@@ -118,9 +155,18 @@ export function ReceivablesSection({ directory, today }: { directory: Directory;
               columns={[
                 {
                   header: 'Referensi',
-                  cell: (row) => <span className="font-medium text-slate-900">{row.reference}</span>,
+                  cell: (row) => (
+                    <ReferenceCell
+                      reference={row.reference}
+                      sources={[
+                        ['Faktur', row.invoiceNumber],
+                        ['Kontrak', row.contractNumber],
+                      ]}
+                    />
+                  ),
                 },
-                { header: 'Pelanggan', cell: (row) => customerName(directory, row.customerId) },
+                { header: 'Pelanggan', cell: (row) => row.customerName },
+                { header: 'Proyek', cell: (row) => row.projectName ?? '-' },
                 { header: 'Jatuh tempo', cell: (row) => <DueDateCell record={row} today={today} /> },
                 { header: 'Status', cell: (row) => <StatusChip status={row.status} /> },
                 { header: 'Nilai', align: 'right', cell: (row) => rupiah(row.amount) },
@@ -161,7 +207,10 @@ export function ReceivablesSection({ directory, today }: { directory: Directory;
           heading={(receivable) => `piutang ${receivable.reference}`}
           fields={(receivable) => [
             { label: 'Referensi', value: receivable.reference },
-            { label: 'Pelanggan', value: customerName(directory, receivable.customerId) },
+            { label: 'Pelanggan', value: receivable.customerName },
+            { label: 'Proyek', value: receivable.projectName ?? 'Tanpa proyek' },
+            { label: 'Kontrak penjualan', value: receivable.contractNumber ?? 'Tidak ditautkan' },
+            { label: 'Faktur', value: receivable.invoiceNumber ?? 'Tidak ditautkan' },
           ]}
           renderEdit={(receivable, controls) => (
             <ReceivableForm

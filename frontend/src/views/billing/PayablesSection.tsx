@@ -12,10 +12,10 @@ import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
-import { BalanceCell, DueDateCell, StatusChip } from './BillingCells'
+import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { PayableForm } from './BillingForms'
-import { vendorName, type Directory } from './directory'
+import type { Directory } from './directory'
 
 const PAGE_SIZE = 10
 
@@ -23,6 +23,7 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<BillingStatus | ''>('')
   const [vendorId, setVendorId] = useState('')
+  const [projectId, setProjectId] = useState('')
   const [page, setPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -32,10 +33,11 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
     search: search.trim() === '' ? undefined : search.trim(),
     status: status === '' ? undefined : status,
     vendorId: vendorId === '' ? undefined : vendorId,
+    projectId: projectId === '' ? undefined : projectId,
     page,
     pageSize: PAGE_SIZE,
   })
-  const isFiltered = search.trim() !== '' || status !== '' || vendorId !== ''
+  const isFiltered = search.trim() !== '' || status !== '' || vendorId !== '' || projectId !== ''
 
   const filterChanged = <T,>(apply: (value: T) => void) => (value: T) => {
     apply(value)
@@ -85,6 +87,19 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
               </option>
             ))}
           </FilterSelect>
+          <FilterSelect
+            id="payable-filter-project"
+            label="Saring menurut proyek"
+            value={projectId}
+            onChange={(event) => filterChanged(setProjectId)(event.target.value)}
+          >
+            <option value="">Semua proyek</option>
+            {directory.projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </FilterSelect>
           <FormToggle isOpen={isFormOpen} openLabel="Catat utang" onToggle={() => setIsFormOpen((open) => !open)} />
         </Toolbar>
 
@@ -114,9 +129,10 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
               columns={[
                 {
                   header: 'Referensi',
-                  cell: (row) => <span className="font-medium text-slate-900">{row.reference}</span>,
+                  cell: (row) => <ReferenceCell reference={row.reference} sources={[['PO', row.purchaseOrderNumber]]} />,
                 },
-                { header: 'Vendor', cell: (row) => vendorName(directory, row.vendorId) },
+                { header: 'Vendor', cell: (row) => row.vendorName },
+                { header: 'Proyek', cell: (row) => row.projectName ?? '-' },
                 { header: 'Jatuh tempo', cell: (row) => <DueDateCell record={row} today={today} /> },
                 { header: 'Status', cell: (row) => <StatusChip status={row.status} /> },
                 { header: 'Nilai', align: 'right', cell: (row) => rupiah(row.amount) },
@@ -157,7 +173,9 @@ export function PayablesSection({ directory, today }: { directory: Directory; to
           heading={(payable) => `utang ${payable.reference}`}
           fields={(payable) => [
             { label: 'Referensi', value: payable.reference },
-            { label: 'Vendor', value: vendorName(directory, payable.vendorId) },
+            { label: 'Vendor', value: payable.vendorName },
+            { label: 'Proyek', value: payable.projectName ?? 'Tanpa proyek' },
+            { label: 'Pesanan pembelian', value: payable.purchaseOrderNumber ?? 'Tidak ditautkan' },
           ]}
           renderEdit={(payable, controls) => (
             <PayableForm

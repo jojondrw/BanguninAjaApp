@@ -8,21 +8,49 @@ import {
   PARTY_TYPES,
   PARTY_TYPE_LABEL,
   type BillingStatus,
+  type Invoice,
   type PartyType,
 } from '../../models/billing'
 import { rupiah } from '../../shared/format'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
-import { SuccessNote } from '../components/Form'
+import { Button, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
-import { BalanceCell, DueDateCell, StatusChip } from './BillingCells'
+import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { InvoiceForm } from './BillingForms'
-import { partyName, projectName, type Directory } from './directory'
+import { partyName, type Directory } from './directory'
 
 const PAGE_SIZE = 10
+const NO_PROJECT = 'Tanpa proyek'
 
-export function InvoicesSection({ directory, today }: { directory: Directory; today: string }) {
+// Satu faktur pelanggan hanya boleh dicatat sekali sebagai piutang. Faktur
+// vendor dan faktur yang sudah lunas tidak ditawari pencatatan.
+function ReceivableStatus({ invoice, onRecord }: { invoice: Invoice; onRecord: (invoice: Invoice) => void }) {
+  if (invoice.receivableReference) {
+    return <>Sudah dicatat sebagai piutang {invoice.receivableReference}</>
+  }
+  if (invoice.partyType !== 'customer') {
+    return <>Faktur vendor tidak dicatat sebagai piutang</>
+  }
+  if (invoice.status === 'paid') {
+    return <>Belum dicatat, dan faktur sudah lunas</>
+  }
+  return (
+    <span className="flex flex-col items-start gap-1.5">
+      <span>Belum dicatat sebagai piutang</span>
+      <Button variant="subtle" onClick={() => onRecord(invoice)}>
+        Catat sebagai piutang
+      </Button>
+    </span>
+  )
+}
+
+export function InvoicesSection({ directory, today, onRecordReceivable }: {
+  directory: Directory
+  today: string
+  onRecordReceivable: (invoice: Invoice) => void
+}) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<BillingStatus | ''>('')
   const [partyType, setPartyType] = useState<PartyType | ''>('')
@@ -138,7 +166,7 @@ export function InvoicesSection({ directory, today }: { directory: Directory; to
                   header: 'Nomor',
                   cell: (row) => (
                     <span className="flex flex-col">
-                      <span className="font-medium text-slate-900">{row.number}</span>
+                      <ReferenceCell reference={row.number} sources={[['Piutang', row.receivableReference]]} />
                       {row.note ? <span className="text-xs text-slate-500">{row.note}</span> : null}
                     </span>
                   ),
@@ -152,7 +180,7 @@ export function InvoicesSection({ directory, today }: { directory: Directory; to
                     </span>
                   ),
                 },
-                { header: 'Proyek', cell: (row) => projectName(directory, row.projectId) },
+                { header: 'Proyek', cell: (row) => row.projectName ?? NO_PROJECT },
                 { header: 'Jatuh tempo', cell: (row) => <DueDateCell record={row} today={today} /> },
                 { header: 'Status', cell: (row) => <StatusChip status={row.status} /> },
                 { header: 'Nilai', align: 'right', cell: (row) => rupiah(row.amount) },
@@ -197,8 +225,9 @@ export function InvoicesSection({ directory, today }: { directory: Directory; to
               label: 'Ditagihkan kepada',
               value: `${partyName(directory, invoice.partyType, invoice.partyId)} (${PARTY_TYPE_LABEL[invoice.partyType].toLowerCase()})`,
             },
-            { label: 'Proyek', value: projectName(directory, invoice.projectId) },
+            { label: 'Proyek', value: invoice.projectName ?? NO_PROJECT },
             { label: 'Catatan', value: invoice.note || '-' },
+            { label: 'Piutang', value: <ReceivableStatus invoice={invoice} onRecord={onRecordReceivable} /> },
           ]}
           renderEdit={(invoice, controls) => (
             <InvoiceForm
