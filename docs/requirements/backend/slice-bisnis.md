@@ -390,15 +390,16 @@ Semua di bawah `/api/billing`.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId`, `recorded` (`false` = belum dicatat sebagai piutang). Sudah berisi `projectName`, `receivableId`, `receivableReference` |
+| GET, POST | `/invoices` | Filter `search`, `status`, `partyType`, `partyId`, `projectId`, `recorded` (`false` = belum dicatat sebagai piutang). Sudah berisi `partyName` (pelanggan atau vendor sesuai `partyType`), `projectName`, `receivableId`, `receivableReference`, `lastPaidAt` |
 | GET, PUT, DELETE | `/invoices/:id` | |
-| POST | `/invoices/:id/payments` | Body `{ "amount": 1000000 }` |
-| GET, POST | `/receivables` | Filter `search`, `status`, `customerId`, `projectId`, `contractId`. Body opsional `projectId`, `contractId`, `invoiceId`. Sudah berisi `customerName`, `projectName`, `contractNumber`, `invoiceNumber` |
+| POST | `/invoices/:id/payments` | Body `{ "amount": 1000000, "paidAt"?, "method"?, "reference"?, "note"? }`, lihat [Riwayat pembayaran](#riwayat-pembayaran) |
+| GET | `/invoices/:id/payments` | Riwayat pembayaran, terbaru dulu, `page` dan `pageSize` |
+| GET, POST | `/receivables` | Filter `search`, `status`, `customerId`, `projectId`, `contractId`. Body opsional `projectId`, `contractId`, `invoiceId`. Sudah berisi `customerName`, `projectName`, `contractNumber`, `invoiceNumber`, `lastPaidAt` |
 | GET, PUT, DELETE | `/receivables/:id` | |
-| POST | `/receivables/:id/payments` | |
-| GET, POST | `/payables` | Filter `search`, `status`, `vendorId`, `projectId`, `purchaseOrderId`. Body opsional `projectId`, `purchaseOrderId`. Sudah berisi `vendorName`, `projectName`, `purchaseOrderNumber` |
+| POST, GET | `/receivables/:id/payments` | Sama seperti faktur |
+| GET, POST | `/payables` | Filter `search`, `status`, `vendorId`, `projectId`, `purchaseOrderId`. Body opsional `projectId`, `purchaseOrderId`. Sudah berisi `vendorName`, `projectName`, `purchaseOrderNumber`, `lastPaidAt` |
 | GET, PUT, DELETE | `/payables/:id` | |
-| POST | `/payables/:id/payments` | |
+| POST, GET | `/payables/:id/payments` | Sama seperti faktur |
 
 ### Tautan piutang dan utang ke sumbernya
 
@@ -419,6 +420,69 @@ dicatat.
 | `payable.purchase_order_id` | `purchase_order` | `SET NULL` |
 | `receivable.invoice_id` | `invoice`, unik (`uq_receivable_invoice`) | `RESTRICT`, supaya faktur tidak hilang di bawah piutang yang mencatatnya. Hapus piutangnya dulu |
 
+### Riwayat pembayaran
+
+Setiap pembayaran menjadi satu baris `billing_payment`, dan `paid_amount` di
+induknya tetap disimpan sebagai total berjalan supaya daftar dan KPI tidak
+perlu menjumlah ulang. Baris riwayat dan `paid_amount` ditulis dalam satu
+transaksi dengan baris induk dikunci (`SELECT ... FOR UPDATE`).
+
+| Kolom | Isi |
+|---|---|
+| `invoice_id`, `receivable_id`, `payable_id` | Minimal satu terisi (`chk_billing_payment_parent`). Faktur dan piutang boleh terisi bersamaan, utang selalu sendiri. FK `ON DELETE CASCADE`, index per kolom |
+| `amount` | Lebih dari nol (`chk_billing_payment_amount`) |
+| `paid_at` | Tanggal bayar. Kalau tidak dikirim, hari ini menurut Asia/Jakarta. Tanggal setelah hari ini ditolak |
+| `method` | `transfer` (bawaan), `tunai`, `cek`, `lainnya`. Divalidasi `oneof` di DTO, bukan check constraint, supaya metode baru (misalnya pembayaran on-chain dari pekerjaan N3) cukup menambah nilai di DTO |
+| `reference`, `note` | Opsional, maksimal 60 dan 200 karakter |
+| `created_by` | User yang mencatat, dari token. FK ke `users`, `SET NULL` |
+
+Respons riwayat berisi `invoiceNumber`, `receivableReference`, dan
+`createdByName` lewat join, supaya rincian faktur bisa menulis "Juga tercatat
+di piutang X" dan sebaliknya.
+
+### Faktur dan piutang yang tertaut dibayar bersama
+
+Piutang yang mencatat faktur (`receivable.invoice_id`) dan fakturnya adalah
+utang yang sama, jadi saldonya harus selalu sama.
+
+1. Pembayaran ke salah satunya menulis **satu** baris riwayat berisi
+   `invoice_id` dan `receivable_id`, lalu menaikkan `paid_amount` dan status
+   keduanya di transaksi yang sama.
+2. Urutan kunci selalu faktur dulu, lalu piutang, dari arah mana pun
+   pembayarannya datang, supaya dua pembayaran bersamaan tidak saling
+   mengunci. Bayar lewat piutang membaca `invoice_id` dulu tanpa kunci, lalu
+   mengunci faktur, lalu piutang. Kalau tautannya berubah di antara itu,
+   pembayaran ditolak dengan `billing_link_changed` (409) dan cukup diulang.
+3. Pembayaran yang melebihi sisa salah satu sisi ditolak (422
+   `payment_exceeds_outstanding`), dengan pesan yang menyebut sisi mana dan
+   sisanya, misalnya "Pembayaran melebihi sisa piutang PTG-1 yang tertaut,
+   sisanya tinggal Rp 500.000".
+
+Aturan saat piutang ditautkan ke faktur (buat piutang dengan `invoiceId`, atau
+ubah piutang ke faktur lain):
+
+| Keadaan | Hasil |
+|---|---|
+| Keduanya belum dibayar, atau total bayarnya sudah sama | Ditautkan apa adanya |
+| Hanya faktur yang sudah dibayar | Total bayar faktur disalin ke piutang, baris riwayat faktur ikut diberi `receivable_id`. Nilai piutang harus minimal sebesar total itu (`receivable_below_invoice_paid`) |
+| Hanya piutang yang sudah dibayar | Total bayar piutang disalin ke faktur, baris riwayat piutang ikut diberi `invoice_id` |
+| Keduanya sudah dibayar dengan total berbeda | Ditolak (422 `link_paid_mismatch`), karena tidak bisa diketahui pembayaran mana yang sama |
+| Piutang yang sudah dibayar dilepas dari fakturnya atau dipindah ke faktur lain | Ditolak (422 `receivable_link_has_payment`), karena riwayatnya sudah dipakai bersama |
+
+Karena total bayar faktur ikut disalin, "Catat sebagai piutang" di frontend
+mengisi nilai piutang dengan nilai penuh faktur, bukan sisanya.
+
+### Backfill riwayat
+
+`cmd/migrate` mengisi riwayat untuk data lama yang `paid_amount > 0` tapi
+belum punya baris, dengan satu baris senilai total itu, `paid_at =
+updated_at::date`, metode `lainnya`, catatan "Saldo terbayar sebelum riwayat
+pembayaran dicatat". Pasangan faktur dan piutang tertaut yang total bayarnya
+sama mendapat satu baris bersama. Pasangan yang totalnya sudah berbeda sebelum
+riwayat ada tidak disamakan otomatis: tiap sisi mendapat barisnya sendiri dan
+selisihnya perlu dirapikan manual. Semua `INSERT` dijaga `NOT EXISTS`, jadi
+menjalankan migrate kedua kalinya tidak menambah baris.
+
 ### Status jatuh tempo tidak dipercaya dari kolom
 
 `status` tetap disimpan supaya index parsial `WHERE status <> 'paid'` terpakai,
@@ -437,7 +501,10 @@ Aturan yang sama dipakai untuk cicilan di slice `sales`.
 
 | Aturan | Kode error |
 |---|---|
-| Pembayaran dicatat dalam transaksi dengan baris dikunci, dan tidak boleh melebihi sisa tagihan | `payment_exceeds_outstanding` |
+| Pembayaran dicatat dalam transaksi dengan baris dikunci, dan tidak boleh melebihi sisa tagihan (di kedua sisi untuk faktur dan piutang yang tertaut) | `payment_exceeds_outstanding` |
+| Tanggal bayar tidak boleh setelah hari ini (WIB) | `payment_date_in_future` |
+| Tautan faktur dan piutang berubah saat pembayaran menunggu kunci (409) | `billing_link_changed` |
+| Aturan penautan piutang ke faktur yang sudah dibayar (lihat di atas) | `link_paid_mismatch`, `receivable_below_invoice_paid`, `receivable_link_has_payment` |
 | Jumlah tagihan tidak boleh diubah di bawah yang sudah dibayar | `amount_below_paid` |
 | Data yang sudah menerima pembayaran tidak bisa dihapus | `invoice_has_payment`, `receivable_has_payment`, `payable_has_payment` |
 | `invoice.partyId` tidak punya foreign key karena bisa menunjuk pelanggan atau vendor, jadi keberadaannya diperiksa repository | `invoice_party_not_found` |
