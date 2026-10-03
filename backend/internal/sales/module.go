@@ -54,6 +54,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	contracts.PUT("/:id", m.controller.UpdateContract)
 	contracts.PATCH("/:id/status", m.controller.UpdateContractStatus)
 	contracts.DELETE("/:id", m.controller.DeleteContract)
+	contracts.GET("/:id/installments/summary", m.controller.SummarizeInstallments)
 	contracts.POST("/:id/installments", m.controller.CreateInstallment)
 	contracts.PUT("/:id/installments/:childId", m.controller.UpdateInstallment)
 	contracts.DELETE("/:id/installments/:childId", m.controller.DeleteInstallment)

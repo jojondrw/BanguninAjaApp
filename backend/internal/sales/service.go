@@ -121,6 +121,7 @@ type Service interface {
 	DeleteContract(ctx context.Context, id uuid.UUID) error
 
 	ListInstallments(ctx context.Context, query InstallmentQuery) (pagination.Page[InstallmentResponse], error)
+	SummarizeInstallments(ctx context.Context, contractID uuid.UUID) (InstallmentSummaryResponse, error)
 	CreateInstallment(ctx context.Context, contractID uuid.UUID, request InstallmentRequest) (InstallmentResponse, error)
 	UpdateInstallment(ctx context.Context, contractID, installmentID uuid.UUID, request InstallmentRequest) (InstallmentResponse, error)
 	DeleteInstallment(ctx context.Context, contractID, installmentID uuid.UUID) error
@@ -414,6 +415,17 @@ func (s *service) ListInstallments(ctx context.Context, query InstallmentQuery) 
 		return newInstallmentResponse(row, today)
 	})
 	return pagination.New(responses, query.Query, total), nil
+}
+
+func (s *service) SummarizeInstallments(ctx context.Context, contractID uuid.UUID) (InstallmentSummaryResponse, error) {
+	if _, err := s.repository.FindContractRow(ctx, contractID); err != nil {
+		return InstallmentSummaryResponse{}, contractReadErrors.Resolve(err)
+	}
+	totals, err := s.repository.SummarizeInstallments(ctx, contractID, s.today())
+	if err != nil {
+		return InstallmentSummaryResponse{}, apperror.Internal(err)
+	}
+	return newInstallmentSummaryResponse(totals), nil
 }
 
 func (s *service) CreateInstallment(ctx context.Context, contractID uuid.UUID, request InstallmentRequest) (InstallmentResponse, error) {
