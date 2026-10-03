@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { useContracts, useInstallmentCount, useUnitSummary } from '../controllers/useSales'
+import { useContractSummary, useInstallmentCount, useUnitSummary } from '../controllers/useSales'
 import type { UnitStatus } from '../models/sales'
 import { number, rupiahShort } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
@@ -10,7 +10,6 @@ import { SectionTabs } from './components/ListTools'
 import { ContractsSection } from './sales/ContractsSection'
 import { CustomersSection } from './sales/CustomersSection'
 import { LeadsSection } from './sales/LeadsSection'
-import { OPTION_LIMIT } from './sales/salesShared'
 import { UnitsSection } from './sales/UnitsSection'
 
 type SalesTab = 'units' | 'leads' | 'customers' | 'contracts'
@@ -25,18 +24,13 @@ const TABS: { value: SalesTab; label: string }[] = [
 
 function SalesKpis() {
   const summary = useUnitSummary()
-  const contracts = useContracts({ pageSize: OPTION_LIMIT })
+  const contracts = useContractSummary()
   const overdue = useInstallmentCount('overdue')
   const due = useInstallmentCount('due')
 
   const countOf = (status: UnitStatus) =>
     summary.data?.find((item) => item.status === status)?.total ?? 0
   const totalUnits = summary.data?.reduce((total, item) => total + item.total, 0) ?? 0
-
-  const contractItems = contracts.data?.items ?? []
-  const binding = contractItems.filter((contract) => contract.status !== 'cancelled')
-  const contractValue = binding.reduce((total, contract) => total + contract.value, 0)
-  const isPartial = (contracts.data?.totalItems ?? 0) > contractItems.length
 
   return (
     <KpiRow>
@@ -52,10 +46,10 @@ function SalesKpis() {
       />
       <Kpi
         label="Nilai kontrak"
-        value={kpiText(contracts, () => rupiahShort(contractValue))}
+        value={kpiText(contracts, (summary) => rupiahShort(summary.totalValue))}
         note={
           contracts.data
-            ? `${number(binding.length)} kontrak di luar yang batal${isPartial ? `, dari ${OPTION_LIMIT} terbaru` : ''}`
+            ? `${number(contracts.data.count - contracts.data.byStatus.cancelled)} kontrak di luar yang batal`
             : undefined
         }
       />

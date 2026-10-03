@@ -36,6 +36,22 @@ export function useCreateProject() {
   })
 }
 
+export function useProjectSummary() {
+  return useQuery({
+    queryKey: [PROJECTS_KEY, 'summary'],
+    queryFn: projectApi.summary,
+    ...DATA_QUERY,
+  })
+}
+
+export function useBudgetSummary(projectId?: string) {
+  return useQuery({
+    queryKey: [BUDGETS_KEY, 'summary', projectId ?? 'all'],
+    queryFn: () => financeApi.budgetSummary({ projectId }),
+    ...DATA_QUERY,
+  })
+}
+
 export function useBudgets(projectId?: string) {
   return useQuery({
     queryKey: [BUDGETS_KEY, projectId ?? 'all'],

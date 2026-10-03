@@ -23,6 +23,13 @@ export interface UnitStatusCount {
   total: number
 }
 
+// Ringkasan seluruh kontrak dari backend. totalValue di luar kontrak batal.
+export interface ContractSummary {
+  count: number
+  totalValue: number
+  byStatus: Record<ContractStatus, number>
+}
+
 export interface UnitFilter {
   search?: string
   projectId?: string
