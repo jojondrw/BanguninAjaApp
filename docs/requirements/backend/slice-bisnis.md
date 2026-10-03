@@ -273,6 +273,7 @@ Semua di bawah `/api/sales`.
 | GET, PUT, DELETE | `/units/:id` | |
 | GET, POST | `/leads` | Filter `search`, `projectId`, `stage` |
 | GET, PUT, DELETE | `/leads/:id` | |
+| POST | `/leads/:id/convert` | Body sama dengan pelanggan baru. Membuat pelanggan, menautkannya ke prospek (`customerId`), dan menjadikan tahap `won` dalam satu transaksi |
 | GET, POST | `/contracts` | Filter `search`, `customerId`, `unitId`, `status`, `type`. Sudah berisi nama pelanggan dan kode unit |
 | GET, PUT, DELETE | `/contracts/:id` | |
 | PATCH | `/contracts/:id/status` | `active`, `paid`, `cancelled` |
@@ -283,6 +284,14 @@ Semua di bawah `/api/sales`.
 
 Nomor identitas pelanggan wajib diisi karena kolomnya unik. Kalau boleh kosong,
 dua pelanggan tanpa nomor identitas akan bentrok di index unik.
+
+### Prospek menjadi pelanggan
+
+Satu prospek hanya bisa menjadi satu pelanggan (`lead.customer_id` unik, FK
+`ON DELETE SET NULL`). Konversi mengunci baris prospek dengan `FOR UPDATE`,
+menolak prospek yang sudah tertaut (409 `lead_already_converted`) atau yang
+`cancelled` (422 `lead_cancelled`), dan gagal seluruhnya kalau nomor identitas
+pelanggan bentrok.
 
 ### Unit mengikuti kontrak
 

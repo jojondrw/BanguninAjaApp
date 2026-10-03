@@ -118,6 +118,7 @@ type Repository interface {
 
 	ListLeads(ctx context.Context, filter LeadFilter) ([]Lead, int64, error)
 	FindLead(ctx context.Context, id uuid.UUID) (Lead, error)
+	LockLead(ctx context.Context, id uuid.UUID) (Lead, error)
 	CreateLead(ctx context.Context, lead *Lead) error
 	SaveLead(ctx context.Context, lead *Lead) error
 	DeleteLead(ctx context.Context, id uuid.UUID) error
@@ -235,6 +236,12 @@ func (r *gormRepository) ListLeads(ctx context.Context, filter LeadFilter) ([]Le
 func (r *gormRepository) FindLead(ctx context.Context, id uuid.UUID) (Lead, error) {
 	var lead Lead
 	err := r.db.WithContext(ctx).Where("id = ?", id).Take(&lead).Error
+	return lead, database.Translate(err)
+}
+
+func (r *gormRepository) LockLead(ctx context.Context, id uuid.UUID) (Lead, error) {
+	var lead Lead
+	err := r.locked(ctx).Where("id = ?", id).Take(&lead).Error
 	return lead, database.Translate(err)
 }
 
