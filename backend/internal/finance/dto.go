@@ -22,16 +22,17 @@ type BudgetQuery struct {
 }
 
 type BudgetResponse struct {
-	ID         uuid.UUID `json:"id"`
-	ProjectID  uuid.UUID `json:"projectId"`
-	Year       int       `json:"year"`
-	Value      int64     `json:"value"`
-	Note       string    `json:"note"`
-	Realized   int64     `json:"realized"`
-	Remaining  int64     `json:"remaining"`
-	Absorption int       `json:"absorption"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	ID          uuid.UUID `json:"id"`
+	ProjectID   uuid.UUID `json:"projectId"`
+	ProjectName string    `json:"projectName"`
+	Year        int       `json:"year"`
+	Value       int64     `json:"value"`
+	Note        string    `json:"note"`
+	Realized    int64     `json:"realized"`
+	Remaining   int64     `json:"remaining"`
+	Absorption  int       `json:"absorption"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 type CashTransactionRequest struct {
@@ -57,7 +58,10 @@ type CashTransactionResponse struct {
 	Date           time.Time  `json:"date"`
 	Type           string     `json:"type"`
 	AccountID      uuid.UUID  `json:"accountId"`
+	AccountCode    string     `json:"accountCode"`
+	AccountName    string     `json:"accountName"`
 	ProjectID      *uuid.UUID `json:"projectId"`
+	ProjectName    string     `json:"projectName,omitempty"`
 	Amount         int64      `json:"amount"`
 	Note           string     `json:"note"`
 	JournalEntryID *uuid.UUID `json:"journalEntryId"`
@@ -122,10 +126,12 @@ type JournalEntryResponse struct {
 }
 
 type JournalLineResponse struct {
-	ID        uuid.UUID `json:"id"`
-	AccountID uuid.UUID `json:"accountId"`
-	Debit     int64     `json:"debit"`
-	Credit    int64     `json:"credit"`
+	ID          uuid.UUID `json:"id"`
+	AccountID   uuid.UUID `json:"accountId"`
+	AccountCode string    `json:"accountCode"`
+	AccountName string    `json:"accountName"`
+	Debit       int64     `json:"debit"`
+	Credit      int64     `json:"credit"`
 }
 
 type JournalEntryDetailResponse struct {
@@ -161,16 +167,17 @@ type LedgerPage struct {
 
 func newBudgetResponse(row BudgetRow) BudgetResponse {
 	return BudgetResponse{
-		ID:         row.ID,
-		ProjectID:  row.ProjectID,
-		Year:       row.Year,
-		Value:      row.Value,
-		Note:       row.Note,
-		Realized:   row.Realized,
-		Remaining:  row.Value - row.Realized,
-		Absorption: absorption(row.Realized, row.Value),
-		CreatedAt:  row.CreatedAt,
-		UpdatedAt:  row.UpdatedAt,
+		ID:          row.ID,
+		ProjectID:   row.ProjectID,
+		ProjectName: row.ProjectName,
+		Year:        row.Year,
+		Value:       row.Value,
+		Note:        row.Note,
+		Realized:    row.Realized,
+		Remaining:   row.Value - row.Realized,
+		Absorption:  absorption(row.Realized, row.Value),
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
 	}
 }
 
@@ -180,7 +187,10 @@ func newCashTransactionResponse(row CashTransactionRow) CashTransactionResponse 
 		Date:           row.Date,
 		Type:           row.Type,
 		AccountID:      row.AccountID,
+		AccountCode:    row.AccountCode,
+		AccountName:    row.AccountName,
 		ProjectID:      row.ProjectID,
+		ProjectName:    row.ProjectName,
 		Amount:         row.Amount,
 		Note:           row.Note,
 		JournalEntryID: row.JournalEntryID,
@@ -202,6 +212,13 @@ func newJournalEntryResponse(row JournalEntryRow) JournalEntryResponse {
 	}
 }
 
-func newJournalLineResponse(line JournalLine) JournalLineResponse {
-	return JournalLineResponse{ID: line.ID, AccountID: line.AccountID, Debit: line.Debit, Credit: line.Kredit}
+func newJournalLineResponse(line JournalLineRow) JournalLineResponse {
+	return JournalLineResponse{
+		ID:          line.ID,
+		AccountID:   line.AccountID,
+		AccountCode: line.AccountCode,
+		AccountName: line.AccountName,
+		Debit:       line.Debit,
+		Credit:      line.Credit,
+	}
 }

@@ -3,16 +3,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useJournalEntries, useJournalEntry } from '../../controllers/useFinance'
-import { useAccounts } from '../../controllers/useProjectWorkspace'
 import {
   CASH_JOURNAL_LABEL,
   JOURNAL_NOTE_MAX_LENGTH,
+  accountText,
   isCashJournal,
   isDateRangeValid,
   journalDetailRows,
   journalTotals,
 } from '../../models/accounting'
-import type { Account } from '../../models/master'
 import { accountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
@@ -23,7 +22,7 @@ import { Chip, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/Re
 import { SearchSelect } from '../components/SearchSelect'
 import { JOURNAL_PARAM, cashLink, ledgerLink, useSearchParam } from './financeTabs'
 import { JournalForm } from './JournalForm'
-import { DateRangeFilter, Notice, RowActions, RowLink } from './parts'
+import { DateRangeFilter, RowActions, RowLink } from './parts'
 
 const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
@@ -34,7 +33,7 @@ function CashJournalChip() {
   return <Chip tone={CASH_JOURNAL_TONE}>{CASH_JOURNAL_LABEL}</Chip>
 }
 
-function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Account[]; onClose: () => void }) {
+function JournalDetailCard({ id, onClose }: { id: string; onClose: () => void }) {
   const entry = useJournalEntry(id)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -44,7 +43,6 @@ function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Ac
     cardRef.current?.scrollIntoView({ block: 'nearest' })
   }, [id])
 
-  const account = (accountId: string) => accounts.find((item) => item.id === accountId)
   const close = <RowAction label="Tutup rincian" onClick={onClose} />
 
   if (entry.isPending || entry.isError) {
@@ -96,14 +94,13 @@ function JournalDetailCard({ id, accounts, onClose }: { id: string; accounts: Ac
                 if (row.kind === 'total') {
                   return <span className="font-semibold text-slate-900">Total</span>
                 }
-                const item = account(row.line.accountId)
                 return (
                   <Link
                     to={ledgerLink(row.line.accountId)}
                     className={`${LINK_CLASS} ${row.line.credit > 0 ? 'pl-6' : ''} inline-block`}
                     title="Lihat buku besar akun ini"
                   >
-                    {item ? `${item.code} ${item.name}` : row.line.accountId.slice(0, 8)}
+                    {accountText(row.line)}
                   </Link>
                 )
               },
@@ -147,8 +144,6 @@ export function JournalTab() {
   const [page, setPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedId, setSelectedId] = useSearchParam(JOURNAL_PARAM)
-  const accounts = useAccounts()
-  const accountItems = accounts.data?.items ?? []
   const isRangeValid = isDateRangeValid(range.dateFrom, range.dateTo)
 
   const entries = useJournalEntries(
@@ -208,12 +203,7 @@ export function JournalTab() {
         </Toolbar>
 
         {isFormOpen ? (
-          <JournalForm accounts={accountItems} isLoadingAccounts={accounts.isPending} onRecorded={(entry) => setSelectedId(entry.id)} />
-        ) : null}
-        {accounts.isError ? (
-          <Notice>
-            <ErrorNote message="Daftar akun gagal dimuat, jadi pilihan akun belum tersedia." />
-          </Notice>
+          <JournalForm onRecorded={(entry) => setSelectedId(entry.id)} />
         ) : null}
 
         {!isRangeValid ? <ErrorNote message="Tanggal sampai tidak boleh lebih awal dari tanggal dari." /> : null}
@@ -272,7 +262,7 @@ export function JournalTab() {
       </Card>
 
       {selectedId !== '' ? (
-        <JournalDetailCard id={selectedId} accounts={accountItems} onClose={() => setSelectedId('')} />
+        <JournalDetailCard id={selectedId} onClose={() => setSelectedId('')} />
       ) : null}
     </div>
   )

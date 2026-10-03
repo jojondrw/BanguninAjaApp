@@ -2,16 +2,15 @@ import { BookOpen } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { useCashTransaction } from '../../controllers/useFinance'
-import { accountLabel } from '../../models/accounting'
+import { accountText } from '../../models/accounting'
 import { CASH_TYPE_LABEL, CASH_TYPE_TONE, type CashTransaction } from '../../models/finance'
-import type { Account } from '../../models/master'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
 import { Loading } from '../components/Data'
 import { ErrorNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip } from '../components/RecordControls'
-import { journalLink } from './financeTabs'
+import { cashProjectName, journalLink } from './financeTabs'
 import { RowActions, RowLink, SignedAmount } from './parts'
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
@@ -26,10 +25,8 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 // Transaksi yang dibuka dari tautan "Lihat transaksi kas" di rincian jurnal.
 // Daftar kas berhalaman dan bisa tersaring, jadi transaksinya ditampilkan
 // sendiri di atas daftar, bukan dicari di halaman tabel.
-export function CashFocusPanel({ id, accounts, projectName, isEditing, onEdit, onClose }: {
+export function CashFocusPanel({ id, isEditing, onEdit, onClose }: {
   id: string
-  accounts: Account[]
-  projectName: (projectId: string | null) => string
   isEditing: boolean
   onEdit: (transaction: CashTransaction) => void
   onClose: () => void
@@ -66,8 +63,8 @@ export function CashFocusPanel({ id, accounts, projectName, isEditing, onEdit, o
           <Detail label="Jumlah">
             <SignedAmount type={data.type} amount={data.amount} />
           </Detail>
-          <Detail label="Akun lawan">{accountLabel(accounts, data.accountId)}</Detail>
-          <Detail label="Proyek">{projectName(data.projectId)}</Detail>
+          <Detail label="Akun lawan">{accountText(data)}</Detail>
+          <Detail label="Proyek">{cashProjectName(data)}</Detail>
           <Detail label="Keterangan">{data.note || '-'}</Detail>
         </dl>
       ) : null}

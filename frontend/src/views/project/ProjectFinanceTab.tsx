@@ -3,7 +3,6 @@ import { type ChangeEvent, type FormEvent, useState } from 'react'
 import { useBudgets } from '../../controllers/useErp'
 import {
   CASH_FLOW_MONTHS,
-  useAccounts,
   useCreateCashTransaction,
   useProjectCashFlow,
   useProjectCashTransactions,
@@ -18,16 +17,17 @@ import {
   type CashFlowPeriod,
   type CashTransactionFormValues,
 } from '../../models/finance'
-import { accountGroups, type Account } from '../../models/master'
+import { accountText } from '../../models/accounting'
+import { postableAccountOptions } from '../../models/lookupApi'
 import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { kpiValue, monthLabel, rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
+import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
 
 const NO_BUDGETS: Budget[] = []
-const NO_ACCOUNTS: Account[] = []
 const MIN_VISIBLE_BAR = 2
 
 export function ProjectFinanceTab({ project }: { project: Project }) {
@@ -126,13 +126,7 @@ function SpendByMonth({ periods }: { periods: CashFlowPeriod[] }) {
 
 function TransactionsCard({ project }: { project: Project }) {
   const transactions = useProjectCashTransactions(project.id)
-  const accounts = useAccounts()
   const [isAdding, setIsAdding] = useState(false)
-
-  const accountName = (id: string) => {
-    const account = accounts.data?.items.find((item) => item.id === id)
-    return account ? `${account.code} ${account.name}` : '-'
-  }
   const page = transactions.data
 
   return (
@@ -149,7 +143,7 @@ function TransactionsCard({ project }: { project: Project }) {
           columns={[
             { header: 'Tanggal', cell: (row) => shortDate(row.date) },
             { header: 'Keterangan', cell: (row) => row.note || '-' },
-            { header: 'Akun', cell: (row) => accountName(row.accountId) },
+            { header: 'Akun', cell: (row) => accountText(row) },
             { header: 'Jenis', cell: (row) => <Chip tone={CASH_TYPE_TONE[row.type]}>{CASH_TYPE_LABEL[row.type]}</Chip> },
             { header: 'Jumlah', align: 'right', cell: (row) => rupiah(row.amount) },
           ]}
@@ -184,9 +178,7 @@ function amountHint(value: string): string {
 
 function CashTransactionForm({ projectId }: { projectId: string }) {
   const [values, setValues] = useState<CashTransactionFormValues>(() => emptyCashTransactionForm(new Date()))
-  const accounts = useAccounts()
   const createTransaction = useCreateCashTransaction(projectId)
-  const groups = accountGroups(accounts.data?.items ?? NO_ACCOUNTS, values.type)
 
   const update =
     (key: keyof CashTransactionFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -215,26 +207,16 @@ function CashTransactionForm({ projectId }: { projectId: string }) {
             <option value="out">Kas keluar</option>
             <option value="in">Kas masuk</option>
           </SelectField>
-          <SelectField
+          <SearchSelect
+            {...postableAccountOptions}
             id="cash-account"
             label="Akun"
+            placeholder="Cari kode atau nama akun"
             required
-            disabled={accounts.isPending}
-            hint="Kas keluar biasanya ke akun Beban, kas masuk ke akun Pendapatan"
+            hint="Hanya akun rincian. Kas keluar biasanya ke akun Beban, kas masuk ke akun Pendapatan"
             value={values.accountId}
-            onChange={update('accountId')}
-          >
-            <option value="">{accounts.isPending ? 'Memuat akun...' : 'Pilih akun'}</option>
-            {groups.map((group) => (
-              <optgroup key={group.type} label={group.label}>
-                {group.accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.code} {account.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </SelectField>
+            onChange={(accountId) => setValues((current) => ({ ...current, accountId }))}
+          />
           <Field
             id="cash-amount"
             label="Jumlah"
@@ -260,8 +242,6 @@ function CashTransactionForm({ projectId }: { projectId: string }) {
             />
           </div>
         </div>
-
-        {accounts.isError ? <LoadFailed onRetry={() => accounts.refetch()} /> : null}
 
         <Button type="submit" isPending={createTransaction.isPending} pendingLabel="Menyimpan transaksi">
           Simpan transaksi

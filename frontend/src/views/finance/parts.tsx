@@ -3,8 +3,6 @@ import type { ReactNode } from 'react'
 import { Link, type To } from 'react-router-dom'
 
 import type { CashType } from '../../models/finance'
-import type { AccountGroup } from '../../models/master'
-import type { Project } from '../../models/project'
 import { rupiah } from '../../shared/format'
 import { BUTTON_BASE, BUTTON_PRIMARY } from '../components/Form'
 import { ToolbarInput } from '../components/RecordControls'
@@ -93,36 +91,6 @@ export function SignedAmount({ type, amount }: { type: CashType; amount: number 
       {type === 'in' ? '+' : '−'}
       {rupiah(amount)}
     </span>
-  )
-}
-
-export function AccountOptions({ groups, placeholder }: { groups: AccountGroup[]; placeholder: string }) {
-  return (
-    <>
-      <option value="">{placeholder}</option>
-      {groups.map((group) => (
-        <optgroup key={group.type} label={group.label}>
-          {group.accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.code} {account.name}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-    </>
-  )
-}
-
-export function ProjectOptions({ projects, placeholder }: { projects: Project[]; placeholder: string }) {
-  return (
-    <>
-      <option value="">{placeholder}</option>
-      {projects.map((project) => (
-        <option key={project.id} value={project.id}>
-          {project.name} ({project.code})
-        </option>
-      ))}
-    </>
   )
 }
 

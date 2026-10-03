@@ -62,6 +62,7 @@ type AccountQuery struct {
 	Search   string     `form:"search" binding:"omitempty,max=120"`
 	Type     string     `form:"type" binding:"omitempty,oneof=asset liability equity revenue expense"`
 	ParentID *uuid.UUID `form:"parentId,parser=encoding.TextUnmarshaler"`
+	Postable bool       `form:"postable"`
 }
 
 type AccountResponse struct {

@@ -8,7 +8,6 @@ import type {
   CashTransactionFilter,
   CashTransactionRequest,
 } from './finance'
-import type { Account, UnitOfMeasure } from './master'
 import type {
   BudgetItemPage,
   Permit,
@@ -56,14 +55,6 @@ export const financeApi = {
 
   createCashTransaction: (body: CashTransactionRequest) =>
     request<CashTransaction>('/finance/cash-transactions', { method: 'POST', body }),
-}
-
-export const masterApi = {
-  accounts: () =>
-    request<Page<Account>>(`/master/accounts${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
-
-  unitsOfMeasure: () =>
-    request<Page<UnitOfMeasure>>(`/master/units-of-measure${toQueryString({ pageSize: MAX_PAGE_SIZE })}`),
 }
 
 export interface SiteEvaluateRequest {

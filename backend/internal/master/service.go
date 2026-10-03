@@ -231,6 +231,7 @@ func (s *service) ListAccounts(ctx context.Context, query AccountQuery) (paginat
 		Search:   query.Search,
 		Type:     query.Type,
 		ParentID: query.ParentID,
+		Postable: query.Postable,
 		Offset:   query.Offset(),
 		Limit:    query.Size(),
 	})
