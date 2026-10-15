@@ -182,7 +182,7 @@ func TestDeleteAccountNamesWhereItIsStillUsed(t *testing.T) {
 
 	err := NewService(NewRepository(db)).DeleteAccount(context.Background(), accountID)
 
-	assertRefusal(t, err, http.StatusConflict, "account_in_use", "Akun masih dipakai di akun turunan dan jurnal, jadi tidak bisa dihapus")
+	assertRefusal(t, err, http.StatusConflict, "account_in_use", "Akun masih dipakai di akun turunan dan jurnal")
 	queries := recorder.Queries()
 	if len(queries) != 5 {
 		t.Fatalf("got %d queries, want find, delete, and three usage checks", len(queries))
@@ -206,7 +206,7 @@ func TestDeleteRegionNamesWhereItIsStillUsed(t *testing.T) {
 
 	err := NewService(NewRepository(db)).DeleteRegion(context.Background(), uuid.New())
 
-	assertRefusal(t, err, http.StatusConflict, "region_in_use", "Wilayah masih dipakai di proyek, jadi tidak bisa dihapus")
+	assertRefusal(t, err, http.StatusConflict, "region_in_use", "Wilayah masih dipakai di proyek")
 }
 
 func TestDeleteUnitOfMeasureNamesEveryUsage(t *testing.T) {
@@ -221,7 +221,7 @@ func TestDeleteUnitOfMeasureNamesEveryUsage(t *testing.T) {
 	err := NewService(NewRepository(db)).DeleteUnitOfMeasure(context.Background(), uuid.New())
 
 	assertRefusal(t, err, http.StatusConflict, "unit_of_measure_in_use",
-		"Satuan masih dipakai di material, RAB proyek, dan pesanan pembelian, jadi tidak bisa dihapus")
+		"Satuan masih dipakai di material, RAB proyek, dan pesanan pembelian")
 }
 
 func TestDeleteUnitOfMeasureFallsBackWhenUsageIsUnknown(t *testing.T) {

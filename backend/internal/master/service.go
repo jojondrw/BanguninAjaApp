@@ -382,7 +382,7 @@ func explainInUse(ctx context.Context, fallback *apperror.Error, subject string,
 	if err != nil || len(usages) == 0 {
 		return fallback
 	}
-	return apperror.Conflict(fallback.Code, subject+" masih dipakai di "+joinLabels(usages)+", jadi tidak bisa dihapus")
+	return apperror.Conflict(fallback.Code, subject+" masih dipakai di "+joinLabels(usages))
 }
 
 func joinLabels(labels []string) string {
