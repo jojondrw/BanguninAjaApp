@@ -22,10 +22,14 @@ export function RegisterPage() {
     register.mutate(
       { name, email, password },
       {
-        onSuccess: () =>
+        onSuccess: (user) =>
           navigate('/masuk', {
             replace: true,
-            state: { message: 'Akun berhasil dibuat. Silakan masuk.' },
+            state: {
+              message: user.role
+                ? 'Akun berhasil dibuat. Silakan masuk.'
+                : 'Akun berhasil dibuat. Silakan masuk; admin perlu memberi peran sebelum Anda bisa membuka data.',
+            },
           }),
       },
     )

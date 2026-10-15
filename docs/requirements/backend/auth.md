@@ -78,8 +78,22 @@ Semua endpoint berada di bawah `/api/auth`.
 ```
 
 Balasan 201 berisi `id`, `name`, `email`, `active`, `role`, `permissions`, `createdAt`.
-Pendaftar pertama di sistem kosong otomatis menjadi `admin`, pendaftar berikutnya
-menjadi `pengamat` sampai admin mengubah perannya.
+Pendaftar pertama di sistem kosong otomatis menjadi `admin`. Pendaftar berikutnya
+**belum punya peran** (`role: null`, `permissions: {}`) sampai admin memberinya
+peran lewat `PATCH /api/users/:id/role`.
+
+Alasannya: tautan demo bersifat publik, jadi siapa pun bisa mendaftar. Dulu
+pendaftar baru menjadi `pengamat`, dan pengamat bisa membaca semua modul termasuk
+gaji dan kas. Sekarang akun tanpa peran:
+
+1. tetap bisa `login`, `refresh`, `logout`, dan membaca `/auth/me`;
+2. ditolak 403 `forbidden` di semua modul oleh `middleware.Authorization`,
+   karena `access.Allows` tidak mengenal peran kosong;
+3. di frontend melihat layar "Akun menunggu persetujuan" (email, tombol
+   "Periksa lagi" yang mengambil ulang `/auth/me`, dan "Keluar"), bukan aplikasi.
+
+Admin melihat pendaftar yang menunggu di halaman Pengguna (saringan
+"Menunggu peran", `GET /api/users?role=none`).
 
 ### POST /api/auth/login
 
@@ -191,8 +205,8 @@ Urutannya:
    (`users` primary key, `LEFT JOIN role` primary key). Hasilnya disimpan 30 detik
    di memori per user id (`access.Directory`) dan langsung dihapus saat admin
    mengubah peran atau status aktif user itu.
-4. User nonaktif dibalas 401 `account_inactive`. User tanpa peran tidak punya
-   akses ke modul mana pun.
+4. User nonaktif dibalas 401 `account_inactive`. User tanpa peran (pendaftar yang
+   menunggu persetujuan) tidak punya akses ke modul mana pun dan dibalas 403.
 5. Kalau peran tidak punya tingkat yang dibutuhkan, balas 403 `forbidden`
    dengan pesan seperti "Peran Anda tidak punya akses mengubah data modul Keuangan".
 
@@ -203,7 +217,7 @@ didaftarkan. Ini sengaja, supaya modul baru tidak terbuka untuk semua orang.
 
 | Method | Path | Body | Keterangan |
 |---|---|---|---|
-| GET | `/api/users` | - | Query `search` (nama atau email), `role`, `active`, `page`, `pageSize` |
+| GET | `/api/users` | - | Query `search` (nama atau email), `role` (kode peran, atau `none` untuk akun yang belum punya peran), `active`, `page`, `pageSize` |
 | PATCH | `/api/users/:id/role` | `{ "role": "keuangan" }` | Mengganti peran |
 | PATCH | `/api/users/:id/active` | `{ "active": false }` | Menonaktifkan atau mengaktifkan lagi |
 
@@ -220,15 +234,22 @@ tidak bisa membuat sistem kehilangan admin.
 ### Bootstrap dan migrasi
 
 `cmd/migrate` dan `cmd/seed` meng-upsert ketujuh peran berdasarkan `code`.
-Setelah itu `cmd/migrate` memberi peran `admin` ke semua user yang `role_id`-nya
-masih kosong, supaya tim yang sudah terdaftar sebelum fitur ini tetap punya akses
-penuh. Keduanya idempoten: menjalankan migrasi dua kali tidak mengubah apa pun
-pada putaran kedua.
+Setelah itu `cmd/migrate` memberi peran `admin` ke user yang `role_id`-nya masih
+kosong, **hanya kalau belum ada satu user pun yang punya peran**. Itu keadaan
+basis data dari sebelum fitur peran ada, dan tim yang sudah terdaftar saat itu
+tetap mendapat akses penuh. Begitu ada user berperan, langkah ini tidak mengubah
+apa pun, jadi pendaftar baru yang sengaja dibiarkan tanpa peran tidak ikut
+menjadi admin setiap kali migrasi dijalankan. Keduanya idempoten: menjalankan
+migrasi dua kali tidak mengubah apa pun pada putaran kedua.
 
 Pendaftaran baru menghitung jumlah user di dalam transaksi yang memegang advisory
-lock. Sistem kosong menghasilkan `admin`, selebihnya `pengamat`. Kalau tabel
-`role` belum diisi, pendaftaran gagal dengan 500 supaya migrasi yang terlewat
-langsung ketahuan.
+lock. Sistem kosong menghasilkan `admin`, selebihnya tanpa peran. Kalau tabel
+`role` belum diisi saat pendaftar pertama masuk, pendaftaran gagal dengan 500
+supaya migrasi yang terlewat langsung ketahuan.
+
+`cmd/seed-demo` tetap membuat akun demo menjadi admin: akun itu didaftarkan lewat
+`Register` (tanpa peran kalau sudah ada user lain), lalu langsung dinaikkan
+dengan `ChangeRole` ke `admin`.
 
 ## Kata sandi
 

@@ -28,6 +28,8 @@ var (
 	errLastAdmin         = apperror.Unprocessable("last_admin", "Harus tetap ada satu admin aktif. Jadikan pengguna lain admin dulu")
 )
 
+const pendingRole = ""
+
 type Service interface {
 	Register(ctx context.Context, request RegisterRequest) (UserResponse, error)
 	Login(ctx context.Context, request LoginRequest) (Session, error)
@@ -335,7 +337,7 @@ func roleForNewcomer(existingUsers int64) string {
 	if existingUsers == 0 {
 		return access.RoleAdmin
 	}
-	return access.RoleObserver
+	return pendingRole
 }
 
 func normalizeEmail(email string) string {

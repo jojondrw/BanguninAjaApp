@@ -21,15 +21,15 @@ func assertContains(t *testing.T, sql string, fragments ...string) {
 	}
 }
 
-func TestAssignAdminToUnassignedUsersIsIdempotent(t *testing.T) {
+func TestPromoteLegacyUsersToAdminIsIdempotent(t *testing.T) {
 	db, recorder := databasetest.Open(t, databasetest.Result{Affected: 3}, databasetest.Result{Affected: 0})
 	repository := NewRepository(db)
 
-	first, err := AssignAdminToUnassignedUsers(context.Background(), repository)
+	first, err := PromoteLegacyUsersToAdmin(context.Background(), repository)
 	if err != nil || first != 3 {
 		t.Fatalf("first run got %d, %v", first, err)
 	}
-	second, err := AssignAdminToUnassignedUsers(context.Background(), repository)
+	second, err := PromoteLegacyUsersToAdmin(context.Background(), repository)
 	if err != nil || second != 0 {
 		t.Fatalf("second run got %d, %v", second, err)
 	}
@@ -39,7 +39,8 @@ func TestAssignAdminToUnassignedUsersIsIdempotent(t *testing.T) {
 		t.Fatalf("got %d queries", len(queries))
 	}
 	for _, query := range queries {
-		assertContains(t, query.SQL, "UPDATE users SET role_id = (SELECT id FROM role WHERE code = $1)", "WHERE role_id IS NULL")
+		assertContains(t, query.SQL, "UPDATE users SET role_id = (SELECT id FROM role WHERE code = $1)", "WHERE role_id IS NULL",
+			"NOT EXISTS (SELECT 1 FROM users AS assigned WHERE assigned.role_id IS NOT NULL)")
 		if query.Args[0] != access.RoleAdmin {
 			t.Fatalf("got args %v", query.Args)
 		}
@@ -147,4 +148,47 @@ func TestListUsersSearchesNameAndEmailWithRole(t *testing.T) {
 		"users.active = $4",
 		"ORDER BY users.name ASC, users.id ASC",
 	)
+}
+
+func TestCreateUserWithoutRoleLeavesTheRoleEmpty(t *testing.T) {
+	db, recorder := databasetest.Open(t,
+		databasetest.Result{},
+		databasetest.Result{Columns: []string{"count"}, Rows: [][]driver.Value{{int64(4)}}},
+		databasetest.Result{Affected: 1},
+	)
+	user := User{Name: "UJI", Email: "uji@uji.test", PasswordHash: "x", Active: true}
+
+	err := NewRepository(db).CreateUserWithRole(context.Background(), &user, roleForNewcomer)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.RoleID != nil {
+		t.Fatalf("got role %v", user.RoleID)
+	}
+	queries := recorder.Queries()
+	if len(queries) != 5 || queries[0].SQL != databasetest.Begin || queries[4].SQL != databasetest.Commit {
+		t.Fatalf("got %+v", queries)
+	}
+	assertContains(t, queries[3].SQL, `INSERT INTO "users"`)
+	for _, query := range queries {
+		if strings.Contains(query.SQL, `FROM "role"`) {
+			t.Fatalf("a pending user needs no role lookup: %s", query.SQL)
+		}
+	}
+}
+
+func TestListUsersFiltersUsersWaitingForARole(t *testing.T) {
+	db, recorder := databasetest.Open(t, databasetest.Result{Columns: []string{"count"}, Rows: [][]driver.Value{{int64(0)}}})
+
+	if _, _, err := NewRepository(db).ListUsers(context.Background(), UserFilter{Role: pendingRoleFilter, Limit: 20}); err != nil {
+		t.Fatal(err)
+	}
+	queries := recorder.Queries()
+	for _, query := range queries {
+		assertContains(t, query.SQL, "users.role_id IS NULL")
+		if strings.Contains(query.SQL, "role.code =") {
+			t.Fatalf("pending filter must not compare role codes: %s", query.SQL)
+		}
+	}
 }

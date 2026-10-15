@@ -65,7 +65,7 @@ type Repository interface {
 	CountActiveAdmins(ctx context.Context) (int64, error)
 	LockAdminChanges(ctx context.Context) error
 	UpsertRoles(ctx context.Context, roles []Role) error
-	AssignRoleToUnassigned(ctx context.Context, roleCode string) (int64, error)
+	AssignRoleToLegacyUsers(ctx context.Context, roleCode string) (int64, error)
 	Transaction(ctx context.Context, work func(Repository) error) error
 }
 
@@ -150,7 +150,12 @@ func (r *gormRepository) CreateUserWithRole(ctx context.Context, user *User, cho
 			return err
 		}
 
-		role, err := transactional.FindRoleByCode(ctx, chooseRole(existing))
+		code := chooseRole(existing)
+		if code == "" {
+			return transactional.CreateUser(ctx, user)
+		}
+
+		role, err := transactional.FindRoleByCode(ctx, code)
 		if err != nil {
 			return err
 		}
@@ -238,11 +243,19 @@ func (f UserFilter) apply(db *gorm.DB) *gorm.DB {
 		pattern := database.ContainsPattern(f.Search)
 		db = db.Where("users.name ILIKE ? OR users.email ILIKE ?", pattern, pattern)
 	}
-	if f.Role != "" {
-		db = db.Where("role.code = ?", f.Role)
-	}
+	db = f.applyRole(db)
 	if f.Active != nil {
 		db = db.Where("users.active = ?", *f.Active)
+	}
+	return db
+}
+
+func (f UserFilter) applyRole(db *gorm.DB) *gorm.DB {
+	if f.Role == pendingRoleFilter {
+		return db.Where("users.role_id IS NULL")
+	}
+	if f.Role != "" {
+		return db.Where("role.code = ?", f.Role)
 	}
 	return db
 }
@@ -286,10 +299,11 @@ func (r *gormRepository) UpsertRoles(ctx context.Context, roles []Role) error {
 	}).Create(&roles).Error
 }
 
-func (r *gormRepository) AssignRoleToUnassigned(ctx context.Context, roleCode string) (int64, error) {
+func (r *gormRepository) AssignRoleToLegacyUsers(ctx context.Context, roleCode string) (int64, error) {
 	result := r.db.WithContext(ctx).Exec(
 		`UPDATE users SET role_id = (SELECT id FROM role WHERE code = ?), updated_at = now()
-		  WHERE role_id IS NULL AND EXISTS (SELECT 1 FROM role WHERE code = ?)`,
+		  WHERE role_id IS NULL AND EXISTS (SELECT 1 FROM role WHERE code = ?)
+		    AND NOT EXISTS (SELECT 1 FROM users AS assigned WHERE assigned.role_id IS NOT NULL)`,
 		roleCode, roleCode,
 	)
 	return result.RowsAffected, result.Error

@@ -68,12 +68,14 @@ func (m *memoryRepository) EmailExists(_ context.Context, email string) (bool, e
 }
 
 func (m *memoryRepository) CreateUserWithRole(ctx context.Context, user *User, chooseRole func(int64) string) error {
-	role, err := m.FindRoleByCode(ctx, chooseRole(int64(len(m.users))))
-	if err != nil {
-		return err
+	if code := chooseRole(int64(len(m.users))); code != "" {
+		role, err := m.FindRoleByCode(ctx, code)
+		if err != nil {
+			return err
+		}
+		user.RoleID = &role.ID
 	}
 	user.ID = uuid.New()
-	user.RoleID = &role.ID
 	m.users[user.ID] = user
 	return nil
 }
@@ -185,8 +187,8 @@ func boolPointer(value bool) *bool {
 	return &value
 }
 
-func TestFirstUserBecomesAdminAndLaterUsersBecomeObservers(t *testing.T) {
-	if roleForNewcomer(0) != access.RoleAdmin || roleForNewcomer(1) != access.RoleObserver || roleForNewcomer(40) != access.RoleObserver {
+func TestFirstUserBecomesAdminAndLaterUsersWaitForARole(t *testing.T) {
+	if roleForNewcomer(0) != access.RoleAdmin || roleForNewcomer(1) != pendingRole || roleForNewcomer(40) != pendingRole {
 		t.Fatal("bootstrap rule broken")
 	}
 
@@ -205,11 +207,56 @@ func TestFirstUserBecomesAdminAndLaterUsersBecomeObservers(t *testing.T) {
 	if first.Role == nil || first.Role.Code != access.RoleAdmin || first.Permissions["users"] != "write" {
 		t.Fatalf("first user got %+v", first)
 	}
-	if second.Role == nil || second.Role.Code != access.RoleObserver || second.Permissions["finance"] != "read" {
-		t.Fatalf("second user got %+v", second)
+	if second.Role != nil || second.Permissions == nil || len(second.Permissions) != 0 {
+		t.Fatalf("second user must wait for a role without any permission, got %+v", second)
 	}
-	if _, ok := second.Permissions["users"]; ok {
-		t.Fatal("observer must not see user management")
+	for _, module := range access.Modules() {
+		if access.Allows("", module, access.LevelRead) {
+			t.Errorf("a user without role must not read %s", module)
+		}
+	}
+}
+
+func TestPendingUserCanLogInWithoutPermissions(t *testing.T) {
+	repository := newMemoryRepository()
+	service, _ := newTestService(repository)
+	ctx := context.Background()
+	if _, err := service.Register(ctx, RegisterRequest{Name: "UJI Admin", Email: "admin@uji.test", Password: "rahasia123"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Register(ctx, RegisterRequest{Name: "UJI Tamu", Email: "tamu@uji.test", Password: "rahasia123"}); err != nil {
+		t.Fatal(err)
+	}
+
+	session, err := service.Login(ctx, LoginRequest{Email: "tamu@uji.test", Password: "rahasia123"})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if session.Response.AccessToken == "" || session.RefreshToken == "" || repository.refreshSaved != 1 {
+		t.Fatalf("pending user must still get a session, got %+v", session.Response)
+	}
+	if session.Response.User.Role != nil || len(session.Response.User.Permissions) != 0 {
+		t.Fatalf("got %+v", session.Response.User)
+	}
+}
+
+func TestAdminCanGiveAPendingUserARole(t *testing.T) {
+	repository := newMemoryRepository()
+	repository.addUser(access.RoleAdmin, true)
+	pendingID := repository.addUser("", true)
+	service, cache := newTestService(repository)
+
+	updated, err := service.ChangeRole(context.Background(), pendingID, ChangeRoleRequest{Role: access.RoleSales})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Role == nil || updated.Role.Code != access.RoleSales {
+		t.Fatalf("got %+v", updated)
+	}
+	if len(cache.forgotten) != 1 || cache.forgotten[0] != pendingID {
+		t.Fatalf("role cache not invalidated: %v", cache.forgotten)
 	}
 }
 

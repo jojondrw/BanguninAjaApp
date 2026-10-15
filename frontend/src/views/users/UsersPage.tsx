@@ -1,13 +1,21 @@
+import { Hourglass } from 'lucide-react'
 import { useState } from 'react'
 
 import { useCurrentUser } from '../../controllers/useAuth'
 import { useChangeUserActive, useChangeUserRole, useUsers } from '../../controllers/useUsers'
-import { type ManagedUser, ROLE_OPTIONS, type RoleCode, roleLabel, type UserFilter } from '../../models/user'
+import {
+  type ManagedUser,
+  PENDING_ROLE_FILTER,
+  ROLE_OPTIONS,
+  type RoleCode,
+  roleLabel,
+  type UserFilter,
+} from '../../models/user'
 import { errorMessage } from '../../shared/errorMessage'
-import { shortDate } from '../../shared/format'
+import { number, shortDate } from '../../shared/format'
 import { AppShell } from '../components/AppShell'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
-import { ErrorNote, SuccessNote } from '../components/Form'
+import { BUTTON_BASE, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterSelect, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from '../hr/RowActions'
 import { RoleCell } from './RoleCell'
@@ -31,6 +39,9 @@ export function UsersPage() {
     pageSize: PAGE_SIZE,
   }
   const users = useUsers(filter)
+  const pending = useUsers({ role: PENDING_ROLE_FILTER, pageSize: 1 })
+  const pendingCount = pending.data?.totalItems ?? 0
+  const isPendingView = role === PENDING_ROLE_FILTER
   const changeRole = useChangeUserRole()
   const changeActive = useChangeUserActive()
 
@@ -64,14 +75,22 @@ export function UsersPage() {
     )
   }
 
+  const togglePendingView = () => {
+    setRole(isPendingView ? '' : PENDING_ROLE_FILTER)
+    setPage(1)
+  }
+
   const failure = changeRole.isError ? changeRole.error : changeActive.isError ? changeActive.error : null
 
   return (
     <AppShell title="Pengguna" description="Atur peran dan status akun tim. Hak akses tiap modul mengikuti peran.">
       <Card
         title="Daftar pengguna"
-        description="Pendaftar baru otomatis menjadi Pengamat. Harus selalu ada minimal satu admin aktif."
+        description="Pendaftar baru tidak bisa membuka data apa pun sampai Anda memberi peran. Harus selalu ada minimal satu admin aktif."
       >
+        {pendingCount > 0 || isPendingView ? (
+          <PendingBanner count={pendingCount} isShowing={isPendingView} onToggle={togglePendingView} />
+        ) : null}
         <Toolbar>
           <ToolbarInput
             id="user-search"
@@ -96,6 +115,7 @@ export function UsersPage() {
             }}
           >
             <option value="">Semua peran</option>
+            <option value={PENDING_ROLE_FILTER}>Menunggu peran</option>
             {ROLE_OPTIONS.map((option) => (
               <option key={option.code} value={option.code}>
                 {option.label}
@@ -134,11 +154,7 @@ export function UsersPage() {
           <>
             <Table
               rows={users.data.items}
-              emptyMessage={
-                filter.search || filter.role || filter.active
-                  ? 'Tidak ada pengguna yang cocok dengan saringan itu.'
-                  : 'Belum ada pengguna terdaftar.'
-              }
+              emptyMessage={emptyMessage(filter, isPendingView)}
               columns={[
                 {
                   header: 'Pengguna',
@@ -211,5 +227,41 @@ export function UsersPage() {
         ) : null}
       </Card>
     </AppShell>
+  )
+}
+
+function emptyMessage(filter: UserFilter, isPendingView: boolean): string {
+  if (isPendingView && !filter.search && !filter.active) {
+    return 'Tidak ada pendaftar yang menunggu peran.'
+  }
+  if (filter.search || filter.role || filter.active) {
+    return 'Tidak ada pengguna yang cocok dengan saringan itu.'
+  }
+  return 'Belum ada pengguna terdaftar.'
+}
+
+// Pendaftar baru tidak punya peran, jadi admin perlu tahu ada yang menunggu.
+// Tombolnya menyaring daftar ke akun tanpa peran, sama dengan pilihan
+// "Menunggu peran" di saringan peran.
+function PendingBanner({ count, isShowing, onToggle }: { count: number; isShowing: boolean; onToggle: () => void }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[13px] text-amber-800">
+      <Hourglass aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.8} />
+      <p role="status" className="min-w-0 flex-1">
+        {count > 0
+          ? `${number(count)} pendaftar menunggu peran. Pilih perannya di kolom Peran, atau nonaktifkan akun yang tidak dikenal.`
+          : 'Tidak ada lagi pendaftar yang menunggu peran.'}
+      </p>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={isShowing}
+        className={`h-8 ${BUTTON_BASE} ${
+          isShowing ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white text-amber-900 shadow-hairline hover:bg-amber-100/60'
+        }`}
+      >
+        Menunggu peran
+      </button>
+    </div>
   )
 }

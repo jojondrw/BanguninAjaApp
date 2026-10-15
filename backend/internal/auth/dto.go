@@ -35,6 +35,8 @@ type UserResponse struct {
 	CreatedAt   time.Time         `json:"createdAt"`
 }
 
+const pendingRoleFilter = "none"
+
 type UserQuery struct {
 	pagination.Query
 	Search string `form:"search" binding:"omitempty,max=160"`
