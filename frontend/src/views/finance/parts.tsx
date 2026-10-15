@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, type To } from 'react-router-dom'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import type { CashType } from '../../models/finance'
 import { rupiah } from '../../shared/format'
 import { BUTTON_BASE, BUTTON_PRIMARY } from '../components/Form'
@@ -17,6 +18,11 @@ export function ConfirmDelete({ subject, isConfirming, isPending, onAsk, onCance
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
   if (!isConfirming && !isPending) {
     return (
       <button

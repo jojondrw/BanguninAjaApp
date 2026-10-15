@@ -46,6 +46,7 @@ func run() error {
 
 func seedAll(tx *gorm.DB) error {
 	steps := []seedStep{
+		{"roles", seedRoles},
 		{"regions", seedRegions},
 		{"units of measure", seedUnits},
 		{"accounts", seedAccounts},

@@ -3,6 +3,7 @@ import { lazy, type ReactNode, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { useSession, useSessionRestore } from './controllers/useAuth'
+import { RouteAccess } from './views/access/RouteAccess'
 import { BrandMark } from './views/components/Brand'
 import { ErrorBoundary } from './views/components/ErrorBoundary'
 import { LoginPage } from './views/LoginPage'
@@ -20,6 +21,7 @@ const ProcurementPage = lazy(() => import('./views/ProcurementPage').then((modul
 const ProjectsPage = lazy(() => import('./views/ProjectsPage').then((module) => ({ default: module.ProjectsPage })))
 const ProjectWorkspacePage = lazy(() => import('./views/ProjectWorkspacePage').then((module) => ({ default: module.ProjectWorkspacePage })))
 const SalesPage = lazy(() => import('./views/SalesPage').then((module) => ({ default: module.SalesPage })))
+const UsersPage = lazy(() => import('./views/users/UsersPage').then((module) => ({ default: module.UsersPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +49,7 @@ export default function App() {
                 <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
                 <Route path="/sdm" element={<RequireSession><HrPage /></RequireSession>} />
                 <Route path="/inventaris" element={<RequireSession><InventoryPage /></RequireSession>} />
+                <Route path="/pengguna" element={<RequireSession><UsersPage /></RequireSession>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
@@ -93,7 +96,7 @@ function RequireSession({ children }: { children: ReactNode }) {
     return <Navigate to="/masuk" replace />
   }
 
-  return children
+  return <RouteAccess>{children}</RouteAccess>
 }
 
 function GuestOnly({ children }: { children: ReactNode }) {

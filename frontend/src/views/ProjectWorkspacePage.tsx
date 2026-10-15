@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
+import { useCan } from '../controllers/useAccess'
 import { useProject } from '../controllers/useProjectWorkspace'
 import type { Project } from '../models/project'
 import { ApiError } from '../shared/apiClient'
@@ -9,6 +10,7 @@ import { rupiah, shortDate } from '../shared/format'
 import { AppShell } from './components/AppShell'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { BUTTON_BASE, BUTTON_SUBTLE } from './components/Form'
+import { AccessScope } from './access/AccessScope'
 import { Tabs, type TabItem } from './components/Tabs'
 import { StatusChip } from './OverviewPage'
 import { PanelToggle, ProgressMeter } from './project/parts'
@@ -64,7 +66,14 @@ export function ProjectWorkspacePage() {
   const { id = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const project = useProject(id)
-  const tab = toTab(searchParams.get(TAB_PARAM))
+  const canReadLocations = useCan('locations', 'read')
+  const canReadFinance = useCan('finance', 'read')
+  // Tab yang datanya dari modul lain hanya tampil kalau peran boleh membacanya.
+  const tabs = TABS.filter(
+    (item) => (item.id !== 'lokasi' || canReadLocations) && (item.id !== 'keuangan' || canReadFinance),
+  )
+  const requestedTab = toTab(searchParams.get(TAB_PARAM))
+  const tab = tabs.some((item) => item.id === requestedTab) ? requestedTab : DEFAULT_TAB
   const [panel, setPanel] = useState<ManagePanel | null>(null)
 
   const togglePanel = (next: ManagePanel) => setPanel((current) => (current === next ? null : next))
@@ -133,10 +142,18 @@ export function ProjectWorkspacePage() {
 
         <ProjectFacts project={data} />
 
-        <Tabs idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={TABS} active={tab} onChange={changeTab}>
+        <Tabs idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={tabs} active={tab} onChange={changeTab}>
           {tab === 'ringkasan' ? <ProjectSummaryTab project={data} /> : null}
-          {tab === 'lokasi' ? <ProjectSiteTab project={data} /> : null}
-          {tab === 'keuangan' ? <ProjectFinanceTab project={data} /> : null}
+          {tab === 'lokasi' ? (
+            <AccessScope module="locations">
+              <ProjectSiteTab project={data} />
+            </AccessScope>
+          ) : null}
+          {tab === 'keuangan' ? (
+            <AccessScope module="finance">
+              <ProjectFinanceTab project={data} />
+            </AccessScope>
+          ) : null}
         </Tabs>
       </div>
     </AppShell>

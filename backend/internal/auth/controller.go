@@ -91,3 +91,48 @@ func (c *Controller) Profile(ctx *gin.Context) {
 
 	httpresponse.OK(ctx, user)
 }
+
+func (c *Controller) ListUsers(ctx *gin.Context) {
+	var query UserQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	page, err := c.service.ListUsers(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, page, err)
+}
+
+func (c *Controller) ChangeUserRole(ctx *gin.Context) {
+	userID, err := httprequest.PathID(ctx, "id")
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	var request ChangeRoleRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	user, err := c.service.ChangeRole(ctx.Request.Context(), userID, request)
+	httpresponse.Respond(ctx, user, err)
+}
+
+func (c *Controller) ChangeUserActive(ctx *gin.Context) {
+	userID, err := httprequest.PathID(ctx, "id")
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	var request ChangeActiveRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	user, err := c.service.ChangeActive(ctx.Request.Context(), userID, request)
+	httpresponse.Respond(ctx, user, err)
+}
