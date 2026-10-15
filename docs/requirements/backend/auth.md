@@ -235,7 +235,9 @@ Urutannya:
 
 1. Ambil segmen pertama setelah `/api` dari rute yang cocok (`c.FullPath()`).
    Segmen `auth` dilewati tanpa pemeriksaan, jadi login, refresh, logout, dan
-   `/auth/me` tetap seperti sebelumnya.
+   `/auth/me` tetap seperti sebelumnya. Segmen `pay` (halaman bayar on-chain
+   untuk pembeli, lihat Billing di `slice-bisnis.md`) juga dilewati: tidak butuh
+   token maupun peran, dan grupnya tidak memasang `middleware.Authentication`.
 2. Baca access token. Kalau kosong atau rusak, balas 401 seperti middleware
    autentikasi. User id disimpan di context, sehingga `middleware.Authentication`
    milik modul tidak mengurai token dua kali.

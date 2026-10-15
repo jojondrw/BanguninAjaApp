@@ -430,6 +430,12 @@ Semua di bawah `/api/billing`.
 | GET, POST | `/payables` | Filter `search`, `status`, `vendorId`, `projectId`, `purchaseOrderId`. Body opsional `projectId`, `purchaseOrderId`. Sudah berisi `vendorName`, `projectName`, `purchaseOrderNumber`, `lastPaidAt` |
 | GET, PUT, DELETE | `/payables/:id` | |
 | POST, GET | `/payables/:id/payments` | Sama seperti faktur |
+| POST, GET | `/invoices/:id/onchain-requests`, `/receivables/:id/onchain-requests` | Permintaan bayar on-chain. POST body opsional `{ "amount": 50000000 }` (kosong berarti sisa tagihan). GET berisi permintaan tagihan itu dan pasangan tertautnya, terbaru dulu, `page` dan `pageSize`. Lihat [Pembayaran on-chain](#pembayaran-on-chain-sepolia) |
+| GET | `/onchain/config` | `{ enabled, chainId, receiver, idrPerEth, explorerUrl, minConfirmations, requestTtlMinutes }` |
+| POST | `/onchain/requests/:id/cancel` | Membatalkan permintaan yang masih `pending` |
+
+Dua endpoint publik untuk pembeli ada di luar `/api/billing`, tanpa login:
+`GET /api/pay/:token` dan `POST /api/pay/:token/confirm`.
 
 ### Tautan piutang dan utang ke sumbernya
 
@@ -462,8 +468,8 @@ transaksi dengan baris induk dikunci (`SELECT ... FOR UPDATE`).
 | `invoice_id`, `receivable_id`, `payable_id` | Minimal satu terisi (`chk_billing_payment_parent`). Faktur dan piutang boleh terisi bersamaan, utang selalu sendiri. FK `ON DELETE CASCADE`, index per kolom |
 | `amount` | Lebih dari nol (`chk_billing_payment_amount`) |
 | `paid_at` | Tanggal bayar. Kalau tidak dikirim, hari ini menurut Asia/Jakarta. Tanggal setelah hari ini ditolak |
-| `method` | `transfer` (bawaan), `tunai`, `cek`, `lainnya`. Divalidasi `oneof` di DTO, bukan check constraint, supaya metode baru (misalnya pembayaran on-chain dari pekerjaan N3) cukup menambah nilai di DTO |
-| `reference`, `note` | Opsional, maksimal 60 dan 200 karakter |
+| `method` | `transfer` (bawaan), `tunai`, `cek`, `lainnya`, `onchain`. Divalidasi `oneof` di DTO, bukan check constraint, supaya metode baru cukup menambah nilai di DTO |
+| `reference`, `note` | Opsional, maksimal 80 dan 200 karakter. 80 supaya hash transaksi on-chain (66 karakter) muat; kolomnya dilebarkan dari `varchar(60)` oleh AutoMigrate |
 | `created_by` | User yang mencatat, dari token. FK ke `users`, `SET NULL` |
 
 Respons riwayat berisi `invoiceNumber`, `receivableReference`, dan
@@ -513,6 +519,112 @@ riwayat ada tidak disamakan otomatis: tiap sisi mendapat barisnya sendiri dan
 selisihnya perlu dirapikan manual. Semua `INSERT` dijaga `NOT EXISTS`, jadi
 menjalankan migrate kedua kalinya tidak menambah baris.
 
+### Pembayaran on-chain (Sepolia)
+
+Simulasi pembayaran masuk lewat jaringan uji Ethereum Sepolia untuk faktur ke
+pelanggan dan piutang (bukan utang dan bukan faktur vendor). Perusahaan hanya
+**menerima** ke satu alamat yang diatur lewat env; server tidak pernah memegang
+kunci privat dan tidak pernah mengirim transaksi.
+
+Alur:
+
+1. Staf membuat permintaan bayar di rincian faktur atau piutang. Nominal bawaan
+   adalah sisa tagihan (untuk pasangan faktur dan piutang yang tertaut, sisa
+   terkecil dari keduanya), harus lebih dari nol dan tidak melebihi sisa itu.
+   Selama masih ada permintaan `pending` yang belum kedaluwarsa untuk tagihan
+   itu atau pasangannya, permintaan baru ditolak (`onchain_request_active`).
+2. Server menyimpan nominal rupiah, nilai wei (dibulatkan ke atas memakai kurs
+   simulasi), alamat penerima, chain id, kurs, token publik acak (24 byte,
+   base64url), dan batas waktu. Frontend menampilkan QR dari URI EIP-681
+   `ethereum:<penerima>@<chainId>?value=<wei>` dan tautan `/bayar/<token>`.
+3. Pembeli membayar dari dompetnya (MetaMask di peramban atau memindai QR),
+   lalu halaman bayar mengirim hash transaksinya ke
+   `POST /api/pay/:token/confirm` `{ "txHash": "0x..." }`.
+4. Server memeriksa transaksi sendiri lewat JSON-RPC (`net/http`, tanpa
+   dependensi baru): `eth_chainId`, `eth_getTransactionByHash`,
+   `eth_getTransactionReceipt`, `eth_blockNumber`, dan `eth_getBlockByNumber`
+   kalau node tidak menyertakan `blockTimestamp`.
+5. Kalau lolos, dalam satu transaksi database: baris permintaan dikunci, lalu
+   pembayaran dicatat lewat jalur yang sama dengan `POST .../payments` (faktur
+   dikunci dulu, lalu piutang tertautnya, satu baris `billing_payment` dengan
+   metode `onchain`, referensi = hash transaksi, catatan berisi alamat pengirim
+   dan tautan explorer, `created_by` = staf yang membuat permintaan), lalu
+   permintaan ditandai `paid` beserta alamat pengirim dan waktu bayar.
+
+Konfigurasi (`internal/shared/config/onchain.go`):
+
+| Env | Bawaan | Keterangan |
+|---|---|---|
+| `ONCHAIN_RECEIVER_ADDRESS` | kosong | Alamat penerima `0x...`. Kosong berarti fitur mati: `/onchain/config` membalas `enabled: false` dan frontend menyembunyikan "Bayar on-chain". Huruf campuran harus lolos checksum EIP-55; alamat nol ditolak. Server gagal start kalau alamatnya rusak |
+| `ONCHAIN_RPC_URL` | `https://ethereum-sepolia-rpc.publicnode.com` | Node JSON-RPC publik |
+| `ONCHAIN_CHAIN_ID` | `11155111` | Sepolia |
+| `ONCHAIN_IDR_PER_ETH` | `1e12` | **Kurs simulasi**, bukan harga pasar. Rp 1 triliun = 1 ETH, jadi Rp 50 juta = 0,00005 SepoliaETH, cukup dari faucet. Boleh ditulis `1e12` atau `1000000000000` |
+| `ONCHAIN_MIN_CONFIRMATIONS` | `1` | Jumlah blok (termasuk blok transaksi) sebelum dicatat |
+| `ONCHAIN_REQUEST_TTL` | `30m` | Masa berlaku permintaan, minimal `1m` |
+| `ONCHAIN_EXPLORER_URL` | `https://sepolia.etherscan.io` | Dasar tautan `/tx/<hash>` |
+
+Tabel `onchain_payment_request`:
+
+| Kolom | Isi |
+|---|---|
+| `target_kind`, `target_id` | `invoice` atau `receivable` (`chk_onchain_payment_request_target_kind`) dan id-nya, index gabungan. Tanpa FK karena polimorfik; tagihan yang sudah dihapus membuat halaman bayar membalas 404 `onchain_target_not_found` |
+| `amount_idr`, `amount_wei`, `idr_per_eth` | Wei disimpan sebagai teks angka (`varchar(80)`, dicek regex) karena melebihi int64. Kurs ikut disimpan supaya tampilan tidak berubah kalau env diganti |
+| `receiver`, `chain_id` | Disalin dari env saat dibuat, dan verifikasi memakai nilai yang tersimpan ini |
+| `token` | Unik (`uq_onchain_payment_request_token`) |
+| `status` | `pending`, `paid`, `expired`, `failed`, `cancelled`. `paid` wajib punya `tx_hash` dan `paid_at` (`chk_onchain_payment_request_paid`) |
+| `tx_hash` | Unik bila terisi (`uq_onchain_payment_request_tx_hash`), huruf kecil |
+| `payer_address`, `failure_reason`, `created_by` (FK `users`, `SET NULL`), `expires_at`, `paid_at` | |
+
+Status `pending` yang sudah lewat `expires_at` dibalas sebagai `expired` di
+semua respons tanpa mengubah baris; baris baru benar-benar diubah ke `expired`
+kalau ada transaksi yang terbukti masuk blok setelah batas waktu. Kolom unik
+memakai tag `uniqueIndex`, jadi `cmd/migrate` tetap bisa dijalankan berulang.
+
+Endpoint publik (segmen `pay` terbuka di `access/matrix.go`):
+
+| Method | Path | Keterangan |
+|---|---|---|
+| GET | `/api/pay/:token` | Nomor faktur atau referensi piutang, nama proyek, nominal rupiah, wei dan ETH, kurs, penerima, chain id, URI EIP-681, status, batas waktu, hash dan tautan explorer kalau sudah dibayar. Tidak ada nama pelanggan atau id internal |
+| POST | `/api/pay/:token/confirm` | 200 kalau sudah dicatat (`verification: "paid"`), 202 kalau masih menunggu (`verification: "waiting"` beserta pesan seperti "menunggu konfirmasi jaringan (1 dari 2)"), atau error dengan alasan berbahasa Indonesia |
+
+Token yang bentuknya salah langsung 404 tanpa query, `txHash` divalidasi
+binding (`len=66,startswith=0x,hexadecimal`), dan setiap token dibatasi 60
+GET dan 20 confirm per menit di memori (429 `too_many_requests`).
+
+Aturan verifikasi, berurutan:
+
+| Aturan | Hasil |
+|---|---|
+| Node RPC harus di chain yang sama dengan permintaan | 502 `chain_mismatch` |
+| Node tidak bisa dihubungi atau jawabannya rusak | 502 `chain_unavailable`, halaman bayar mencoba lagi |
+| Transaksi belum terlihat atau belum masuk blok | 202 menunggu; setelah batas waktu lewat jadi 422 `onchain_request_expired` |
+| `chainId` transaksi (kalau ada) sama dengan permintaan | 422 `onchain_wrong_chain` |
+| `to` sama dengan penerima, tanpa membedakan huruf besar kecil | 422 `onchain_wrong_receiver` |
+| `value` minimal sebesar wei permintaan (lebih boleh, yang dicatat tetap nominal rupiahnya) | 422 `onchain_value_too_low` dengan kedua nilai |
+| Status receipt `0x1` | 422 `onchain_tx_reverted` |
+| Waktu blok tidak sebelum permintaan dibuat (toleransi jam 2 menit) | 422 `onchain_tx_before_request` |
+| Waktu blok tidak setelah `expires_at` (toleransi 2 menit). Transaksi yang masuk tepat waktu tetap dicatat walaupun konfirmasinya dikirim setelah kedaluwarsa | 422 `onchain_tx_after_expiry`, permintaan ditandai `expired` beserta hash di alasan |
+| Konfirmasi minimal `ONCHAIN_MIN_CONFIRMATIONS` | 202 menunggu |
+| Hash belum dipakai permintaan lain atau pembayaran `onchain` lain di `billing_payment` (dicek sebelum RPC) | 409 `onchain_tx_used` |
+
+Idempoten: konfirmasi ulang permintaan yang sudah `paid` dengan hash yang sama
+membalas status lunas tanpa pembayaran kedua (juga kalau dua konfirmasi datang
+bersamaan, karena baris permintaan dikunci). Hash lain untuk permintaan yang
+sudah lunas dibalas 409 `onchain_request_paid`. Kalau transaksi sah tetapi
+pencatatan ditolak (misalnya tagihan sudah dilunasi lewat transfer sementara
+itu, atau tagihannya dihapus), permintaan ditandai `failed` beserta hash,
+pengirim, dan alasannya, lalu dibalas 422 `onchain_settlement_failed`; staf
+perlu mengurus dana itu secara manual. Permintaan yang dibatalkan (409
+`onchain_request_cancelled`) tidak bisa dikonfirmasi lagi.
+
+Klien RPC (`internal/shared/ethereum`) adalah implementasi interface
+`billing.ChainReader`, jadi tes memakai node palsu. Respons asli Sepolia (chain
+id, nomor blok, transaksi, receipt, blok) dipakai sebagai fixture tes pengurai.
+
+Yang belum: server tidak memindai blok untuk menemukan pembayaran sendiri.
+Pembayaran dari HP lewat QR tetap perlu hash transaksinya ditempel di halaman
+bayar (tombol "Saya sudah bayar, tempel hash transaksi").
+
 ### Status jatuh tempo tidak dipercaya dari kolom
 
 `status` tetap disimpan supaya index parsial `WHERE status <> 'paid'` terpakai,
@@ -544,6 +656,8 @@ Aturan yang sama dipakai untuk cicilan di slice `sales`.
 | Faktur yang ditautkan harus ada, ditagihkan ke pelanggan piutang, dan nilai piutang tidak melebihi nilai faktur (422) | `linked_invoice_not_found`, `invoice_customer_mismatch`, `receivable_exceeds_invoice` |
 | Satu faktur hanya satu piutang (409, "Faktur ini sudah dicatat sebagai piutang <referensi>") | `invoice_already_recorded` |
 | Faktur yang sudah dicatat sebagai piutang tidak bisa dihapus (409), dan saat diubah pelanggannya harus tetap sama serta nilainya tidak di bawah nilai piutang (422) | `invoice_has_receivable`, `invoice_receivable_mismatch` |
+| Permintaan bayar on-chain hanya untuk faktur pelanggan dan piutang yang masih bersisa, nominal tidak melebihi sisa, satu yang aktif per tagihan, dan fitur harus aktif (503) | `onchain_vendor_invoice`, `onchain_nothing_outstanding`, `onchain_amount_exceeds_outstanding`, `onchain_request_active`, `onchain_disabled` |
+| Verifikasi transaksi on-chain (lihat tabel di atas) | `onchain_*`, `chain_unavailable`, `chain_mismatch` |
 
 ## HR
 
