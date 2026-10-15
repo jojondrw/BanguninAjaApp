@@ -90,3 +90,31 @@ func TestValidateAccountParent(t *testing.T) {
 		t.Errorf("valid parent: got %v", err)
 	}
 }
+
+func TestBlankCodeOrNameIsRefusedBeforeTouchingTheDatabase(t *testing.T) {
+	service := &service{repository: &fakeRepository{}}
+	ctx := context.Background()
+	id := uuid.New()
+
+	cases := []struct {
+		name string
+		err  error
+		want error
+	}{
+		{"create account", second(service.CreateAccount(ctx, AccountRequest{Code: "   ", Name: "Kas", Type: "asset"})), errAccountBlank},
+		{"update account", second(service.UpdateAccount(ctx, id, AccountRequest{Code: "1110", Name: " ", Type: "asset"})), errAccountBlank},
+		{"create region", second(service.CreateRegion(ctx, RegionRequest{Code: "	", Name: "Bogor", Type: "province"})), errRegionBlank},
+		{"update region", second(service.UpdateRegion(ctx, id, RegionRequest{Code: "32", Name: "  ", Type: "province"})), errRegionBlank},
+		{"create unit", second(service.CreateUnitOfMeasure(ctx, UnitOfMeasureRequest{Code: " ", Name: "Meter"})), errUnitOfMeasureBlank},
+		{"update unit", second(service.UpdateUnitOfMeasure(ctx, id, UnitOfMeasureRequest{Code: "m", Name: "  "})), errUnitOfMeasureBlank},
+	}
+	for _, tc := range cases {
+		if !errors.Is(tc.err, tc.want) {
+			t.Errorf("%s: got %v, want %v", tc.name, tc.err, tc.want)
+		}
+	}
+}
+
+func second[T any](_ T, err error) error {
+	return err
+}

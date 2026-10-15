@@ -14,6 +14,7 @@ import (
 
 var (
 	errRegionNotFound       = apperror.NotFound("region_not_found", "Wilayah tidak ditemukan")
+	errRegionBlank          = apperror.Unprocessable("region_blank", "Kode dan nama wilayah wajib diisi")
 	errRegionCodeUsed       = apperror.Conflict("region_code_used", "Kode wilayah sudah dipakai")
 	errRegionInUse          = apperror.Conflict("region_in_use", "Wilayah masih dipakai oleh data lain")
 	errRegionTypeLocked     = apperror.Conflict("region_type_locked", "Jenis wilayah tidak bisa diubah karena masih punya wilayah turunan")
@@ -22,10 +23,12 @@ var (
 	errRegionParentInvalid  = apperror.Unprocessable("region_parent_invalid", "Jenis wilayah induk tidak sesuai dengan jenis wilayah")
 
 	errUnitOfMeasureNotFound = apperror.NotFound("unit_of_measure_not_found", "Satuan tidak ditemukan")
+	errUnitOfMeasureBlank    = apperror.Unprocessable("unit_of_measure_blank", "Kode dan nama satuan wajib diisi")
 	errUnitOfMeasureCodeUsed = apperror.Conflict("unit_of_measure_code_used", "Kode satuan sudah dipakai")
 	errUnitOfMeasureInUse    = apperror.Conflict("unit_of_measure_in_use", "Satuan masih dipakai oleh data lain")
 
 	errAccountNotFound           = apperror.NotFound("account_not_found", "Akun tidak ditemukan")
+	errAccountBlank              = apperror.Unprocessable("account_blank", "Kode dan nama akun wajib diisi")
 	errAccountCodeUsed           = apperror.Conflict("account_code_used", "Kode akun sudah dipakai")
 	errAccountInUse              = apperror.Conflict("account_in_use", "Akun masih dipakai oleh data lain")
 	errAccountTypeLocked         = apperror.Conflict("account_type_locked", "Jenis akun tidak bisa diubah karena masih punya akun turunan")
@@ -108,6 +111,9 @@ func (s *service) GetRegion(ctx context.Context, id uuid.UUID) (RegionResponse, 
 }
 
 func (s *service) CreateRegion(ctx context.Context, request RegionRequest) (RegionResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return RegionResponse{}, errRegionBlank
+	}
 	if err := s.validateRegionParent(ctx, request); err != nil {
 		return RegionResponse{}, err
 	}
@@ -121,6 +127,9 @@ func (s *service) CreateRegion(ctx context.Context, request RegionRequest) (Regi
 }
 
 func (s *service) UpdateRegion(ctx context.Context, id uuid.UUID, request RegionRequest) (RegionResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return RegionResponse{}, errRegionBlank
+	}
 	region, err := s.repository.FindRegion(ctx, id)
 	if err != nil {
 		return RegionResponse{}, regionReadErrors.Resolve(err)
@@ -201,6 +210,9 @@ func (s *service) GetUnitOfMeasure(ctx context.Context, id uuid.UUID) (UnitOfMea
 }
 
 func (s *service) CreateUnitOfMeasure(ctx context.Context, request UnitOfMeasureRequest) (UnitOfMeasureResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return UnitOfMeasureResponse{}, errUnitOfMeasureBlank
+	}
 	unit := UnitOfMeasure{Code: strings.TrimSpace(request.Code), Name: strings.TrimSpace(request.Name)}
 	if err := s.repository.CreateUnitOfMeasure(ctx, &unit); err != nil {
 		return UnitOfMeasureResponse{}, unitOfMeasureWriteErrors.Resolve(err)
@@ -209,6 +221,9 @@ func (s *service) CreateUnitOfMeasure(ctx context.Context, request UnitOfMeasure
 }
 
 func (s *service) UpdateUnitOfMeasure(ctx context.Context, id uuid.UUID, request UnitOfMeasureRequest) (UnitOfMeasureResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return UnitOfMeasureResponse{}, errUnitOfMeasureBlank
+	}
 	unit, err := s.repository.FindUnitOfMeasure(ctx, id)
 	if err != nil {
 		return UnitOfMeasureResponse{}, unitOfMeasureReadErrors.Resolve(err)
@@ -250,6 +265,9 @@ func (s *service) GetAccount(ctx context.Context, id uuid.UUID) (AccountResponse
 }
 
 func (s *service) CreateAccount(ctx context.Context, request AccountRequest) (AccountResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return AccountResponse{}, errAccountBlank
+	}
 	if err := s.validateAccountParent(ctx, uuid.Nil, request); err != nil {
 		return AccountResponse{}, err
 	}
@@ -263,6 +281,9 @@ func (s *service) CreateAccount(ctx context.Context, request AccountRequest) (Ac
 }
 
 func (s *service) UpdateAccount(ctx context.Context, id uuid.UUID, request AccountRequest) (AccountResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return AccountResponse{}, errAccountBlank
+	}
 	account, err := s.repository.FindAccount(ctx, id)
 	if err != nil {
 		return AccountResponse{}, accountReadErrors.Resolve(err)
@@ -327,6 +348,12 @@ func (s *service) ensureAccountTypeChangeable(ctx context.Context, account Accou
 		return errAccountTypeLocked
 	}
 	return nil
+}
+
+func isBlank(values ...string) bool {
+	return slices.ContainsFunc(values, func(value string) bool {
+		return strings.TrimSpace(value) == ""
+	})
 }
 
 func applyRegionRequest(region *Region, request RegionRequest) {
