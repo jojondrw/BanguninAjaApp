@@ -24,6 +24,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
@@ -91,7 +92,7 @@ func run() error {
 
 func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options) error {
 	finder := gormLookup{db: tx}
-	owner, err := resolveOwner(ctx, finder, auth.NewService(auth.NewRepository(tx), nil), opts.ownerEmail)
+	owner, err := resolveOwner(ctx, finder, auth.NewService(auth.NewRepository(tx), nil, noSubjectCache{}), opts.ownerEmail)
 	if err != nil {
 		return err
 	}
@@ -131,12 +132,18 @@ func resolveOwner(ctx context.Context, finder lookup, accounts auth.Service, ema
 		return requireUser(ctx, finder, email)
 	}
 	id, found, err := finder.find(ctx, "users", map[string]any{"email": demoAccountEmail})
-	if err != nil || found {
-		return id, err
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if found {
+		return id, makeAdmin(ctx, accounts, id)
 	}
 	if password := os.Getenv("DEMO_USER_PASSWORD"); password != "" {
 		created, err := accounts.Register(ctx, auth.RegisterRequest{Name: demoAccountName, Email: demoAccountEmail, Password: password})
-		return created.ID, err
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return created.ID, makeAdmin(ctx, accounts, created.ID)
 	}
 	id, found, err = finder.first(ctx, "users", "created_at ASC")
 	if err != nil {
@@ -146,6 +153,17 @@ func resolveOwner(ctx context.Context, finder lookup, accounts auth.Service, ema
 		return uuid.Nil, errNoOwner
 	}
 	return id, nil
+}
+
+type noSubjectCache struct{}
+
+func (noSubjectCache) Forget(uuid.UUID) {}
+
+func makeAdmin(ctx context.Context, accounts auth.Service, userID uuid.UUID) error {
+	if _, err := accounts.ChangeRole(ctx, userID, auth.ChangeRoleRequest{Role: access.RoleAdmin}); err != nil {
+		return fmt.Errorf("make %s admin: %w", demoAccountEmail, err)
+	}
+	return nil
 }
 
 func requireUser(ctx context.Context, finder lookup, email string) (uuid.UUID, error) {
