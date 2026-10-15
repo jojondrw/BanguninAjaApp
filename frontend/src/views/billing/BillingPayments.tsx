@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import { useBillingPayments, usePayBilling } from '../../controllers/useBilling'
+import { useOnchainConfig } from '../../controllers/useOnchain'
 import {
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
@@ -14,13 +15,16 @@ import {
   type PaymentFormValues,
   type PaymentMethod,
 } from '../../models/billing'
+import { normalizeTxHash } from '../../models/onchain'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { Bar, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Pager, SelectField } from '../components/RecordControls'
+import { TxLink } from '../pay/PayParts'
 
 const HISTORY_PAGE_SIZE = 5
+const DEFAULT_EXPLORER_URL = 'https://sepolia.etherscan.io'
 
 // Faktur dan piutang yang tertaut berbagi baris pembayaran. Rincian faktur
 // menyebut piutangnya, rincian piutang menyebut fakturnya.
@@ -34,9 +38,13 @@ function alsoRecordedIn(kind: BillingKind, payment: BillingPayment): string | nu
   return null
 }
 
-function PaymentItem({ kind, payment }: { kind: BillingKind; payment: BillingPayment }) {
+function PaymentItem({ kind, payment, explorerUrl }: { kind: BillingKind; payment: BillingPayment; explorerUrl: string }) {
   const linked = alsoRecordedIn(kind, payment)
-  const details = [PAYMENT_METHOD_LABEL[payment.method] ?? payment.method, payment.reference].filter(Boolean).join(' · ')
+  // Referensi pembayaran on-chain adalah hash transaksi, jadi ditampilkan
+  // sebagai tautan Etherscan, bukan teks 66 karakter.
+  const txHash = payment.method === 'onchain' ? normalizeTxHash(payment.reference) : null
+  const reference = txHash ? '' : payment.reference
+  const details = [PAYMENT_METHOD_LABEL[payment.method] ?? payment.method, reference].filter(Boolean).join(' · ')
 
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
@@ -45,6 +53,11 @@ function PaymentItem({ kind, payment }: { kind: BillingKind; payment: BillingPay
           <span className="font-medium">{shortDate(payment.paidAt)}</span>
           <span className="text-slate-500"> · {details}</span>
         </p>
+        {txHash ? (
+          <p className="mt-0.5 text-xs text-slate-600">
+            Transaksi <TxLink url={`${explorerUrl}/tx/${txHash}`} hash={txHash} />
+          </p>
+        ) : null}
         {payment.note ? <p className="mt-0.5 text-xs break-words text-slate-600">{payment.note}</p> : null}
         {linked ? <p className="mt-0.5 text-xs text-navy-700">{linked}</p> : null}
         {payment.createdByName ? (
@@ -59,6 +72,8 @@ function PaymentItem({ kind, payment }: { kind: BillingKind; payment: BillingPay
 export function PaymentHistory({ kind, record }: { kind: BillingKind; record: BillingRecord }) {
   const [page, setPage] = useState(1)
   const payments = useBillingPayments(kind, record.id, page, HISTORY_PAGE_SIZE)
+  const onchain = useOnchainConfig()
+  const explorerUrl = onchain.data?.explorerUrl || DEFAULT_EXPLORER_URL
 
   return (
     <section className="mt-6 border-t border-slate-100 pt-5" aria-labelledby="billing-history-title">
@@ -82,7 +97,7 @@ export function PaymentHistory({ kind, record }: { kind: BillingKind; record: Bi
           <>
             <ul className="mt-2 divide-y divide-slate-100">
               {payments.data.items.map((payment) => (
-                <PaymentItem key={payment.id} kind={kind} payment={payment} />
+                <PaymentItem key={payment.id} kind={kind} payment={payment} explorerUrl={explorerUrl} />
               ))}
             </ul>
             <Pager

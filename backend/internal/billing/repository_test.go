@@ -162,7 +162,7 @@ func TestReceivableListRouteBindsProjectAndContractFilters(t *testing.T) {
 
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens, config.Onchain{}).RegisterRoutes(router.Group("/api"))
 	request := httptest.NewRequest(http.MethodGet, "/api/billing/receivables?projectId="+projectID.String()+"&contractId="+contractID.String(), nil)
 	request.Header.Set("Authorization", "Bearer "+access.Value)
 	response := httptest.NewRecorder()

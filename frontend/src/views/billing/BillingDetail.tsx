@@ -14,7 +14,9 @@ import { number, rupiah, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading } from '../components/Data'
 import { BUTTON_BASE, Button, ErrorNote, SuccessNote } from '../components/Form'
 import { FormPanel } from '../components/RecordControls'
+import type { OnchainBillingKind } from '../../models/onchain'
 import { StatusChip } from './BillingCells'
+import { OnchainSection } from './OnchainPanel'
 import { PaymentForm, PaymentHistory } from './BillingPayments'
 
 export interface DetailField {
@@ -28,6 +30,16 @@ interface EditControls {
 }
 
 const DANGER_BUTTON = 'bg-red-600 text-white shadow-button hover:bg-red-700 disabled:bg-red-600/55'
+
+// Pembayaran on-chain hanya untuk sisi pelanggan: faktur ke pelanggan dan
+// piutang. Utang dan faktur vendor tidak ditawari.
+function isOnchainKind(kind: BillingKind): kind is OnchainBillingKind {
+  return kind !== 'payables'
+}
+
+function isCustomerSide(record: BillingRecord): boolean {
+  return !('partyType' in record) || record.partyType === 'customer'
+}
 
 function DeleteAction({ kind, record, label, onDeleted }: {
   kind: BillingKind
@@ -192,6 +204,8 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
       />
 
       <PaymentHistory kind={kind} record={data} />
+
+      {isOnchainKind(kind) && isCustomerSide(data) ? <OnchainSection kind={kind} record={data} /> : null}
 
       {canWrite ? (
         <section className="mt-6 border-t border-slate-100 pt-5">

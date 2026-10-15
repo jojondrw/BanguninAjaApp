@@ -67,7 +67,7 @@ type Payment struct {
 	Amount       int64      `gorm:"not null"`
 	PaidAt       time.Time  `gorm:"type:date;not null"`
 	Method       string     `gorm:"type:varchar(20);not null"`
-	Reference    string     `gorm:"type:varchar(60);not null;default:''"`
+	Reference    string     `gorm:"type:varchar(80);not null;default:''"`
 	Note         string     `gorm:"type:varchar(200);not null;default:''"`
 	CreatedBy    *uuid.UUID `gorm:"type:uuid;index:idx_billing_payment_created_by"`
 }
@@ -76,8 +76,31 @@ func (Payment) TableName() string {
 	return "billing_payment"
 }
 
+type OnchainRequest struct {
+	entity.Base
+	TargetKind    string     `gorm:"type:varchar(20);not null;index:idx_onchain_payment_request_target,priority:1"`
+	TargetID      uuid.UUID  `gorm:"type:uuid;not null;index:idx_onchain_payment_request_target,priority:2"`
+	AmountIDR     int64      `gorm:"column:amount_idr;not null"`
+	AmountWei     string     `gorm:"type:varchar(80);not null"`
+	IDRPerETH     int64      `gorm:"column:idr_per_eth;not null"`
+	Receiver      string     `gorm:"type:varchar(42);not null"`
+	ChainID       int64      `gorm:"not null"`
+	Token         string     `gorm:"type:varchar(64);not null;uniqueIndex:uq_onchain_payment_request_token"`
+	Status        string     `gorm:"type:varchar(20);not null;index:idx_onchain_payment_request_status"`
+	TxHash        *string    `gorm:"type:varchar(66);uniqueIndex:uq_onchain_payment_request_tx_hash"`
+	PayerAddress  *string    `gorm:"type:varchar(42)"`
+	FailureReason string     `gorm:"type:varchar(300);not null;default:''"`
+	CreatedBy     *uuid.UUID `gorm:"type:uuid;index:idx_onchain_payment_request_created_by"`
+	ExpiresAt     time.Time  `gorm:"not null"`
+	PaidAt        *time.Time
+}
+
+func (OnchainRequest) TableName() string {
+	return "onchain_payment_request"
+}
+
 func Entities() []any {
-	return []any{&Invoice{}, &Receivable{}, &Payable{}, &Payment{}}
+	return []any{&Invoice{}, &Receivable{}, &Payable{}, &Payment{}, &OnchainRequest{}}
 }
 
 func Indexes() []string {
@@ -115,5 +138,10 @@ func Constraints() []string {
 			"(payable_id IS NULL OR (invoice_id IS NULL AND receivable_id IS NULL))"),
 		database.Check("billing_payment", "amount", "amount > 0"),
 		database.Check("billing_payment", "method", "method <> ''"),
+		database.ForeignKey("onchain_payment_request", "created_by", "users", database.DeleteSetNull),
+		database.Check("onchain_payment_request", "target_kind", "target_kind IN ('invoice','receivable')"),
+		database.Check("onchain_payment_request", "status", "status IN ('pending','paid','expired','failed','cancelled')"),
+		database.Check("onchain_payment_request", "amount", "amount_idr > 0 AND idr_per_eth > 0 AND amount_wei ~ '^[1-9][0-9]*$'"),
+		database.Check("onchain_payment_request", "paid", "status <> 'paid' OR (tx_hash IS NOT NULL AND paid_at IS NOT NULL)"),
 	}
 }
