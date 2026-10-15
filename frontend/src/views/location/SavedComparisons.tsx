@@ -13,12 +13,14 @@ import {
   type ComparisonDetail,
 } from '../../models/location'
 import { useScopedCan } from '../../controllers/useAccess'
+import { useDownloadComparisonReport } from '../../controllers/useLocationReports'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Pager } from '../components/RecordControls'
 import { ROW_BUTTON, ROW_BUTTON_DANGER, ROW_BUTTON_QUIET } from './buttons'
+import { DownloadNotes, ReportRowButton } from './ReportDownload'
 
 const PAGE_SIZE = 8
 const NO_COMPARISONS: Comparison[] = []
@@ -39,6 +41,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
   const open = useOpenComparison()
   const rename = useRenameComparison()
   const remove = useDeleteComparison()
+  const report = useDownloadComparisonReport()
   const canChange = useScopedCan('write')
   const items = comparisons.data?.items ?? NO_COMPARISONS
 
@@ -48,6 +51,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
     open.reset()
     rename.reset()
     remove.reset()
+    report.reset()
   }
 
   function startRename(id: string) {
@@ -65,6 +69,11 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
   function handleOpen(id: string) {
     resetNotes()
     open.mutate(id, { onSuccess: onOpened })
+  }
+
+  function handleDownload(id: string) {
+    resetNotes()
+    report.mutate(id)
   }
 
   function handleRename(id: string, name: string) {
@@ -103,6 +112,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
         {remove.isError ? <ErrorNote message={errorMessage(remove.error)} /> : null}
         {rename.isSuccess ? <SuccessNote message={`Nama perbandingan diganti menjadi "${rename.data.name}".`} /> : null}
         {remove.isSuccess ? <SuccessNote message={`Perbandingan "${remove.variables.name}" dihapus.`} /> : null}
+        <DownloadNotes fileName={report.data} error={report.error} />
 
         {comparisons.isPending ? <Loading label="Mengambil perbandingan tersimpan..." /> : null}
         {comparisons.isError ? <LoadFailed onRetry={() => comparisons.refetch()} /> : null}
@@ -115,6 +125,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
             {items.map((comparison) => {
               const isOpening = open.isPending && open.variables === comparison.id
               const isDeleting = remove.isPending && remove.variables.id === comparison.id
+              const isDownloading = report.isPending && report.variables === comparison.id
               const isIncomplete = comparison.locationCount < MIN_COMPARED
 
               return (
@@ -168,6 +179,11 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
                         {isOpening ? 'Membuka...' : 'Buka'}
                         <span className="sr-only">: {comparison.name}</span>
                       </button>
+                      <ReportRowButton
+                        srLabel={comparison.name}
+                        isPending={isDownloading}
+                        onClick={() => handleDownload(comparison.id)}
+                      />
                       {isIncomplete || !canChange ? null : (
                         <button
                           type="button"
