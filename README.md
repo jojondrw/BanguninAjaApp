@@ -132,12 +132,13 @@ Sudah jalan:
 - Layar untuk semua modul: Ringkasan, Proyek (ruang kerja per proyek), Analisis
   Lokasi, Keuangan (anggaran, kas, jurnal, buku besar), Tagihan, Penjualan,
   Pengadaan, Inventaris, dan SDM
+- Laporan (arus kas, anggaran, proyek, umur piutang dan utang, stok,
+  penggajian, penjualan) dengan pratinjau dan unduhan PDF, XLSX, dan CSV
 - CI di GitHub Actions untuk backend, frontend, dan layanan scoring
 
 Belum dikerjakan:
 
 - Simulasi pembayaran on-chain
 - Pembatasan akses berdasarkan peran
-- Pembuatan berkas laporan PDF, XLSX, dan CSV
 
 Rincian dan sisa pekerjaan lain ada di `PROJECT_HANDOFF.md`.

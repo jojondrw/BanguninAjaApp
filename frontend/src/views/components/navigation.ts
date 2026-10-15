@@ -1,5 +1,6 @@
 import {
   Boxes,
+  FileBarChart,
   FolderKanban,
   Handshake,
   LayoutDashboard,
@@ -38,6 +39,7 @@ export const MENU: MenuGroup[] = [
       { to: '/lokasi', label: 'Analisis Lokasi', icon: MapPinned, keywords: 'peta skor site evaluasi gis', module: 'locations' },
       { to: '/keuangan', label: 'Keuangan', icon: Wallet, keywords: 'kas anggaran finance budget', module: 'finance' },
       { to: '/tagihan', label: 'Tagihan', icon: ReceiptText, keywords: 'faktur invoice piutang utang pembayaran billing', module: 'billing' },
+      { to: '/laporan', label: 'Laporan', icon: FileBarChart, keywords: 'report unduh pdf excel xlsx csv ekspor arus kas', module: 'reports' },
     ],
   },
   {

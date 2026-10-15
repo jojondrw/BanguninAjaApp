@@ -24,6 +24,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	reports := router.Group("/reports", middleware.Authentication(m.tokens))
 	reports.GET("", m.controller.ListReports)
 	reports.POST("", m.controller.CreateReport)
+	reports.GET("/preview", m.controller.PreviewReport)
 	reports.GET("/:id", m.controller.GetReport)
+	reports.GET("/:id/download", m.controller.DownloadReport)
 	reports.DELETE("/:id", m.controller.DeleteReport)
 }

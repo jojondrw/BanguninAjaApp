@@ -598,15 +598,54 @@ ikut menghapus lokasinya.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/api/reports` | Filter `search`, `type`, `format`, `projectId`. Pembuat diambil dari access token |
+| GET, POST | `/api/reports` | Filter `search`, `type`, `format`, `projectId`. Pembuat diambil dari access token. Daftar membawa `projectCode`, `projectName`, dan `createdByName` |
+| GET | `/api/reports/preview` | Query `type` (wajib), `projectId`, `periodStart`, `periodEnd` (`YYYY-MM-DD`). Isi laporan sebagai JSON, paling banyak 200 baris per bagian plus `totalRows` |
 | GET, DELETE | `/api/reports/:id` | |
+| GET | `/api/reports/:id/download` | Berkas dibuat ulang dari data terbaru saat diunduh. `Content-Disposition: attachment; filename=laporan-arus-kas-2026-10.pdf`, header itu dibuka lewat `Access-Control-Expose-Headers` |
 
-Slice ini baru mencatat daftar laporan. Pembuatan berkas PDF, XLSX, atau CSV
-belum dikerjakan.
+Baris `report` hanya menyimpan kriteria (jenis, proyek, periode, format), bukan
+berkasnya. Isinya selalu mengikuti data saat diunduh.
+
+Jenis laporan (`type`):
+
+| Jenis | Isi | Arti periode |
+|---|---|---|
+| `arus_kas` | Kas masuk, keluar, arus bersih, dan saldo per bulan mulai dari saldo awal, lalu semua transaksi kas | Tanggal transaksi. Kosong berarti bulan berjalan |
+| `anggaran` | Anggaran per proyek per tahun, realisasi (kas keluar proyek di tahun itu), sisa, serapan | Tahun anggaran dari tahun tanggal awal sampai tahun tanggal akhir |
+| `proyek` | Status, progres, jadwal, nilai kontrak, total RAB | Proyek yang jadwalnya beririsan dengan periode |
+| `piutang_utang` | Piutang dan utang yang belum lunas, kelompok umur 0–30, 31–60, 61–90, > 90 hari terlambat (belum jatuh tempo masuk 0–30) | Tanggal jatuh tempo. Umur dihitung sampai hari ini |
+| `stok` | Stok per gudang dan material di bawah stok minimum (stok minimum dibanding jumlah di semua gudang yang tersaring) | Tidak memakai periode, posisi hari ini |
+| `penggajian` | Ringkasan per periode gaji dan rincian slip | Periode gaji `YYYY-MM`. Kosong berarti bulan berjalan |
+| `penjualan` | Kontrak dengan nilai terbayar dan jumlah cicilan lunas atau terlambat, lalu status cicilan | Tanggal kontrak untuk kontrak, tanggal jatuh tempo untuk cicilan |
+
+Filter proyek berlaku untuk semua jenis: kas, anggaran, piutang, dan utang lewat
+`project_id`, stok lewat gudang proyek, penggajian lewat proyek karyawan,
+penjualan lewat proyek unit. Kontrak batal tetap tampil tetapi tidak masuk total.
+Alias lama (`cash_flow`, `budget`, `projects`, `stock`, `payroll`, `sales`, dan
+sejenisnya) masih diterima dan disimpan sebagai nama baku di atas. Untuk laporan
+bulanan, periode yang dipakai saat dibuat disimpan di baris laporan supaya
+"Unduh lagi" memberi periode yang sama.
+
+Format berkas (`format`), ditulis tanpa dependensi tambahan di paket
+`reporting/export`:
+
+| Format | Bentuk |
+|---|---|
+| `pdf` | A4, Helvetica WinAnsi, judul, baris filter, tabel per bagian dengan kepala tabel yang diulang di halaman baru, nomor halaman "Halaman x dari y". Otomatis landscape kalau tabel terlalu lebar |
+| `xlsx` | Satu sheet per bagian, kepala tabel tebal dan dibekukan, angka tersimpan sebagai angka (`#,##0`), tanggal sebagai tanggal Excel, lebar kolom menyesuaikan isi |
+| `csv` | UTF-8 dengan BOM, pemisah titik koma (`;`) supaya langsung terbaca Excel berpengaturan Indonesia. Angka tanpa pemisah ribuan, desimal memakai koma, tanggal `YYYY-MM-DD`. Setiap bagian diawali baris judul |
+
+| Aturan | Kode error |
+|---|---|
+| Jenis laporan harus salah satu dari tabel di atas | `report_type_invalid` |
+| Laporan stok tidak menerima periode | `report_period_unsupported` |
+| Tanggal akhir tidak boleh sebelum tanggal awal | `invalid_date_range` |
+| Proyek pada filter harus ada | `project_not_found` |
+
+Setiap bagian dibatasi 10.000 baris.
 
 ## Yang belum dikerjakan
 
 1. Belum ada pembatasan akses berdasarkan peran. Tabel `role` dan
    `project_member` sudah ada, tapi semua user yang punya access token saat ini
    bisa memakai semua endpoint.
-2. Pembuatan berkas laporan di slice `reporting`.
