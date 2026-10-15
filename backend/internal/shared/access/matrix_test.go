@@ -36,7 +36,7 @@ func TestModuleForPathMapsEveryApiPrefix(t *testing.T) {
 }
 
 func TestModuleForPathLeavesAuthOpen(t *testing.T) {
-	for _, path := range []string{"/api/auth/login", "/api/auth/me", "/api/auth/refresh", "/health", "/api"} {
+	for _, path := range []string{"/api/auth/login", "/api/auth/me", "/api/auth/password", "/api/auth/refresh", "/health", "/api"} {
 		if _, guarded := ModuleForPath(path); guarded {
 			t.Errorf("%s should stay open", path)
 		}

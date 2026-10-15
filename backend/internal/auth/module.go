@@ -45,6 +45,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	routes.POST("/refresh", m.controller.Refresh)
 	routes.POST("/logout", m.controller.Logout)
 	routes.GET("/me", authenticated, m.controller.Profile)
+	routes.PATCH("/me", authenticated, m.controller.UpdateProfile)
+	routes.PATCH("/password", authenticated, m.controller.ChangePassword)
 
 	users := router.Group("/users", authenticated)
 	users.GET("", m.controller.ListUsers)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -26,6 +27,14 @@ var (
 	errManagedNotFound   = apperror.NotFound("user_not_found", "Pengguna tidak ditemukan")
 	errUnknownRole       = apperror.Unprocessable("unknown_role", "Peran tidak dikenal")
 	errLastAdmin         = apperror.Unprocessable("last_admin", "Harus tetap ada satu admin aktif. Jadikan pengguna lain admin dulu")
+	errNameLength        = apperror.Unprocessable("invalid_name", "Nama harus 2 sampai 100 karakter")
+	errWrongPassword     = apperror.Unprocessable("wrong_current_password", "Kata sandi saat ini salah")
+	errSamePassword      = apperror.Unprocessable("same_password", "Kata sandi baru harus berbeda dari kata sandi saat ini")
+)
+
+const (
+	minimumNameLength = 2
+	maximumNameLength = 100
 )
 
 const pendingRole = ""
@@ -36,6 +45,8 @@ type Service interface {
 	Refresh(ctx context.Context, refreshToken string) (Session, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Profile(ctx context.Context, userID uuid.UUID) (UserResponse, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, request UpdateProfileRequest) (UserResponse, error)
+	ChangePassword(ctx context.Context, userID uuid.UUID, currentRefreshToken string, request ChangePasswordRequest) error
 	ListUsers(ctx context.Context, query UserQuery) (pagination.Page[ManagedUserResponse], error)
 	ChangeRole(ctx context.Context, userID uuid.UUID, request ChangeRoleRequest) (ManagedUserResponse, error)
 	ChangeActive(ctx context.Context, userID uuid.UUID, request ChangeActiveRequest) (ManagedUserResponse, error)
@@ -166,6 +177,62 @@ func (s *service) Profile(ctx context.Context, userID uuid.UUID) (UserResponse, 
 	}
 
 	return s.describe(ctx, user)
+}
+
+func (s *service) UpdateProfile(ctx context.Context, userID uuid.UUID, request UpdateProfileRequest) (UserResponse, error) {
+	name := strings.TrimSpace(request.Name)
+	if length := utf8.RuneCountInString(name); length < minimumNameLength || length > maximumNameLength {
+		return UserResponse{}, errNameLength
+	}
+
+	user, err := s.activeUser(ctx, userID)
+	if err != nil {
+		return UserResponse{}, err
+	}
+
+	if err := s.repository.UpdateUserName(ctx, userID, name); err != nil {
+		return UserResponse{}, apperror.Internal(fmt.Errorf("update user name: %w", err))
+	}
+
+	user.Name = name
+	return s.describe(ctx, user)
+}
+
+func (s *service) ChangePassword(ctx context.Context, userID uuid.UUID, currentRefreshToken string, request ChangePasswordRequest) error {
+	user, err := s.activeUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !security.PasswordMatches(user.PasswordHash, request.CurrentPassword) {
+		return errWrongPassword
+	}
+	if request.NewPassword == request.CurrentPassword {
+		return errSamePassword
+	}
+
+	passwordHash, err := security.HashPassword(request.NewPassword)
+	if err != nil {
+		return apperror.Internal(err)
+	}
+
+	keptSession := sessionHash(currentRefreshToken)
+	err = s.repository.Transaction(ctx, func(repository Repository) error {
+		if err := repository.UpdateUserPassword(ctx, userID, passwordHash); err != nil {
+			return err
+		}
+		return repository.RevokeOtherRefreshTokens(ctx, userID, keptSession, time.Now())
+	})
+	if err != nil {
+		return apperror.Internal(fmt.Errorf("change password: %w", err))
+	}
+	return nil
+}
+
+func sessionHash(refreshToken string) string {
+	if refreshToken == "" {
+		return ""
+	}
+	return token.HashRefresh(refreshToken)
 }
 
 func (s *service) activeUser(ctx context.Context, userID uuid.UUID) (User, error) {

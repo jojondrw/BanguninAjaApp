@@ -21,6 +21,7 @@ type memoryRepository struct {
 	users        map[uuid.UUID]*User
 	roles        map[string]Role
 	revoked      []uuid.UUID
+	keptSessions []string
 	locks        int
 	refreshSaved int
 }

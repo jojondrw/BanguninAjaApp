@@ -70,6 +70,14 @@ Semua endpoint berada di bawah `/api/auth`.
 | POST | `/refresh` | tidak | Membaca cookie, mencabut token lama, membalas access token baru |
 | POST | `/logout` | tidak | Mencabut refresh token dan menghapus cookie |
 | GET | `/me` | ya | Membalas profil pemilik access token, termasuk peran dan hak akses |
+| PATCH | `/me` | ya | Mengganti nama sendiri. Membalas profil yang sama dengan `GET /me` |
+| PATCH | `/password` | ya | Mengganti kata sandi sendiri. Membalas 204 |
+
+`PATCH /me` dan `PATCH /password` hanya butuh user yang sudah masuk dan aktif,
+tanpa hak modul apa pun, jadi pendaftar yang menunggu peran pun bisa memakainya.
+Segmen `auth` dilewati `middleware.Authorization`, sehingga keduanya dipasangi
+`middleware.Authentication` sendiri: tanpa access token dibalas 401
+`missing_access_token`.
 
 ### POST /api/auth/register
 
@@ -131,6 +139,33 @@ login. Kalau cookie tidak ada, sudah kedaluwarsa, atau sudah dipakai, balasannya
 Tidak ada body. Selalu 204, termasuk kalau cookie sudah tidak ada, supaya tidak
 bisa dipakai menebak status sesi orang lain.
 
+### PATCH /api/auth/me
+
+```json
+{ "name": "Jonathan Andrew" }
+```
+
+Nama dipangkas spasinya, lalu harus 2 sampai 100 karakter (`invalid_name` kalau
+tidak). Email dan peran tidak bisa diubah di sini; peran hanya lewat admin.
+
+### PATCH /api/auth/password
+
+```json
+{ "currentPassword": "rahasia123", "newPassword": "rahasia456" }
+```
+
+1. `newPassword` 8 sampai 72 karakter (aturan bcrypt yang sama dengan daftar).
+2. `currentPassword` harus cocok dengan hash tersimpan. Kalau salah dibalas 422
+   `wrong_current_password` "Kata sandi saat ini salah". Sengaja bukan 401,
+   karena 401 di frontend berarti access token habis dan memicu refresh.
+3. Kata sandi baru harus berbeda dari yang sekarang (`same_password`).
+
+Hash baru disimpan dan refresh token lain milik user dicabut dalam satu
+transaksi. Refresh token dari cookie permintaan ini (cookie ber-path `/api/auth`,
+jadi ikut terkirim) tidak dicabut, sehingga sesi yang sedang dipakai tetap jalan
+dan perangkat lain harus masuk lagi saat access token-nya habis (paling lama
+umur access token, 15 menit). Kalau cookie tidak ada, semua refresh token dicabut.
+
 ## Kode error
 
 | Kode | Status | Muncul saat |
@@ -146,6 +181,9 @@ bisa dipakai menebak status sesi orang lain.
 | `email_already_used` | 409 | Email sudah dipakai akun lain |
 | `unknown_role` | 422 | Kode peran di `PATCH /api/users/:id/role` tidak ada di matriks |
 | `last_admin` | 422 | Perubahan akan meninggalkan sistem tanpa admin aktif |
+| `invalid_name` | 422 | Nama di `PATCH /api/auth/me` kurang dari 2 atau lebih dari 100 karakter setelah dipangkas |
+| `wrong_current_password` | 422 | Kata sandi saat ini salah di `PATCH /api/auth/password` |
+| `same_password` | 422 | Kata sandi baru sama dengan yang sekarang |
 | `internal_error` | 500 | Kesalahan tak terduga di server |
 
 Email yang tidak terdaftar dan kata sandi yang salah sengaja dibalas dengan kode

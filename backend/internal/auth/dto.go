@@ -20,6 +20,15 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required,min=8,max=72"`
 }
 
+type UpdateProfileRequest struct {
+	Name string `json:"name" binding:"required,min=2,max=100"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" binding:"required,max=72"`
+	NewPassword     string `json:"newPassword" binding:"required,min=8,max=72"`
+}
+
 type RoleResponse struct {
 	Code string `json:"code"`
 	Name string `json:"name"`
