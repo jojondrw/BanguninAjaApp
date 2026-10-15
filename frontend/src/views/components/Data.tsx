@@ -11,8 +11,8 @@ export function Card({ title, description, action, children }: {
 }) {
   return (
     <section className="min-w-0 rounded-2xl bg-white shadow-hairline">
-      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-4 pb-3">
+        <div className="min-w-0 flex-1 basis-44">
           <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
           {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
         </div>
