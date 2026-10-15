@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 
 import { useBudgets, useCashFlow, useCashTransactions } from '../../controllers/useErp'
-import { monthLabel, rupiah, rupiahShort, shortDate } from '../../shared/format'
+import { monthLabel, rupiahShort, shortDate } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table } from '../components/Data'
+import { SignedAmount } from './parts'
 
 export function FinanceSummaryTab() {
   const cashFlow = useCashFlow()
@@ -74,21 +75,9 @@ export function FinanceSummaryTab() {
               rows={transactions.data.items}
               emptyMessage="Belum ada transaksi kas."
               columns={[
-                { header: 'Tanggal', cell: (row) => shortDate(row.date) },
+                { header: 'Tanggal', cell: (row) => <span className="whitespace-nowrap">{shortDate(row.date)}</span> },
                 { header: 'Keterangan', cell: (row) => row.note || '-' },
-                {
-                  header: 'Jenis',
-                  cell: (row) => (
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-medium ${
-                        row.type === 'in' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {row.type === 'in' ? 'Masuk' : 'Keluar'}
-                    </span>
-                  ),
-                },
-                { header: 'Jumlah', align: 'right', cell: (row) => rupiah(row.amount) },
+                { header: 'Jumlah', align: 'right', cell: (row) => <SignedAmount type={row.type} amount={row.amount} /> },
               ]}
             />
           ) : null}
