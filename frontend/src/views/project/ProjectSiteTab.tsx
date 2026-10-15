@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { useBuildingProfiles, useSavedLocationPage, useSavedLocationSummary } from '../../controllers/useErp'
+import { useDownloadSiteReport } from '../../controllers/useLocationReports'
 import type { SavedLocation } from '../../models/erpApi'
 import type { Project } from '../../models/project'
 import { kpiValue, number, shortDate } from '../../shared/format'
@@ -9,6 +10,7 @@ import { Button } from '../components/Form'
 import { Pager } from '../components/RecordControls'
 import { SITE_EVALUATION_ID, SiteEvaluation } from '../components/SiteEvaluation'
 import type { MapPoint } from '../components/SiteMap'
+import { DownloadNotes } from '../location/ReportDownload'
 import { ProgressMeter } from './parts'
 
 const COORDINATE_DIGITS = 4
@@ -22,6 +24,7 @@ export function ProjectSiteTab({ project }: { project: Project }) {
   const sites = useSavedLocationPage(project.id, page, PAGE_SIZE)
   const totals = useSavedLocationSummary(project.id)
   const profiles = useBuildingProfiles()
+  const report = useDownloadSiteReport()
 
   const summary = totals.data
   const hasSites = (summary?.count ?? 0) > 0
@@ -64,6 +67,11 @@ export function ProjectSiteTab({ project }: { project: Project }) {
       >
         {sites.isPending ? <Loading /> : null}
         {sites.isError ? <LoadFailed onRetry={() => sites.refetch()} /> : null}
+        {report.isError || report.isSuccess ? (
+          <div className="mb-4">
+            <DownloadNotes fileName={report.data} error={report.error} />
+          </div>
+        ) : null}
         {sites.data ? (
           <>
             <Table
@@ -95,6 +103,20 @@ export function ProjectSiteTab({ project }: { project: Project }) {
                   cell: (row) => (
                     <Button variant="subtle" onClick={() => showOnMap(row)}>
                       Lihat di peta<span className="sr-only">: {row.name}</span>
+                    </Button>
+                  ),
+                },
+                {
+                  header: 'Laporan',
+                  align: 'right',
+                  cell: (row) => (
+                    <Button
+                      variant="subtle"
+                      isPending={report.isPending && report.variables === row.id}
+                      pendingLabel="Mengunduh..."
+                      onClick={() => report.mutate(row.id)}
+                    >
+                      Unduh PDF<span className="sr-only">: laporan {row.name}</span>
                     </Button>
                   ),
                 },

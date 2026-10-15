@@ -1,6 +1,9 @@
 package location
 
 import (
+	"mime"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
@@ -13,10 +16,11 @@ const idParam = "id"
 
 type Controller struct {
 	service Service
+	reports ReportService
 }
 
-func NewController(service Service) *Controller {
-	return &Controller{service: service}
+func NewController(service Service, reports ReportService) *Controller {
+	return &Controller{service: service, reports: reports}
 }
 
 func (c *Controller) ListSavedLocations(ctx *gin.Context) {
@@ -160,6 +164,37 @@ func (c *Controller) DeleteComparison(ctx *gin.Context) {
 		return
 	}
 	httpresponse.RespondNoContent(ctx, c.service.DeleteComparison(ctx.Request.Context(), userID, id))
+}
+
+func (c *Controller) DownloadSiteReport(ctx *gin.Context) {
+	userID, id, err := ownerAndID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	file, err := c.reports.SiteReport(ctx.Request.Context(), userID, id)
+	sendReport(ctx, file, err)
+}
+
+func (c *Controller) DownloadComparisonReport(ctx *gin.Context) {
+	userID, id, err := ownerAndID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	file, err := c.reports.ComparisonReport(ctx.Request.Context(), userID, id)
+	sendReport(ctx, file, err)
+}
+
+func sendReport(ctx *gin.Context, file ReportFile, err error) {
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	ctx.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": file.Name}))
+	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	ctx.Header("Cache-Control", "no-store")
+	ctx.Data(http.StatusOK, file.ContentType, file.Content)
 }
 
 func ownerAndID(ctx *gin.Context) (uuid.UUID, uuid.UUID, error) {

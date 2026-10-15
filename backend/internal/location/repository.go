@@ -62,6 +62,28 @@ type ComparisonRow struct {
 	UpdatedAt     time.Time
 }
 
+type DimensionLabel struct {
+	ID          uuid.UUID
+	Code        string
+	Name        string
+	Description string
+	SortOrder   int
+}
+
+type ProfileWeight struct {
+	DimensionID uuid.UUID
+	Percent     int
+}
+
+type ProjectLabel struct {
+	Code string
+	Name string
+}
+
+type nameRow struct {
+	Name string
+}
+
 type Repository interface {
 	Transaction(ctx context.Context, work func(Repository) error) error
 
@@ -84,6 +106,12 @@ type Repository interface {
 
 	ListComparisonItems(ctx context.Context, comparisonID uuid.UUID) ([]ComparisonItem, error)
 	ReplaceComparisonItems(ctx context.Context, comparisonID uuid.UUID, items []ComparisonItem) error
+
+	ListDimensions(ctx context.Context) ([]DimensionLabel, error)
+	ListProfileWeights(ctx context.Context, profileID uuid.UUID) ([]ProfileWeight, error)
+	FindBuildingProfileName(ctx context.Context, id uuid.UUID) (string, error)
+	FindRegionName(ctx context.Context, id uuid.UUID) (string, error)
+	FindProjectLabel(ctx context.Context, id uuid.UUID) (ProjectLabel, error)
 }
 
 type gormRepository struct {
@@ -239,6 +267,46 @@ func (r *gormRepository) ReplaceComparisonItems(ctx context.Context, comparisonI
 		return database.Translate(err)
 	}
 	return database.Translate(r.db.WithContext(ctx).Create(&items).Error)
+}
+
+func (r *gormRepository) ListDimensions(ctx context.Context) ([]DimensionLabel, error) {
+	var dimensions []DimensionLabel
+	err := r.db.WithContext(ctx).
+		Table("dimension").
+		Select("id, code, name, description, sort_order").
+		Order("sort_order ASC, code ASC").
+		Scan(&dimensions).Error
+	return dimensions, database.Translate(err)
+}
+
+func (r *gormRepository) ListProfileWeights(ctx context.Context, profileID uuid.UUID) ([]ProfileWeight, error) {
+	var weights []ProfileWeight
+	err := r.db.WithContext(ctx).
+		Table("weight").
+		Select("dimension_id, percent").
+		Where("building_profile_id = ?", profileID).
+		Scan(&weights).Error
+	return weights, database.Translate(err)
+}
+
+func (r *gormRepository) FindBuildingProfileName(ctx context.Context, id uuid.UUID) (string, error) {
+	return r.findName(ctx, "building_profile", id)
+}
+
+func (r *gormRepository) FindRegionName(ctx context.Context, id uuid.UUID) (string, error) {
+	return r.findName(ctx, "region", id)
+}
+
+func (r *gormRepository) FindProjectLabel(ctx context.Context, id uuid.UUID) (ProjectLabel, error) {
+	var label ProjectLabel
+	err := r.db.WithContext(ctx).Table("project").Select("code, name").Where("id = ?", id).Take(&label).Error
+	return label, database.Translate(err)
+}
+
+func (r *gormRepository) findName(ctx context.Context, table string, id uuid.UUID) (string, error) {
+	var row nameRow
+	err := r.db.WithContext(ctx).Table(table).Select("name").Where("id = ?", id).Take(&row).Error
+	return row.Name, database.Translate(err)
 }
 
 func (r *gormRepository) deleteOwned(ctx context.Context, model any, userID, id uuid.UUID) error {

@@ -27,13 +27,21 @@ const (
 type Column struct {
 	Header string `json:"header"`
 	Kind   Kind   `json:"kind"`
+	Wrap   bool   `json:"wrap,omitempty"`
+}
+
+type Field struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
 }
 
 type Section struct {
-	Title   string   `json:"title"`
-	Columns []Column `json:"columns"`
-	Rows    [][]any  `json:"rows"`
-	Total   []any    `json:"total,omitempty"`
+	Title      string   `json:"title"`
+	Fields     []Field  `json:"fields,omitempty"`
+	Columns    []Column `json:"columns"`
+	Rows       [][]any  `json:"rows"`
+	Total      []any    `json:"total,omitempty"`
+	Paragraphs []string `json:"paragraphs,omitempty"`
 }
 
 type Document struct {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -32,13 +33,30 @@ const (
 	textBaselineLift = 4.0
 	fixedShareLimit  = 0.7
 	textColumnFloor  = 60.0
+	cellLeading      = 10.0
+	wrappedColumnCap = 140.0
+	bodySize         = 9.0
+	bodyLeading      = 13.0
+	fieldPadding     = 2.0
+	fieldLabelFloor  = 90.0
+	fieldLabelCap    = 170.0
+	fieldLabelGap    = 12.0
+	paragraphGap     = 4.0
+	openingTextLines = 3
 
 	pdfObjectsBeforePages = 5
 	continuedSuffix       = " (lanjutan)"
+	emptySectionText      = "Tidak ada data untuk filter ini."
 )
 
 type pdfPage struct {
 	content bytes.Buffer
+}
+
+type tablePlan struct {
+	widths     []float64
+	header     [][][]byte
+	headerBand float64
 }
 
 type pdfLayout struct {
@@ -103,76 +121,194 @@ func (l *pdfLayout) drawHeading(document Document) {
 }
 
 func (l *pdfLayout) drawSection(section Section) {
-	if len(section.Columns) == 0 {
+	if !hasContent(section) {
 		return
 	}
-	widths := fitWidths(section.Columns, desiredWidths(section), l.usableWidth())
-	if l.cursor-sectionLeading-headerHeight-rowHeight < tableBottom {
+	plan := l.planTable(section)
+	if l.cursor-sectionLeading-openingHeight(section, plan) < tableBottom {
 		l.addPage()
 	}
-	l.drawSectionTop(section, widths, section.Title)
-	for _, row := range section.Rows {
-		l.ensureRowSpace(section, widths)
-		l.drawRow(section.Columns, widths, row, helvetica)
-	}
-	if len(section.Total) > 0 {
-		l.ensureRowSpace(section, widths)
-		l.line(pageMargin, l.cursor, pageMargin+sumWidths(widths), l.cursor, "0.2 G 0.8 w")
-		l.drawRow(section.Columns, widths, section.Total, helveticaBold)
-	}
-	if len(section.Rows) == 0 && len(section.Total) == 0 {
-		l.cursor -= rowHeight
-		l.text(helvetica, cellSize, pageMargin+cellPadding, l.cursor+textBaselineLift, encodeWinAnsi("Tidak ada data untuk filter ini."))
-	}
+	l.drawTitle(section.Title)
+	l.drawFields(section)
+	l.drawTable(section, plan)
+	l.drawParagraphs(section)
 	l.cursor -= sectionGap
 }
 
-func (l *pdfLayout) ensureRowSpace(section Section, widths []float64) {
-	if l.cursor-rowHeight >= tableBottom {
-		return
-	}
-	l.addPage()
-	l.drawSectionTop(section, widths, section.Title+continuedSuffix)
+func hasContent(section Section) bool {
+	return len(section.Columns) > 0 || len(section.Fields) > 0 || len(section.Paragraphs) > 0
 }
 
-func (l *pdfLayout) drawSectionTop(section Section, widths []float64, title string) {
+func openingHeight(section Section, plan tablePlan) float64 {
+	if len(section.Fields) > 0 || len(section.Columns) == 0 {
+		return fieldPadding + openingTextLines*bodyLeading
+	}
+	return plan.headerBand + rowHeight
+}
+
+func (l *pdfLayout) planTable(section Section) tablePlan {
+	if len(section.Columns) == 0 {
+		return tablePlan{}
+	}
+	widths := fitWidths(section.Columns, preferredWidths(section, l.usableWidth()), l.usableWidth())
+	header := make([][][]byte, len(section.Columns))
+	for index, column := range section.Columns {
+		header[index] = cellLines(helveticaBold, column.Header, column.Wrap, widths[index])
+	}
+	return tablePlan{widths: widths, header: header, headerBand: bandHeight(headerHeight, header)}
+}
+
+func (l *pdfLayout) drawTitle(title string) {
 	l.cursor -= sectionTitleSize
 	l.text(helveticaBold, sectionTitleSize, pageMargin, l.cursor, helveticaBold.fit(title, sectionTitleSize, l.usableWidth()))
 	l.cursor -= sectionLeading - sectionTitleSize
-	l.drawHeader(section.Columns, widths)
 }
 
-func (l *pdfLayout) drawHeader(columns []Column, widths []float64) {
+func (l *pdfLayout) drawTable(section Section, plan tablePlan) {
+	if len(section.Columns) == 0 {
+		return
+	}
+	if l.cursor-plan.headerBand-rowHeight < tableBottom {
+		l.addPage()
+		l.drawTitle(section.Title + continuedSuffix)
+	}
+	l.drawHeader(section.Columns, plan)
+	for _, row := range section.Rows {
+		cells := rowCells(section.Columns, plan.widths, row, helvetica)
+		l.ensureRowSpace(section, plan, bandHeight(rowHeight, cells))
+		l.drawRow(section.Columns, plan.widths, cells, helvetica)
+	}
+	if len(section.Total) > 0 {
+		cells := rowCells(section.Columns, plan.widths, section.Total, helveticaBold)
+		l.ensureRowSpace(section, plan, bandHeight(rowHeight, cells))
+		l.line(pageMargin, l.cursor, pageMargin+sumWidths(plan.widths), l.cursor, "0.2 G 0.8 w")
+		l.drawRow(section.Columns, plan.widths, cells, helveticaBold)
+	}
+	if len(section.Rows) == 0 && len(section.Total) == 0 {
+		l.cursor -= rowHeight
+		l.text(helvetica, cellSize, pageMargin+cellPadding, l.cursor+textBaselineLift, encodeWinAnsi(emptySectionText))
+	}
+}
+
+func (l *pdfLayout) ensureRowSpace(section Section, plan tablePlan, height float64) {
+	if l.cursor-height >= tableBottom {
+		return
+	}
+	l.addPage()
+	l.drawTitle(section.Title + continuedSuffix)
+	l.drawHeader(section.Columns, plan)
+}
+
+func (l *pdfLayout) drawHeader(columns []Column, plan tablePlan) {
 	top := l.cursor
-	l.cursor -= headerHeight
+	l.cursor -= plan.headerBand
 	fmt.Fprintf(&l.page().content, "0.886 0.910 0.941 rg %s %s %s %s re f 0 g\n",
-		number(pageMargin), number(l.cursor), number(sumWidths(widths)), number(top-l.cursor))
-	x := pageMargin
-	for index, column := range columns {
-		l.cell(helveticaBold, column.Header, column.IsNumeric(), x, widths[index])
-		x += widths[index]
-	}
+		number(pageMargin), number(l.cursor), number(sumWidths(plan.widths)), number(top-l.cursor))
+	l.drawCells(columns, plan.widths, plan.header, helveticaBold, top-headerHeight+textBaselineLift)
 }
 
-func (l *pdfLayout) drawRow(columns []Column, widths []float64, values []any, font pdfFont) {
-	l.cursor -= rowHeight
-	x := pageMargin
-	for index, column := range columns {
-		if index < len(values) {
-			l.cell(font, DisplayText(column.Kind, values[index]), column.IsNumeric(), x, widths[index])
-		}
-		x += widths[index]
-	}
+func (l *pdfLayout) drawRow(columns []Column, widths []float64, cells [][][]byte, font pdfFont) {
+	top := l.cursor
+	l.cursor -= bandHeight(rowHeight, cells)
+	l.drawCells(columns, widths, cells, font, top-rowHeight+textBaselineLift)
 	l.line(pageMargin, l.cursor, pageMargin+sumWidths(widths), l.cursor, "0.85 G 0.4 w")
 }
 
-func (l *pdfLayout) cell(font pdfFont, text string, alignRight bool, x, width float64) {
-	encoded := font.fit(text, cellSize, width-2*cellPadding)
-	left := x + cellPadding
-	if alignRight {
-		left = x + width - cellPadding - font.width(encoded, cellSize)
+func (l *pdfLayout) drawCells(columns []Column, widths []float64, cells [][][]byte, font pdfFont, baseline float64) {
+	x := pageMargin
+	for index, column := range columns {
+		l.drawCellLines(font, cells[index], column.IsNumeric(), x, widths[index], baseline)
+		x += widths[index]
 	}
-	l.text(font, cellSize, left, l.cursor+textBaselineLift, encoded)
+}
+
+func (l *pdfLayout) drawCellLines(font pdfFont, lines [][]byte, alignRight bool, x, width, baseline float64) {
+	for index, line := range lines {
+		left := x + cellPadding
+		if alignRight {
+			left = x + width - cellPadding - font.width(line, cellSize)
+		}
+		l.text(font, cellSize, left, baseline-float64(index)*cellLeading, line)
+	}
+}
+
+func (l *pdfLayout) drawFields(section Section) {
+	if len(section.Fields) == 0 {
+		return
+	}
+	labelWidth := fieldLabelWidth(section.Fields)
+	for _, field := range section.Fields {
+		labels := helveticaBold.wrap(field.Label, bodySize, labelWidth-fieldLabelGap)
+		values := helvetica.wrap(field.Value, bodySize, l.usableWidth()-labelWidth)
+		l.cursor -= fieldPadding
+		for index := range max(len(labels), len(values)) {
+			l.ensureTextSpace(section.Title, bodyLeading)
+			l.cursor -= bodyLeading
+			l.bodyLine(helveticaBold, labels, index, pageMargin)
+			l.bodyLine(helvetica, values, index, pageMargin+labelWidth)
+		}
+		l.cursor -= fieldPadding
+		l.line(pageMargin, l.cursor, pageMargin+l.usableWidth(), l.cursor, "0.88 G 0.4 w")
+	}
+}
+
+func (l *pdfLayout) drawParagraphs(section Section) {
+	for _, paragraph := range section.Paragraphs {
+		l.cursor -= paragraphGap
+		for _, line := range helvetica.wrap(paragraph, bodySize, l.usableWidth()) {
+			l.ensureTextSpace(section.Title, bodyLeading)
+			l.cursor -= bodyLeading
+			l.text(helvetica, bodySize, pageMargin, l.cursor+textBaselineLift, line)
+		}
+	}
+}
+
+func (l *pdfLayout) bodyLine(font pdfFont, lines [][]byte, index int, x float64) {
+	if index < len(lines) {
+		l.text(font, bodySize, x, l.cursor+textBaselineLift, lines[index])
+	}
+}
+
+func (l *pdfLayout) ensureTextSpace(title string, height float64) {
+	if l.cursor-height >= tableBottom {
+		return
+	}
+	l.addPage()
+	l.drawTitle(title + continuedSuffix)
+}
+
+func fieldLabelWidth(fields []Field) float64 {
+	widest := 0.0
+	for _, field := range fields {
+		widest = max(widest, helveticaBold.width(encodeWinAnsi(field.Label), bodySize))
+	}
+	return min(max(widest+fieldLabelGap, fieldLabelFloor), fieldLabelCap)
+}
+
+func rowCells(columns []Column, widths []float64, values []any, font pdfFont) [][][]byte {
+	cells := make([][][]byte, len(columns))
+	for index, column := range columns {
+		if index < len(values) {
+			cells[index] = cellLines(font, DisplayText(column.Kind, values[index]), column.Wrap, widths[index])
+		}
+	}
+	return cells
+}
+
+func cellLines(font pdfFont, text string, wrap bool, width float64) [][]byte {
+	limit := width - 2*cellPadding
+	if wrap {
+		return font.wrap(text, cellSize, limit)
+	}
+	return [][]byte{font.fit(text, cellSize, limit)}
+}
+
+func bandHeight(base float64, cells [][][]byte) float64 {
+	lines := 1
+	for _, cell := range cells {
+		lines = max(lines, len(cell))
+	}
+	return base + float64(lines-1)*cellLeading
 }
 
 func (l *pdfLayout) text(font pdfFont, size, x, y float64, encoded []byte) {
@@ -263,23 +399,43 @@ func (w *pdfWriter) finish() []byte {
 }
 
 func desiredWidths(section Section) []float64 {
+	return measuredWidths(section, wrappedColumnCap)
+}
+
+func preferredWidths(section Section, available float64) []float64 {
+	natural := measuredWidths(section, math.Inf(1))
+	if sumWidths(natural) <= available {
+		return natural
+	}
+	return desiredWidths(section)
+}
+
+func measuredWidths(section Section, wrapLimit float64) []float64 {
 	widths := make([]float64, len(section.Columns))
 	for index, column := range section.Columns {
-		width := helveticaBold.width(encodeWinAnsi(column.Header), cellSize)
+		width := measure(helveticaBold, column.Header, column.Wrap, wrapLimit)
 		for rowIndex, row := range section.Rows {
 			if rowIndex >= measuredRows {
 				break
 			}
 			if index < len(row) {
-				width = max(width, helvetica.width(encodeWinAnsi(DisplayText(column.Kind, row[index])), cellSize))
+				width = max(width, measure(helvetica, DisplayText(column.Kind, row[index]), column.Wrap, wrapLimit))
 			}
 		}
 		if index < len(section.Total) {
-			width = max(width, helveticaBold.width(encodeWinAnsi(DisplayText(column.Kind, section.Total[index])), cellSize))
+			width = max(width, measure(helveticaBold, DisplayText(column.Kind, section.Total[index]), column.Wrap, wrapLimit))
 		}
 		widths[index] = max(width+2*cellPadding, minimumColumn)
 	}
 	return widths
+}
+
+func measure(font pdfFont, text string, wrap bool, wrapLimit float64) float64 {
+	full := font.width(encodeWinAnsi(text), cellSize)
+	if !wrap {
+		return full
+	}
+	return max(font.longestWord(text, cellSize), min(full, wrapLimit))
 }
 
 func fitWidths(columns []Column, desired []float64, available float64) []float64 {
