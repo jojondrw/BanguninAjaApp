@@ -81,3 +81,13 @@ describe('localDate', () => {
     expect(toApiDate('2026-10-03')).toBe('2026-10-03T00:00:00Z')
   })
 })
+
+describe('unitText', () => {
+  it('menulis pangkat untuk satuan luas dan volume', async () => {
+    const { unitText } = await import('../views/inventory/inventoryShared')
+    expect(unitText('m2')).toBe('m²')
+    expect(unitText('m3')).toBe('m³')
+    expect(unitText('kg')).toBe('kg')
+    expect(unitText('batang')).toBe('batang')
+  })
+})
