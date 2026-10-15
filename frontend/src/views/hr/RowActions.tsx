@@ -9,6 +9,7 @@ import { ErrorNote, SuccessNote } from '../components/Form'
 const TEXT_ACTION_TONE = {
   accent: 'text-navy-600 hover:bg-navy-50',
   muted: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+  danger: 'text-red-600 hover:bg-red-50 hover:text-red-700',
 }
 
 const CONFIRM_TONE = {
@@ -82,7 +83,7 @@ export function ConfirmAction({
     return null
   }
   if (!isAsking && !isPending) {
-    return <TextAction label={label} srLabel={srLabel} tone={tone === 'danger' ? 'muted' : 'accent'} onClick={onAsk} />
+    return <TextAction label={label} srLabel={srLabel} tone={tone === 'danger' ? 'danger' : 'accent'} onClick={onAsk} />
   }
 
   const submit = (event: FormEvent) => {
