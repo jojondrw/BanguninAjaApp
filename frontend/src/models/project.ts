@@ -28,6 +28,8 @@ export interface ProjectSummary {
 export interface ProjectFilter {
   search?: string
   status?: ProjectStatus
+  // 'true' hanya menampilkan proyek yang timnya memuat pengguna yang masuk.
+  mine?: 'true'
   page?: number
   pageSize?: number
 }
