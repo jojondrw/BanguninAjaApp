@@ -60,6 +60,38 @@ docker compose exec backend go run ./cmd/seed
 
 Mengisi wilayah, satuan, bagan akun, dimensi dan bobot penilaian. Aman diulang.
 
+### Data demo (opsional, untuk presentasi)
+
+```bash
+docker compose exec -e DEMO_USER_PASSWORD=<kata-sandi-demo> backend go run ./cmd/seed-demo
+```
+
+Dijalankan setelah `cmd/migrate` dan `cmd/seed`. Mengisi cerita pengembang
+properti yang utuh: 4 proyek (Griya Asri Bandung berjalan, Ruko Sentra Makassar
+perencanaan, RSIA Cirebon berjalan, Cluster Lama Depok selesai) lengkap dengan
+tahap, RAB, izin, anggaran, kas 10 bulan terakhir (tiap transaksi punya jurnal
+`KAS-…`), unit, prospek, kontrak dan cicilan, pengadaan sampai penerimaan barang
+dan stok, tagihan/piutang/hutang dengan riwayat pembayaran, karyawan dengan
+absensi dan penggajian, aset, alat, serta lokasi tersimpan dan satu perbandingan.
+Semua kode berawalan `DEMO-`, tanggal dihitung dari hari ini, dan aman diulang
+(data yang sudah ada dilewati).
+
+- Lokasi tersimpan dan permintaan pembelian dimiliki satu akun. Urutannya:
+  `--owner email@anda` kalau diisi; kalau tidak, akun `demo@banguninaja.id`
+  (dibuat otomatis bila `DEMO_USER_PASSWORD` diisi); kalau tidak juga, akun
+  pertama yang terdaftar.
+- Kalau `SCORE_SERVICE_URL` bisa dihubungi, lokasi dinilai lewat layanan
+  penilaian sungguhan. Kalau tidak, nilainya contoh dan catatannya diawali
+  "Nilai contoh".
+- Hapus semua data demo (hanya yang berawalan `DEMO-`, data lain tidak
+  disentuh):
+
+  ```bash
+  docker compose exec backend go run ./cmd/seed-demo --reset-demo
+  ```
+
+  Jalankan lagi perintah pertama sesudahnya supaya tanggal demo kembali segar.
+
 ### 3b. Isi data RDTR (opsional)
 
 Berkas `rdtr_*.json` tidak ada di repo ini — ada di folder `data/raw/rdtr` repo
