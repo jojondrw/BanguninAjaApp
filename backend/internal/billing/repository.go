@@ -27,6 +27,13 @@ const (
 	paymentColumns = "billing_payment.*, invoice.number AS invoice_number, " +
 		"receivable.reference AS receivable_reference, users.name AS created_by_name"
 
+	reconciliationColumns = "invoice.id AS invoice_id, invoice.number AS invoice_number, " +
+		"invoice.amount AS invoice_amount, invoice.paid_amount AS invoice_paid_amount, " +
+		"receivable.id AS receivable_id, receivable.reference AS receivable_reference, " +
+		"receivable.amount AS receivable_amount, receivable.paid_amount AS receivable_paid_amount, " +
+		"customer.name AS customer_name"
+	reconciliationMismatch = "invoice.paid_amount <> receivable.paid_amount"
+
 	invoicePaymentColumn    = "invoice_id"
 	receivablePaymentColumn = "receivable_id"
 	payablePaymentColumn    = "payable_id"
@@ -75,6 +82,18 @@ type PaymentFilter struct {
 	ParentID uuid.UUID
 	Offset   int
 	Limit    int
+}
+
+type ReconciliationRow struct {
+	InvoiceID            uuid.UUID
+	InvoiceNumber        string
+	InvoiceAmount        int64
+	InvoicePaidAmount    int64
+	ReceivableID         uuid.UUID
+	ReceivableReference  string
+	ReceivableAmount     int64
+	ReceivablePaidAmount int64
+	CustomerName         *string
 }
 
 type ContractRef struct {
@@ -162,6 +181,7 @@ type Repository interface {
 	ListPayments(ctx context.Context, filter PaymentFilter) ([]PaymentRow, int64, error)
 	LinkPayments(ctx context.Context, invoiceID, receivableID uuid.UUID) error
 	BackfillPayments(ctx context.Context) (int64, error)
+	ListUnreconciledPairs(ctx context.Context, offset, limit int) ([]ReconciliationRow, int64, error)
 }
 
 type gormRepository struct {
@@ -346,6 +366,28 @@ func (r *gormRepository) BackfillPayments(ctx context.Context) (int64, error) {
 		inserted += result.RowsAffected
 	}
 	return inserted, nil
+}
+
+func (r *gormRepository) ListUnreconciledPairs(ctx context.Context, offset, limit int) ([]ReconciliationRow, int64, error) {
+	base := r.db.WithContext(ctx).
+		Model(&Receivable{}).
+		Joins("JOIN invoice ON invoice.id = receivable.invoice_id").
+		Where(reconciliationMismatch)
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]ReconciliationRow, 0, limit)
+	err := base.Session(&gorm.Session{}).
+		Joins("LEFT JOIN customer ON customer.id = receivable.customer_id").
+		Select(reconciliationColumns).
+		Order("invoice.number ASC").
+		Offset(offset).
+		Limit(limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
 }
 
 func (r *gormRepository) invoiceRows(ctx context.Context) *gorm.DB {

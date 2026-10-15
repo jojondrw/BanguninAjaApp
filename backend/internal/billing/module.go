@@ -49,4 +49,6 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	payables.DELETE("/:id", m.controller.DeletePayable)
 	payables.POST("/:id/payments", m.controller.PayPayable)
 	payables.GET("/:id/payments", m.controller.PayablePayments)
+
+	routes.GET("/reconciliation", m.controller.ListUnreconciledPairs)
 }

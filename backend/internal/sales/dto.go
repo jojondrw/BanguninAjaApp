@@ -175,6 +175,15 @@ type InstallmentQuery struct {
 	Status     string     `form:"status" binding:"omitempty,oneof=not_due due paid overdue"`
 }
 
+type InstallmentSummaryResponse struct {
+	Count        int64 `json:"count"`
+	PaidCount    int64 `json:"paidCount"`
+	Total        int64 `json:"total"`
+	PaidTotal    int64 `json:"paidTotal"`
+	OverdueCount int64 `json:"overdueCount"`
+	LastNumber   int   `json:"lastNumber"`
+}
+
 type InstallmentResponse struct {
 	ID                uuid.UUID  `json:"id"`
 	ContractID        uuid.UUID  `json:"contractId"`
@@ -264,6 +273,17 @@ func newContractResponse(row ContractRow) ContractResponse {
 		Status:       row.Status,
 		CreatedAt:    row.CreatedAt,
 		UpdatedAt:    row.UpdatedAt,
+	}
+}
+
+func newInstallmentSummaryResponse(totals InstallmentTotals) InstallmentSummaryResponse {
+	return InstallmentSummaryResponse{
+		Count:        totals.Count,
+		PaidCount:    totals.PaidCount,
+		Total:        totals.Total,
+		PaidTotal:    totals.PaidTotal,
+		OverdueCount: totals.OverdueCount,
+		LastNumber:   totals.LastNumber,
 	}
 }
 

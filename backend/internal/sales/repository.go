@@ -26,6 +26,12 @@ const (
 		"COUNT(*) FILTER (WHERE contract.status = ?) AS paid, " +
 		"COUNT(*) FILTER (WHERE contract.status = ?) AS cancelled, " +
 		"COALESCE(SUM(contract.value) FILTER (WHERE contract.status <> ?), 0) AS total_value"
+	installmentTotalsColumns = "COUNT(*) AS count, " +
+		"COUNT(*) FILTER (WHERE status = ?) AS paid_count, " +
+		"COALESCE(SUM(amount), 0) AS total, " +
+		"COALESCE(SUM(amount) FILTER (WHERE status = ?), 0) AS paid_total, " +
+		"COUNT(*) FILTER (WHERE status <> ? AND due_date < ?) AS overdue_count, " +
+		"COALESCE(MAX(installment_number), 0) AS last_number"
 )
 
 type CustomerFilter struct {
@@ -77,6 +83,15 @@ type ContractTotals struct {
 	Paid       int64
 	Cancelled  int64
 	TotalValue int64
+}
+
+type InstallmentTotals struct {
+	Count        int64
+	PaidCount    int64
+	Total        int64
+	PaidTotal    int64
+	OverdueCount int64
+	LastNumber   int
 }
 
 type UnitStatusCount struct {
@@ -154,6 +169,7 @@ type Repository interface {
 	DeleteInstallment(ctx context.Context, contractID, id uuid.UUID) error
 	SumInstallments(ctx context.Context, contractID uuid.UUID, excludeID *uuid.UUID) (int64, error)
 	CountUnpaidInstallments(ctx context.Context, contractID uuid.UUID) (int64, error)
+	SummarizeInstallments(ctx context.Context, contractID uuid.UUID, today time.Time) (InstallmentTotals, error)
 }
 
 type gormRepository struct {
@@ -387,6 +403,16 @@ func (r *gormRepository) CountUnpaidInstallments(ctx context.Context, contractID
 		Where("contract_id = ? AND status <> ?", contractID, settledStatus).
 		Count(&total).Error
 	return total, database.Translate(err)
+}
+
+func (r *gormRepository) SummarizeInstallments(ctx context.Context, contractID uuid.UUID, today time.Time) (InstallmentTotals, error) {
+	var totals InstallmentTotals
+	err := r.db.WithContext(ctx).
+		Model(&Installment{}).
+		Select(installmentTotalsColumns, settledStatus, settledStatus, settledStatus, today).
+		Where("contract_id = ?", contractID).
+		Scan(&totals).Error
+	return totals, database.Translate(err)
 }
 
 func (r *gormRepository) contractRows(ctx context.Context) *gorm.DB {

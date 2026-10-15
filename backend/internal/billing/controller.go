@@ -228,6 +228,16 @@ func (c *Controller) PayPayable(ctx *gin.Context) {
 	httpresponse.Respond(ctx, payable, err)
 }
 
+func (c *Controller) ListUnreconciledPairs(ctx *gin.Context) {
+	var query ReconciliationQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	page, err := c.service.ListUnreconciledPairs(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, page, err)
+}
+
 func (c *Controller) InvoicePayments(ctx *gin.Context) {
 	c.listPayments(ctx, c.service.InvoicePayments)
 }

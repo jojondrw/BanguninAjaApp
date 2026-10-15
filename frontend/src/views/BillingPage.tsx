@@ -8,6 +8,7 @@ import { BillingKpis } from './billing/BillingKpis'
 import { InvoicesSection } from './billing/InvoicesSection'
 import { PayablesSection } from './billing/PayablesSection'
 import { ReceivablesSection } from './billing/ReceivablesSection'
+import { ReconciliationBanner } from './billing/ReconciliationBanner'
 
 const TABS: { value: BillingKind; label: string }[] = [
   { value: 'invoices', label: 'Faktur' },
@@ -35,6 +36,7 @@ export function BillingPage() {
   return (
     <AppShell title="Tagihan" description="Faktur, piutang pelanggan, dan utang ke vendor beserta pembayarannya">
       <BillingKpis />
+      <ReconciliationBanner />
 
       <div className="mt-6 mb-4">
         <SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian tagihan" />

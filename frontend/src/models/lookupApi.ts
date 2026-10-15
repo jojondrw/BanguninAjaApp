@@ -1,4 +1,6 @@
 import { request } from '../shared/apiClient'
+import { rupiah } from '../shared/format'
+import type { Invoice } from './billing'
 import { toQueryString, type Page } from './common'
 import type { Employee } from './hr'
 import type { Asset, Material, Warehouse } from './inventory'
@@ -6,7 +8,7 @@ import type { OptionSource, SearchOption } from './lookup'
 import { ACCOUNT_TYPE_LABEL, type Account, type AccountType, type UnitOfMeasure } from './master'
 import { ORDER_STATUS_LABEL, type PurchaseOrder, type PurchaseOrderStatus, type Vendor } from './procurement'
 import type { Project } from './project'
-import type { Customer, PropertyUnit, UnitStatus } from './sales'
+import type { Contract, Customer, PropertyUnit, UnitStatus } from './sales'
 
 // Satu halaman hasil per ketikan. Cukup untuk dipilih, sisanya lewat kata kunci.
 export const SEARCH_LIMIT = 20
@@ -148,3 +150,45 @@ export const postableAccountOptions = source<Account>(
   (account) => ({ value: account.id, label: `${account.code} ${account.name}`, hint: ACCOUNT_TYPE_LABEL[account.type] }),
   { postable: 'true' },
 )
+
+// Pilihan yang bergantung pada pihak lain di formulir tagihan. Setiap pilihan
+// membawa datanya supaya formulir bisa mengisi bagian yang masih kosong.
+export interface ContractOption extends SearchOption {
+  contract: Contract
+}
+
+// Kontrak milik satu pelanggan.
+export function customerContractOptions(customerId: string): OptionSource<ContractOption> {
+  return source<Contract, ContractOption>(
+    '/sales/contracts',
+    (contract) => ({ value: contract.id, label: contract.number, hint: `unit ${contract.unitCode}`, contract }),
+    { customerId: customerId || undefined },
+  )
+}
+
+export interface PurchaseOrderOption extends SearchOption {
+  order: PurchaseOrder
+}
+
+// Pesanan pembelian milik satu vendor.
+export function vendorOrderOptions(vendorId: string): OptionSource<PurchaseOrderOption> {
+  return source<PurchaseOrder, PurchaseOrderOption>(
+    '/procurement/purchase-orders',
+    (order) => ({ value: order.id, label: order.number, hint: rupiah(order.value), order }),
+    { vendorId: vendorId || undefined },
+  )
+}
+
+export interface InvoiceOption extends SearchOption {
+  invoice: Invoice
+}
+
+// Faktur pelanggan yang belum dicatat sebagai piutang, dipersempit ke satu
+// pelanggan bila sudah dipilih.
+export function unrecordedInvoiceOptions(customerId: string): OptionSource<InvoiceOption> {
+  return source<Invoice, InvoiceOption>(
+    '/billing/invoices',
+    (invoice) => ({ value: invoice.id, label: invoice.number, hint: rupiah(invoice.amount), invoice }),
+    { partyType: 'customer', partyId: customerId || undefined, recorded: 'false' },
+  )
+}

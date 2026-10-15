@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   useContract,
   useDeleteContract,
-  useInstallments,
+  useInstallmentSummary,
   useUpdateContractStatus,
 } from '../../controllers/useSales'
 import {
@@ -21,7 +21,7 @@ import { Chip } from '../components/RecordControls'
 import { ContractForm } from './ContractForm'
 import { InstallmentSchedule } from './InstallmentSchedule'
 import { ConfirmPanel } from './RowActions'
-import { OPTION_LIMIT, refusalText } from './salesShared'
+import { refusalText } from './salesShared'
 
 type ContractAction = ContractTarget | 'delete'
 
@@ -78,9 +78,9 @@ function Figure({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ContractDetail({ contract, installments, deletion, onDelete }: {
+function ContractDetail({ contract, summary, deletion, onDelete }: {
   contract: Contract
-  installments: ReturnType<typeof useInstallments>
+  summary: ReturnType<typeof useInstallmentSummary>
   deletion: ReturnType<typeof useDeleteContract>
   onDelete: (contract: Contract, onSettled: () => void) => void
 }) {
@@ -89,15 +89,14 @@ function ContractDetail({ contract, installments, deletion, onDelete }: {
   const [notice, setNotice] = useState<string | null>(null)
   const updateStatus = useUpdateContractStatus()
 
-  const items = installments.data?.items ?? []
-  const scheduled = items.reduce((total, item) => total + item.amount, 0)
-  const paid = items.filter((item) => item.status === 'paid').reduce((total, item) => total + item.amount, 0)
-  const unpaidCount = items.filter((item) => item.status !== 'paid').length
+  const totals = summary.data
+  const scheduled = totals?.total ?? 0
+  const unpaidCount = totals ? totals.count - totals.paidCount : 0
   const isDraft = contract.status === 'draft'
 
-  // Lunas hanya ditawarkan setelah jadwal cicilan termuat dan semuanya
+  // Lunas hanya ditawarkan setelah ringkasan cicilan termuat dan semuanya
   // terbayar, sama dengan pemeriksaan contract_unpaid di backend.
-  const canMarkPaid = installments.data !== undefined && unpaidCount === 0
+  const canMarkPaid = totals !== undefined && unpaidCount === 0
   const transitions = CONTRACT_TRANSITIONS[contract.status].filter((target) => target !== 'paid' || canMarkPaid)
   const forward = transitions.filter((target) => target !== 'cancelled')
   const hasCancel = transitions.includes('cancelled')
@@ -136,12 +135,9 @@ function ContractDetail({ contract, installments, deletion, onDelete }: {
     >
       <dl className="mb-5 grid grid-cols-2 gap-4 rounded-xl bg-slate-50 px-4 py-3 md:grid-cols-4">
         <Figure label="Nilai kontrak" value={rupiah(contract.value)} />
-        <Figure label="Dijadwalkan" value={installments.data ? rupiah(scheduled) : '...'} />
-        <Figure label="Terbayar" value={installments.data ? rupiah(paid) : '...'} />
-        <Figure
-          label="Belum dijadwalkan"
-          value={installments.data ? rupiah(Math.max(0, contract.value - scheduled)) : '...'}
-        />
+        <Figure label="Dijadwalkan" value={totals ? rupiah(scheduled) : '...'} />
+        <Figure label="Terbayar" value={totals ? rupiah(totals.paidTotal) : '...'} />
+        <Figure label="Belum dijadwalkan" value={totals ? rupiah(Math.max(0, contract.value - scheduled)) : '...'} />
       </dl>
 
       {copy && asking ? (
@@ -190,7 +186,7 @@ function ContractDetail({ contract, installments, deletion, onDelete }: {
               {ACTION_COPY.cancelled.trigger}
             </Button>
           ) : null}
-          {contract.status === 'active' && installments.data && unpaidCount > 0 ? (
+          {contract.status === 'active' && totals && unpaidCount > 0 ? (
             <p className="text-xs text-slate-500">
               Tandai lunas tersedia setelah {number(unpaidCount)} angsuran yang tersisa dibayar.
             </p>
@@ -226,7 +222,7 @@ function ContractDetail({ contract, installments, deletion, onDelete }: {
       ) : null}
 
       <h3 className="mb-3 text-sm font-semibold text-slate-900">Jadwal cicilan</h3>
-      <InstallmentSchedule contract={contract} installments={installments} />
+      <InstallmentSchedule contract={contract} summary={totals} enabled={!isDeleting} />
     </Card>
   )
 }
@@ -238,7 +234,7 @@ export function ContractDetailCard({ contractId, deletion, onDelete }: {
 }) {
   const isDeleting = deletion.isPending && deletion.variables.id === contractId
   const contract = useContract(contractId, !isDeleting)
-  const installments = useInstallments({ contractId, pageSize: OPTION_LIMIT }, !isDeleting)
+  const summary = useInstallmentSummary(contractId, !isDeleting)
 
   if (contract.isPending) {
     return (
@@ -257,6 +253,6 @@ export function ContractDetailCard({ contractId, deletion, onDelete }: {
   }
 
   return (
-    <ContractDetail contract={contract.data} installments={installments} deletion={deletion} onDelete={onDelete} />
+    <ContractDetail contract={contract.data} summary={summary} deletion={deletion} onDelete={onDelete} />
   )
 }

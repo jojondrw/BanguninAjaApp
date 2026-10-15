@@ -26,6 +26,7 @@ frontend/src/
     errorMessage.ts    pesan galat dari backend
     format.ts          rupiah, tanggal, angka
     localDate.ts       tanggal lokal peramban
+  test/              tes otomatis Vitest (setup.ts, render.tsx, *.test.ts/tsx)
   App.tsx            rute, Suspense, error boundary, provider
 ```
 
@@ -137,3 +138,33 @@ Warna merek diambil dari logo: navy `#0b2b6b` dan amber `#fbbb16`.
 
 Aturan kelas: tulis langsung di komponen. Kalau satu rangkaian kelas dipakai di
 lebih dari dua tempat, jadikan komponen di `views/components`, bukan `@apply`.
+
+## Tes otomatis
+
+Vitest dengan jsdom dan Testing Library (`@testing-library/react`,
+`user-event`, `jest-dom`). Konfigurasinya di blok `test` pada `vite.config.ts`,
+jadi plugin React dan React Compiler ikut dipakai saat tes.
+
+```
+cd frontend
+npm test            # sekali jalan (vitest run), sama dengan di CI
+npx vitest          # mode pantau saat menulis tes
+npx vitest run src/test/SearchSelect.test.tsx   # satu berkas
+```
+
+Letak dan isi:
+
+- Semua tes ada di `src/test/` dengan akhiran `.test.ts` atau `.test.tsx`.
+  `setup.ts` memasang matcher `jest-dom` dan pengganti API yang tidak ada di
+  jsdom (`ResizeObserver`, `scrollIntoView`, `CSS.escape`). `render.tsx`
+  berisi `renderWithProviders` (QueryClient baru per tes plus `MemoryRouter`).
+- Logika murni dites langsung: `format.test.ts` (rupiah, tanggal lokal),
+  `location.test.ts` (perbandingan lokasi), `rules.test.ts` (saldo jurnal,
+  tagihan, logika SearchSelect).
+- Komponen dites lewat peran ARIA, seperti cara pengguna dan pembaca layar
+  memakainya: `SearchSelect`, `Tabs`, `CommandPalette`, `ErrorBoundary`.
+- Data server di-mock di batas model atau controller (`fetchOptions` tiruan,
+  `vi.mock('../controllers/useErp')`), bukan dengan memanggil backend.
+
+Tes ikut diperiksa `tsc -b` saat `npm run build`, dan CI menjalankan
+`npm test` di job frontend setelah lint dan build.

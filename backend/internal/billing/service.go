@@ -102,6 +102,8 @@ type Service interface {
 	DeletePayable(ctx context.Context, id uuid.UUID) error
 	PayPayable(ctx context.Context, id uuid.UUID, request PaymentRequest, actor *uuid.UUID) (PayableResponse, error)
 	PayablePayments(ctx context.Context, id uuid.UUID, query PaymentQuery) (pagination.Page[PaymentResponse], error)
+
+	ListUnreconciledPairs(ctx context.Context, query ReconciliationQuery) (pagination.Page[ReconciliationResponse], error)
 }
 
 type service struct {
@@ -231,6 +233,14 @@ func (s *service) InvoicePayments(ctx context.Context, id uuid.UUID, query Payme
 		return pagination.Page[PaymentResponse]{}, invoiceReadErrors.Resolve(err)
 	}
 	return listPayments(ctx, s.repository, invoicePaymentColumn, id, query)
+}
+
+func (s *service) ListUnreconciledPairs(ctx context.Context, query ReconciliationQuery) (pagination.Page[ReconciliationResponse], error) {
+	rows, total, err := s.repository.ListUnreconciledPairs(ctx, query.Offset(), query.Size())
+	if err != nil {
+		return pagination.Page[ReconciliationResponse]{}, apperror.Internal(err)
+	}
+	return pagination.New(pagination.Map(rows, newReconciliationResponse), query.Query, total), nil
 }
 
 func (s *service) ListReceivables(ctx context.Context, query ReceivableQuery) (pagination.Page[ReceivableResponse], error) {
