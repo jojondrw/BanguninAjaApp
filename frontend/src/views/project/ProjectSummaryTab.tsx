@@ -49,7 +49,7 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
         />
       </KpiRow>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 2xl:grid-cols-2">
         <PhasesCard project={project} />
         <PermitsCard project={project} />
       </div>
