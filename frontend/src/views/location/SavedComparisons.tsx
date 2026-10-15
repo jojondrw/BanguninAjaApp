@@ -12,6 +12,7 @@ import {
   type Comparison,
   type ComparisonDetail,
 } from '../../models/location'
+import { useScopedCan } from '../../controllers/useAccess'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
@@ -38,6 +39,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
   const open = useOpenComparison()
   const rename = useRenameComparison()
   const remove = useDeleteComparison()
+  const canChange = useScopedCan('write')
   const items = comparisons.data?.items ?? NO_COMPARISONS
 
   // Satu catatan hasil saja di atas daftar, supaya catatan lama tidak
@@ -166,7 +168,7 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
                         {isOpening ? 'Membuka...' : 'Buka'}
                         <span className="sr-only">: {comparison.name}</span>
                       </button>
-                      {isIncomplete ? null : (
+                      {isIncomplete || !canChange ? null : (
                         <button
                           type="button"
                           aria-expanded={renamingId === comparison.id}
@@ -176,9 +178,11 @@ export function SavedComparisons({ openedId, onOpened, onRenamed, onDeleted }: S
                           Ganti nama<span className="sr-only">: {comparison.name}</span>
                         </button>
                       )}
-                      <button type="button" onClick={() => startDelete(comparison.id)} className={ROW_BUTTON}>
-                        Hapus<span className="sr-only">: {comparison.name}</span>
-                      </button>
+                      {canChange ? (
+                        <button type="button" onClick={() => startDelete(comparison.id)} className={ROW_BUTTON}>
+                          Hapus<span className="sr-only">: {comparison.name}</span>
+                        </button>
+                      ) : null}
                     </div>
                   )}
 

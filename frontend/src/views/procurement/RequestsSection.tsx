@@ -494,6 +494,7 @@ export function RequestsSection({ onCreateOrder }: {
                   align: 'right',
                   cell: (row) => (
                     <RowAction
+                      requires="read"
                       label="Rincian"
                       isActive={row.id === selectedId}
                       onClick={() => setSelectedId((current) => (current === row.id ? null : row.id))}

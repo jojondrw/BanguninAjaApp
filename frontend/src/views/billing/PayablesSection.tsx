@@ -140,6 +140,7 @@ export function PayablesSection({ today }: { today: string }) {
                   align: 'right',
                   cell: (row) => (
                     <RowAction
+                      requires="read"
                       label="Rincian"
                       isActive={row.id === selectedId}
                       onClick={() => {

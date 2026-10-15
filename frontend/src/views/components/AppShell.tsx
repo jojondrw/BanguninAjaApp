@@ -1,11 +1,12 @@
 import { LogOut, Search } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
-import { useLogout, useSession } from '../../controllers/useAuth'
+import { AccessScopeContext, canAccess, usePermissions } from '../../controllers/useAccess'
+import { useCurrentUser, useLogout } from '../../controllers/useAuth'
 import { BrandName } from './Brand'
 import { CommandPalette } from './CommandPalette'
-import { MENU, MENU_ITEMS, type MenuItem } from './navigation'
+import { type MenuItem, moduleForPath, visibleMenu } from './navigation'
 
 const SCROLL_EDGE_PX = 4
 const PALETTE_SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K'
@@ -17,10 +18,25 @@ interface AppShellProps {
   children: ReactNode
 }
 
-export function AppShell({ title, description, actions, children }: AppShellProps) {
-  const { user } = useSession()
+// Modul halaman diturunkan dari rute, supaya tombol bersama (FormToggle,
+// RowAction) tahu hak akses yang berlaku tanpa diatur satu per satu.
+export function AppShell(props: AppShellProps) {
+  const { pathname } = useLocation()
+
+  return (
+    <AccessScopeContext.Provider value={moduleForPath(pathname)}>
+      <ShellFrame {...props} />
+    </AccessScopeContext.Provider>
+  )
+}
+
+function ShellFrame({ title, description, actions, children }: AppShellProps) {
+  const user = useCurrentUser()
+  const permissions = usePermissions()
   const logout = useLogout()
   const navigate = useNavigate()
+  const menu = visibleMenu((module) => canAccess(permissions, module, 'read'))
+  const menuItems = menu.flatMap((group) => group.items)
   const panelRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -87,7 +103,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
         </button>
 
         <nav className="mt-4 flex flex-1 flex-col gap-5 overflow-y-auto" aria-label="Menu utama">
-          {MENU.map((group) => (
+          {menu.map((group) => (
             <div key={group.label}>
               <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-slate-500">{group.label}</p>
               <ul className="flex flex-col gap-0.5">
@@ -105,7 +121,9 @@ export function AppShell({ title, description, actions, children }: AppShellProp
           <Avatar name={user?.name ?? user?.email ?? ''} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-medium text-slate-900">{user?.name ?? 'Pengguna'}</p>
-            <p className="truncate text-xs text-slate-500">{user?.email ?? ''}</p>
+            <p className="truncate text-xs text-slate-500" title={user?.email ?? ''}>
+              {user?.role?.name ?? 'Tanpa peran'}
+            </p>
           </div>
           <SignOutButton isPending={logout.isPending} onClick={endSession} />
         </div>
@@ -140,7 +158,7 @@ export function AppShell({ title, description, actions, children }: AppShellProp
               className="flex gap-1 overflow-x-auto px-4 pt-3 [scrollbar-width:none] lg:hidden"
               aria-label="Menu ponsel"
             >
-              {MENU_ITEMS.map((item) => (
+              {menuItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}

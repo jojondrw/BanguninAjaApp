@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE } from '../components/Form'
 import { CHIP_CLASS } from '../components/ListTools'
 
@@ -72,6 +73,11 @@ export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, on
   onConfirm: () => void
 }) {
   const [isAsking, setIsAsking] = useState(false)
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
 
   if (!isAsking && !isPending) {
     return (
@@ -108,6 +114,12 @@ export function PanelToggle({ label, panelId, isOpen, onToggle }: {
   isOpen: boolean
   onToggle: () => void
 }) {
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
+
   return (
     <button
       type="button"

@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
+import { useCan } from '../../controllers/useAccess'
 import { useBudgets } from '../../controllers/useErp'
 import {
   CASH_FLOW_MONTHS,
@@ -127,6 +128,7 @@ function SpendByMonth({ periods }: { periods: CashFlowPeriod[] }) {
 function TransactionsCard({ project }: { project: Project }) {
   const transactions = useProjectCashTransactions(project.id)
   const [isAdding, setIsAdding] = useState(false)
+  const canRecord = useCan('finance', 'write')
   const page = transactions.data
 
   return (
@@ -150,13 +152,15 @@ function TransactionsCard({ project }: { project: Project }) {
         />
       ) : null}
 
-      <div className="mt-5">
-        <Button variant="subtle" onClick={() => setIsAdding((open) => !open)}>
-          {isAdding ? 'Tutup formulir transaksi' : 'Catat transaksi'}
-        </Button>
-      </div>
+      {canRecord ? (
+        <div className="mt-5">
+          <Button variant="subtle" onClick={() => setIsAdding((open) => !open)}>
+            {isAdding ? 'Tutup formulir transaksi' : 'Catat transaksi'}
+          </Button>
+        </div>
+      ) : null}
 
-      {isAdding ? <CashTransactionForm projectId={project.id} /> : null}
+      {isAdding && canRecord ? <CashTransactionForm projectId={project.id} /> : null}
     </Card>
   )
 }

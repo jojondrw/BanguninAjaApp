@@ -43,7 +43,7 @@ function JournalDetailCard({ id, onClose }: { id: string; onClose: () => void })
     cardRef.current?.scrollIntoView({ block: 'nearest' })
   }, [id])
 
-  const close = <RowAction label="Tutup rincian" onClick={onClose} />
+  const close = <RowAction label="Tutup rincian" requires="read" onClick={onClose} />
 
   if (entry.isPending || entry.isError) {
     return (
@@ -241,6 +241,7 @@ export function JournalTab() {
                         />
                       ) : null}
                       <RowAction
+                        requires="read"
                         label="Rincian"
                         isActive={row.id === selectedId}
                         onClick={() => setSelectedId(row.id === selectedId ? '' : row.id)}

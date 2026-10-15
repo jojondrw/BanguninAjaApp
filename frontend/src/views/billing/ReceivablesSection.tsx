@@ -169,6 +169,7 @@ export function ReceivablesSection({ today, draftInvoice }: {
                   align: 'right',
                   cell: (row) => (
                     <RowAction
+                      requires="read"
                       label="Rincian"
                       isActive={row.id === selectedId}
                       onClick={() => {

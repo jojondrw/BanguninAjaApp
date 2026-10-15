@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { useBillingRecord, useDeleteBilling, usePayBilling } from '../../controllers/useBilling'
 import {
   BILLING_KIND_NOUN,
@@ -106,6 +107,7 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
 }) {
   const record = useBillingRecord(kind, id)
   const pay = usePayBilling(kind)
+  const canWrite = useScopedCan('write')
   const [isEditing, setIsEditing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const noun = BILLING_KIND_NOUN[kind]
@@ -141,18 +143,20 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
             </span>
           ) : null}
         </span>
-        <span className="flex flex-wrap items-start justify-end gap-2">
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setIsEditing((open) => !open)
-              setNotice(null)
-            }}
-          >
-            {isEditing ? 'Tutup formulir ubah' : 'Ubah data'}
-          </Button>
-          <DeleteAction kind={kind} record={data} label={title} onDeleted={onDeleted} />
-        </span>
+        {canWrite ? (
+          <span className="flex flex-wrap items-start justify-end gap-2">
+            <Button
+              variant="subtle"
+              onClick={() => {
+                setIsEditing((open) => !open)
+                setNotice(null)
+              }}
+            >
+              {isEditing ? 'Tutup formulir ubah' : 'Ubah data'}
+            </Button>
+            <DeleteAction kind={kind} record={data} label={title} onDeleted={onDeleted} />
+          </span>
+        ) : null}
       </div>
 
       {notice ? (
@@ -161,7 +165,7 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
         </div>
       ) : null}
 
-      {isEditing ? (
+      {isEditing && canWrite ? (
         <FormPanel>
           {renderEdit(data, {
             onSaved: () => {
@@ -189,16 +193,18 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
 
       <PaymentHistory kind={kind} record={data} />
 
-      <section className="mt-6 border-t border-slate-100 pt-5">
-        <PaymentForm
-          key={data.outstanding}
-          record={data}
-          noun={noun}
-          today={today}
-          linkedTo={linkedTo?.(data) ?? null}
-          pay={pay}
-        />
-      </section>
+      {canWrite ? (
+        <section className="mt-6 border-t border-slate-100 pt-5">
+          <PaymentForm
+            key={data.outstanding}
+            record={data}
+            noun={noun}
+            today={today}
+            linkedTo={linkedTo?.(data) ?? null}
+            pay={pay}
+          />
+        </section>
+      ) : null}
     </Card>
   )
 }
