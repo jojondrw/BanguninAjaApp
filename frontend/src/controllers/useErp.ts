@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { financeApi, locationApi, projectApi, scoringApi, siteApi } from '../models/erpApi'
 import type { CashFlowFilter } from '../models/finance'
 import { toProjectRequest, type ProjectFilter, type ProjectFormValues } from '../models/project'
+import type { QueryToggle } from './queryToggle'
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
@@ -17,10 +18,11 @@ export const DATA_QUERY = {
   retry: 0,
 }
 
-export function useProjects(filter: ProjectFilter = {}) {
+export function useProjects(filter: ProjectFilter = {}, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [PROJECTS_KEY, filter],
     queryFn: () => projectApi.list(filter),
+    enabled,
     ...DATA_QUERY,
   })
 }
@@ -36,18 +38,20 @@ export function useCreateProject() {
   })
 }
 
-export function useProjectSummary() {
+export function useProjectSummary({ enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [PROJECTS_KEY, 'summary'],
     queryFn: projectApi.summary,
+    enabled,
     ...DATA_QUERY,
   })
 }
 
-export function useBudgetSummary(projectId?: string) {
+export function useBudgetSummary(projectId?: string, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [BUDGETS_KEY, 'summary', projectId ?? 'all'],
     queryFn: () => financeApi.budgetSummary({ projectId }),
+    enabled,
     ...DATA_QUERY,
   })
 }
@@ -60,10 +64,11 @@ export function useBudgets(projectId?: string) {
   })
 }
 
-export function useCashFlow(filter: CashFlowFilter = {}) {
+export function useCashFlow(filter: CashFlowFilter = {}, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [CASH_FLOW_KEY, filter],
     queryFn: () => financeApi.cashFlow(filter),
+    enabled,
     ...DATA_QUERY,
   })
 }

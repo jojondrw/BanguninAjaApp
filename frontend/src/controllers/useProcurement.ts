@@ -23,6 +23,7 @@ import {
   type VendorFormValues,
 } from '../models/procurement'
 import { procurementApi } from '../models/procurementApi'
+import type { QueryToggle } from './queryToggle'
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
@@ -88,11 +89,12 @@ export function usePurchaseRequest(id: string | null) {
   })
 }
 
-export function usePurchaseRequestCount(status: PurchaseRequestStatus) {
+export function usePurchaseRequestCount(status: PurchaseRequestStatus, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [PROCUREMENT_KEY, 'purchase-request-count', status],
     queryFn: () => procurementApi.purchaseRequests({ status, pageSize: 1 }),
     select: (page) => page.totalItems,
+    enabled,
     ...DATA_QUERY,
   })
 }

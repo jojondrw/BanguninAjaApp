@@ -29,7 +29,7 @@ export function RoleCell({ user, isPending, onSave }: {
         title={hint}
         onChange={(event) => setDraft(event.target.value)}
       >
-        {current === NO_ROLE ? <option value={NO_ROLE}>Tanpa peran</option> : null}
+        {current === NO_ROLE ? <option value={NO_ROLE}>Menunggu peran</option> : null}
         {ROLE_OPTIONS.map((option) => (
           <option key={option.code} value={option.code}>
             {option.label}

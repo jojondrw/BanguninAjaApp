@@ -19,6 +19,7 @@ import {
   type PayrollSummaryFilter,
 } from '../models/hr'
 import { hrApi } from '../models/hrApi'
+import type { QueryToggle } from './queryToggle'
 
 const ONE_MINUTE = 60_000
 
@@ -196,17 +197,18 @@ export function usePayrolls(filter: PayrollFilter) {
 
 // Total periode dijumlah server dari semua slip, jadi tidak terbatas satu
 // halaman daftar.
-export function usePayrollSummary(filter: PayrollSummaryFilter) {
+export function usePayrollSummary(filter: PayrollSummaryFilter, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [...PAYROLLS_KEY, 'summary', filter],
     queryFn: () => hrApi.payrollSummary(filter),
+    enabled,
     ...DATA_QUERY,
   })
 }
 
 // Dipakai daftar "Perlu perhatian" di Ringkasan: total slip satu periode.
-export function usePayrollTotals(period: string) {
-  return usePayrollSummary({ period })
+export function usePayrollTotals(period: string, options: QueryToggle = {}) {
+  return usePayrollSummary({ period }, options)
 }
 
 function useInvalidatePayrolls() {

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import type { ComparisonTable, SavedLocationDetail } from '../../models/location'
 import { number, rupiah, shortDate } from '../../shared/format'
 import { RiskChips, ScoreCell, ValueWithMark } from './parts'
+import { ReportRowButton } from './ReportDownload'
 
 const COORDINATE_DIGITS = 4
 const LABEL_COLUMN_REM = 11
@@ -25,6 +26,8 @@ interface ComparisonGridProps {
   table: ComparisonTable
   names: LocationNames
   onRemove: (id: string) => void
+  downloadingId: string | null
+  onDownloadReport: (id: string) => void
 }
 
 function Row<T>({ label, hint, items, render }: {
@@ -68,7 +71,7 @@ function emptyText(text: string) {
 
 // Tabel dibalik: baris adalah aspek, kolom adalah lokasi, supaya lokasi bisa
 // dibaca berdampingan. Kolom aspek menempel di kiri saat tabel digeser.
-export function ComparisonGrid({ locations, table, names, onRemove }: ComparisonGridProps) {
+export function ComparisonGrid({ locations, table, names, onRemove, downloadingId, onDownloadReport }: ComparisonGridProps) {
   const span = locations.length + 1
   const minWidth = `${LABEL_COLUMN_REM + locations.length * LOCATION_COLUMN_REM}rem`
 
@@ -202,6 +205,18 @@ export function ComparisonGrid({ locations, table, names, onRemove }: Comparison
             />
           ) : null}
           <Row label="Dievaluasi" items={locations} render={(location) => shortDate(location.savedAt)} />
+          <Row
+            label="Laporan lokasi"
+            hint="PDF analisis satu lokasi"
+            items={locations}
+            render={(location, index) => (
+              <ReportRowButton
+                srLabel={table.labels[index]}
+                isPending={downloadingId === location.id}
+                onClick={() => onDownloadReport(location.id)}
+              />
+            )}
+          />
         </tbody>
       </table>
     </div>

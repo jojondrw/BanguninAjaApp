@@ -2,6 +2,7 @@ package master
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 
@@ -12,8 +13,11 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
 )
 
+const cashAccountCode = "1110"
+
 var (
 	errRegionNotFound       = apperror.NotFound("region_not_found", "Wilayah tidak ditemukan")
+	errRegionBlank          = apperror.Unprocessable("region_blank", "Kode dan nama wilayah wajib diisi")
 	errRegionCodeUsed       = apperror.Conflict("region_code_used", "Kode wilayah sudah dipakai")
 	errRegionInUse          = apperror.Conflict("region_in_use", "Wilayah masih dipakai oleh data lain")
 	errRegionTypeLocked     = apperror.Conflict("region_type_locked", "Jenis wilayah tidak bisa diubah karena masih punya wilayah turunan")
@@ -22,12 +26,15 @@ var (
 	errRegionParentInvalid  = apperror.Unprocessable("region_parent_invalid", "Jenis wilayah induk tidak sesuai dengan jenis wilayah")
 
 	errUnitOfMeasureNotFound = apperror.NotFound("unit_of_measure_not_found", "Satuan tidak ditemukan")
+	errUnitOfMeasureBlank    = apperror.Unprocessable("unit_of_measure_blank", "Kode dan nama satuan wajib diisi")
 	errUnitOfMeasureCodeUsed = apperror.Conflict("unit_of_measure_code_used", "Kode satuan sudah dipakai")
 	errUnitOfMeasureInUse    = apperror.Conflict("unit_of_measure_in_use", "Satuan masih dipakai oleh data lain")
 
 	errAccountNotFound           = apperror.NotFound("account_not_found", "Akun tidak ditemukan")
+	errAccountBlank              = apperror.Unprocessable("account_blank", "Kode dan nama akun wajib diisi")
 	errAccountCodeUsed           = apperror.Conflict("account_code_used", "Kode akun sudah dipakai")
 	errAccountInUse              = apperror.Conflict("account_in_use", "Akun masih dipakai oleh data lain")
+	errAccountCashLocked         = apperror.Conflict("account_cash_locked", "Akun Kas (kode 1110) dipakai jurnal kas otomatis, jadi kodenya tidak bisa diubah dan akunnya tidak bisa dihapus")
 	errAccountTypeLocked         = apperror.Conflict("account_type_locked", "Jenis akun tidak bisa diubah karena masih punya akun turunan")
 	errAccountParentNotFound     = apperror.Unprocessable("account_parent_not_found", "Akun induk tidak ditemukan")
 	errAccountParentTypeMismatch = apperror.Unprocessable("account_parent_type_mismatch", "Akun induk harus memiliki jenis yang sama")
@@ -100,14 +107,17 @@ func (s *service) ListRegions(ctx context.Context, query RegionQuery) (paginatio
 }
 
 func (s *service) GetRegion(ctx context.Context, id uuid.UUID) (RegionResponse, error) {
-	region, err := s.repository.FindRegion(ctx, id)
+	row, err := s.repository.FindRegionRow(ctx, id)
 	if err != nil {
 		return RegionResponse{}, regionReadErrors.Resolve(err)
 	}
-	return newRegionResponse(region), nil
+	return newRegionResponse(row), nil
 }
 
 func (s *service) CreateRegion(ctx context.Context, request RegionRequest) (RegionResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return RegionResponse{}, errRegionBlank
+	}
 	if err := s.validateRegionParent(ctx, request); err != nil {
 		return RegionResponse{}, err
 	}
@@ -117,10 +127,13 @@ func (s *service) CreateRegion(ctx context.Context, request RegionRequest) (Regi
 	if err := s.repository.CreateRegion(ctx, &region); err != nil {
 		return RegionResponse{}, regionWriteErrors.Resolve(err)
 	}
-	return newRegionResponse(region), nil
+	return s.GetRegion(ctx, region.ID)
 }
 
 func (s *service) UpdateRegion(ctx context.Context, id uuid.UUID, request RegionRequest) (RegionResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return RegionResponse{}, errRegionBlank
+	}
 	region, err := s.repository.FindRegion(ctx, id)
 	if err != nil {
 		return RegionResponse{}, regionReadErrors.Resolve(err)
@@ -136,11 +149,15 @@ func (s *service) UpdateRegion(ctx context.Context, id uuid.UUID, request Region
 	if err := s.repository.SaveRegion(ctx, &region); err != nil {
 		return RegionResponse{}, regionWriteErrors.Resolve(err)
 	}
-	return newRegionResponse(region), nil
+	return s.GetRegion(ctx, region.ID)
 }
 
 func (s *service) DeleteRegion(ctx context.Context, id uuid.UUID) error {
-	return regionDeleteErrors.Resolve(s.repository.DeleteRegion(ctx, id))
+	err := s.repository.DeleteRegion(ctx, id)
+	if !errors.Is(err, database.ErrReferenceViolated) {
+		return regionDeleteErrors.Resolve(err)
+	}
+	return explainInUse(ctx, errRegionInUse, "Wilayah", s.repository.ListRegionUsages, id)
 }
 
 func (s *service) validateRegionParent(ctx context.Context, request RegionRequest) error {
@@ -201,6 +218,9 @@ func (s *service) GetUnitOfMeasure(ctx context.Context, id uuid.UUID) (UnitOfMea
 }
 
 func (s *service) CreateUnitOfMeasure(ctx context.Context, request UnitOfMeasureRequest) (UnitOfMeasureResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return UnitOfMeasureResponse{}, errUnitOfMeasureBlank
+	}
 	unit := UnitOfMeasure{Code: strings.TrimSpace(request.Code), Name: strings.TrimSpace(request.Name)}
 	if err := s.repository.CreateUnitOfMeasure(ctx, &unit); err != nil {
 		return UnitOfMeasureResponse{}, unitOfMeasureWriteErrors.Resolve(err)
@@ -209,6 +229,9 @@ func (s *service) CreateUnitOfMeasure(ctx context.Context, request UnitOfMeasure
 }
 
 func (s *service) UpdateUnitOfMeasure(ctx context.Context, id uuid.UUID, request UnitOfMeasureRequest) (UnitOfMeasureResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return UnitOfMeasureResponse{}, errUnitOfMeasureBlank
+	}
 	unit, err := s.repository.FindUnitOfMeasure(ctx, id)
 	if err != nil {
 		return UnitOfMeasureResponse{}, unitOfMeasureReadErrors.Resolve(err)
@@ -223,7 +246,11 @@ func (s *service) UpdateUnitOfMeasure(ctx context.Context, id uuid.UUID, request
 }
 
 func (s *service) DeleteUnitOfMeasure(ctx context.Context, id uuid.UUID) error {
-	return unitOfMeasureDeleteErrors.Resolve(s.repository.DeleteUnitOfMeasure(ctx, id))
+	err := s.repository.DeleteUnitOfMeasure(ctx, id)
+	if !errors.Is(err, database.ErrReferenceViolated) {
+		return unitOfMeasureDeleteErrors.Resolve(err)
+	}
+	return explainInUse(ctx, errUnitOfMeasureInUse, "Satuan", s.repository.ListUnitOfMeasureUsages, id)
 }
 
 func (s *service) ListAccounts(ctx context.Context, query AccountQuery) (pagination.Page[AccountResponse], error) {
@@ -242,14 +269,17 @@ func (s *service) ListAccounts(ctx context.Context, query AccountQuery) (paginat
 }
 
 func (s *service) GetAccount(ctx context.Context, id uuid.UUID) (AccountResponse, error) {
-	account, err := s.repository.FindAccount(ctx, id)
+	row, err := s.repository.FindAccountRow(ctx, id)
 	if err != nil {
 		return AccountResponse{}, accountReadErrors.Resolve(err)
 	}
-	return newAccountResponse(account), nil
+	return newAccountResponse(row), nil
 }
 
 func (s *service) CreateAccount(ctx context.Context, request AccountRequest) (AccountResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return AccountResponse{}, errAccountBlank
+	}
 	if err := s.validateAccountParent(ctx, uuid.Nil, request); err != nil {
 		return AccountResponse{}, err
 	}
@@ -259,13 +289,19 @@ func (s *service) CreateAccount(ctx context.Context, request AccountRequest) (Ac
 	if err := s.repository.CreateAccount(ctx, &account); err != nil {
 		return AccountResponse{}, accountWriteErrors.Resolve(err)
 	}
-	return newAccountResponse(account), nil
+	return s.GetAccount(ctx, account.ID)
 }
 
 func (s *service) UpdateAccount(ctx context.Context, id uuid.UUID, request AccountRequest) (AccountResponse, error) {
+	if isBlank(request.Code, request.Name) {
+		return AccountResponse{}, errAccountBlank
+	}
 	account, err := s.repository.FindAccount(ctx, id)
 	if err != nil {
 		return AccountResponse{}, accountReadErrors.Resolve(err)
+	}
+	if account.Code == cashAccountCode && strings.TrimSpace(request.Code) != cashAccountCode {
+		return AccountResponse{}, errAccountCashLocked
 	}
 	if err := s.ensureAccountTypeChangeable(ctx, account, request.Type); err != nil {
 		return AccountResponse{}, err
@@ -278,11 +314,23 @@ func (s *service) UpdateAccount(ctx context.Context, id uuid.UUID, request Accou
 	if err := s.repository.SaveAccount(ctx, &account); err != nil {
 		return AccountResponse{}, accountWriteErrors.Resolve(err)
 	}
-	return newAccountResponse(account), nil
+	return s.GetAccount(ctx, account.ID)
 }
 
 func (s *service) DeleteAccount(ctx context.Context, id uuid.UUID) error {
-	return accountDeleteErrors.Resolve(s.repository.DeleteAccount(ctx, id))
+	account, err := s.repository.FindAccount(ctx, id)
+	if err != nil {
+		return accountReadErrors.Resolve(err)
+	}
+	if account.Code == cashAccountCode {
+		return errAccountCashLocked
+	}
+
+	err = s.repository.DeleteAccount(ctx, id)
+	if !errors.Is(err, database.ErrReferenceViolated) {
+		return accountDeleteErrors.Resolve(err)
+	}
+	return explainInUse(ctx, errAccountInUse, "Akun", s.repository.ListAccountUsages, id)
 }
 
 func (s *service) validateAccountParent(ctx context.Context, accountID uuid.UUID, request AccountRequest) error {
@@ -327,6 +375,31 @@ func (s *service) ensureAccountTypeChangeable(ctx context.Context, account Accou
 		return errAccountTypeLocked
 	}
 	return nil
+}
+
+func explainInUse(ctx context.Context, fallback *apperror.Error, subject string, listUsages func(context.Context, uuid.UUID) ([]string, error), id uuid.UUID) error {
+	usages, err := listUsages(ctx, id)
+	if err != nil || len(usages) == 0 {
+		return fallback
+	}
+	return apperror.Conflict(fallback.Code, subject+" masih dipakai di "+joinLabels(usages))
+}
+
+func joinLabels(labels []string) string {
+	if len(labels) < 2 {
+		return strings.Join(labels, "")
+	}
+	last := len(labels) - 1
+	if last == 1 {
+		return labels[0] + " dan " + labels[last]
+	}
+	return strings.Join(labels[:last], ", ") + ", dan " + labels[last]
+}
+
+func isBlank(values ...string) bool {
+	return slices.ContainsFunc(values, func(value string) bool {
+		return strings.TrimSpace(value) == ""
+	})
 }
 
 func applyRegionRequest(region *Region, request RegionRequest) {

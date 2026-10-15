@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react'
 
+import { useCan } from '../../controllers/useAccess'
 import { useCreateReport, useReportPreview } from '../../controllers/useReports'
 import { projectOptions } from '../../models/lookupApi'
 import {
@@ -7,12 +8,12 @@ import {
   periodIsOrdered,
   REPORT_FORMATS,
   REPORT_NAME_MAX_LENGTH,
-  REPORT_TYPES,
   reportTypeInfo,
   type ReportCriteria,
   type ReportFormat,
   type ReportFormValues,
   type ReportType,
+  type ReportTypeInfo,
 } from '../../models/report'
 import { errorMessage } from '../../shared/errorMessage'
 import { Card } from '../components/Data'
@@ -20,8 +21,7 @@ import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../component
 import { SearchSelect } from '../components/SearchSelect'
 import { ReportPreviewPanel } from './ReportPreviewPanel'
 
-const INITIAL_VALUES: ReportFormValues = {
-  type: 'arus_kas',
+const INITIAL_VALUES: Omit<ReportFormValues, 'type'> = {
   projectId: '',
   periodStart: '',
   periodEnd: '',
@@ -31,14 +31,17 @@ const INITIAL_VALUES: ReportFormValues = {
 
 const PERIOD_ORDER_ERROR = 'Tanggal akhir tidak boleh lebih awal dari tanggal awal.'
 
-export function ReportBuilder() {
-  const [values, setValues] = useState<ReportFormValues>(INITIAL_VALUES)
+// types berisi jenis laporan yang boleh dibaca peran ini dan tidak pernah kosong;
+// halaman Laporan menampilkan keadaan kosong sendiri kalau tidak ada jenis sama sekali.
+export function ReportBuilder({ types }: { types: ReportTypeInfo[] }) {
+  const [values, setValues] = useState<ReportFormValues>(() => ({ ...INITIAL_VALUES, type: types[0].value }))
   const [projectLabel, setProjectLabel] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [previewCriteria, setPreviewCriteria] = useState<ReportCriteria | null>(null)
   const create = useCreateReport()
   const preview = useReportPreview(previewCriteria)
-  const info = reportTypeInfo(values.type) ?? REPORT_TYPES[0]
+  const canCreate = useCan('reports', 'write')
+  const info = types.find((type) => type.value === values.type) ?? types[0]
 
   const update = (changes: Partial<ReportFormValues>) => {
     setValues((current) => ({ ...current, ...changes }))
@@ -73,7 +76,7 @@ export function ReportBuilder() {
 
   const download = (event: FormEvent) => {
     event.preventDefault()
-    if (criteria()) {
+    if (canCreate && criteria()) {
       create.mutate({ values, scope: values.projectId ? projectLabel : 'Semua proyek' })
     }
   }
@@ -89,7 +92,7 @@ export function ReportBuilder() {
               value={values.type}
               onChange={(event) => changeType(event.target.value as ReportType)}
             >
-              {REPORT_TYPES.map((type) => (
+              {types.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
                 </option>
@@ -157,13 +160,25 @@ export function ReportBuilder() {
             <p className="text-xs text-slate-500">{info.periodHint}</p>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" isPending={create.isPending} pendingLabel="Menyiapkan berkas">
-              Unduh laporan
-            </Button>
-            <Button variant="subtle" onClick={showPreview} isPending={preview.isFetching} pendingLabel="Memuat pratinjau">
+          <div className="flex flex-wrap items-center gap-2">
+            {canCreate ? (
+              <Button type="submit" isPending={create.isPending} pendingLabel="Menyiapkan berkas">
+                Unduh laporan
+              </Button>
+            ) : null}
+            <Button
+              variant={canCreate ? 'subtle' : 'primary'}
+              onClick={showPreview}
+              isPending={preview.isFetching}
+              pendingLabel="Memuat pratinjau"
+            >
               Lihat pratinjau
             </Button>
+            {canCreate ? null : (
+              <p className="text-xs text-slate-500">
+                Peran Anda hanya bisa melihat pratinjau. Laporan yang sudah dibuat tim bisa diunduh dari riwayat di bawah.
+              </p>
+            )}
           </div>
 
           {formError ? <ErrorNote message={formError} /> : null}

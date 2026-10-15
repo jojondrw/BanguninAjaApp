@@ -48,6 +48,22 @@ export interface RegisterRequest {
   password: string
 }
 
+// Batas sama dengan binding backend (internal/auth/dto.go): nama 2–100 karakter
+// setelah dipangkas, kata sandi 8–72 karakter karena bcrypt memotong setelah 72 byte.
+export const NAME_MIN_LENGTH = 2
+export const NAME_MAX_LENGTH = 100
+export const PASSWORD_MIN_LENGTH = 8
+export const PASSWORD_MAX_LENGTH = 72
+
+export interface UpdateProfileRequest {
+  name: string
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 export interface ApiErrorBody {
   code: string
   message: string

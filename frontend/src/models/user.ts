@@ -9,6 +9,10 @@ export interface ManagedUser {
   createdAt: string
 }
 
+// Nilai saringan peran untuk akun yang belum diberi peran (pendaftar baru).
+// Sama dengan pendingRoleFilter di backend (internal/auth/dto.go).
+export const PENDING_ROLE_FILTER = 'none'
+
 export interface UserFilter {
   search?: string
   role?: string

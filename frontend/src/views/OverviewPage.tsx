@@ -15,15 +15,19 @@ import { AttentionList } from './overview/AttentionList'
 
 const CHART_MONTHS = 12
 const FINANCE_ONLY = 'butuh akses Keuangan'
+const PROJECTS_ONLY = 'butuh akses Proyek'
 const RECENT_PROJECTS = 8
 
 export function OverviewPage() {
-  const summary = useProjectSummary()
-  const projects = useProjects({ pageSize: RECENT_PROJECTS })
-  const budgets = useBudgetSummary()
-  const cashFlow = useCashFlow()
-  const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() })
+  // Data modul yang tidak boleh dibaca peran ini tidak diminta sama sekali,
+  // supaya tidak ada permintaan 403 di latar belakang.
+  const canReadProjects = useCan('projects', 'read')
   const canReadFinance = useCan('finance', 'read')
+  const summary = useProjectSummary({ enabled: canReadProjects })
+  const projects = useProjects({ pageSize: RECENT_PROJECTS }, { enabled: canReadProjects })
+  const budgets = useBudgetSummary(undefined, { enabled: canReadFinance })
+  const cashFlow = useCashFlow({}, { enabled: canReadFinance })
+  const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() }, { enabled: canReadFinance })
 
   const items = projects.data?.items ?? []
 
@@ -34,16 +38,24 @@ export function OverviewPage() {
   return (
     <AppShell title="Ringkasan" description={`Kondisi seluruh proyek per ${shortDate(todayDate())}`}>
       <KpiRow>
-        <Kpi
-          label="Proyek berjalan"
-          value={kpiText(summary, (data) => number(data.byStatus.ongoing))}
-          note={summary.data ? `dari ${number(summary.data.count)} proyek terdaftar` : undefined}
-        />
-        <Kpi
-          label="Nilai kontrak"
-          value={kpiText(summary, (data) => rupiahShort(data.contractValue))}
-          note={summary.data ? `seluruh proyek, rata-rata progres ${summary.data.averageProgress}%` : undefined}
-        />
+        {canReadProjects ? (
+          <Kpi
+            label="Proyek berjalan"
+            value={kpiText(summary, (data) => number(data.byStatus.ongoing))}
+            note={summary.data ? `dari ${number(summary.data.count)} proyek terdaftar` : undefined}
+          />
+        ) : (
+          <Kpi label="Proyek berjalan" value="—" note={PROJECTS_ONLY} />
+        )}
+        {canReadProjects ? (
+          <Kpi
+            label="Nilai kontrak"
+            value={kpiText(summary, (data) => rupiahShort(data.contractValue))}
+            note={summary.data ? `seluruh proyek, rata-rata progres ${summary.data.averageProgress}%` : undefined}
+          />
+        ) : (
+          <Kpi label="Nilai kontrak" value="—" note={PROJECTS_ONLY} />
+        )}
         {canReadFinance ? (
           <Kpi
             label="Saldo kas"
@@ -91,9 +103,10 @@ export function OverviewPage() {
         <Card
           title="Proyek"
           description="Status, target, dan progres tiap proyek"
-          action={<CardLink to="/proyek" label="Semua proyek" />}
+          action={canReadProjects ? <CardLink to="/proyek" label="Semua proyek" /> : undefined}
         >
-          {projects.isPending ? <Loading /> : null}
+          {canReadProjects ? null : <Empty message="Daftar proyek hanya tampil untuk peran yang punya akses Proyek." />}
+          {canReadProjects && projects.isPending ? <Loading /> : null}
           {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
           {projects.data ? (
             <Table

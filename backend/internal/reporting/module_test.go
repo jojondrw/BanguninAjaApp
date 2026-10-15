@@ -3,6 +3,7 @@ package reporting
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"net/http"
@@ -14,29 +15,41 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/databasetest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 )
 
+type fixedRole string
+
+func (r fixedRole) Subject(context.Context, uuid.UUID) (access.Subject, error) {
+	return access.Subject{Role: string(r), Active: true}, nil
+}
+
 func serveReports(t *testing.T, path string, results ...databasetest.Result) (*httptest.ResponseRecorder, *databasetest.Recorder) {
+	t.Helper()
+	return serveReportsAs(t, access.RoleAdmin, http.MethodGet, path, results...)
+}
+
+func serveReportsAs(t *testing.T, role, method, path string, results ...databasetest.Result) (*httptest.ResponseRecorder, *databasetest.Recorder) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
 	db, recorder := databasetest.Open(t, results...)
 	tokens := token.NewManager(config.Token{AccessSecret: "reporting-module-test", AccessTTL: time.Minute, Issuer: "reporting-module-test"})
-	access, err := tokens.IssueAccess(uuid.New())
+	issued, err := tokens.IssueAccess(uuid.New())
 	if err != nil {
 		t.Fatalf("issue access token: %v", err)
 	}
 
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens).RegisterRoutes(router.Group("/api", middleware.Authorization(tokens, fixedRole(role))))
 
-	request := httptest.NewRequest(http.MethodGet, path, nil)
-	request.Header.Set("Authorization", "Bearer "+access.Value)
+	request := httptest.NewRequest(method, path, strings.NewReader(`{"name":"UJI","type":"penggajian","format":"pdf"}`))
+	request.Header.Set("Authorization", "Bearer "+issued.Value)
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 	return response, recorder

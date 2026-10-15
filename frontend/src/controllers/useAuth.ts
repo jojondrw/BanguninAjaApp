@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { authApi } from '../models/authApi'
-import type { LoginRequest, RegisterRequest, User } from '../models/auth'
+import type { ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateProfileRequest, User } from '../models/auth'
 import { refreshSession } from '../shared/apiClient'
 import { useSessionStore } from './sessionStore'
 
@@ -79,4 +79,24 @@ export function useCurrentUser(): User | null {
   const sessionUser = useSessionStore((state) => state.user)
   const profile = useProfile()
   return profile.data ?? sessionUser
+}
+
+// Nama baru langsung dipakai di sidebar: profil di cache dan user di sesi
+// sama-sama diganti dengan balasan server, tanpa menunggu /auth/me berikutnya.
+export function useUpdateProfile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: UpdateProfileRequest) => authApi.updateProfile(payload),
+    onSuccess: (user) => {
+      queryClient.setQueryData([PROFILE_KEY, user.id], user)
+      useSessionStore.setState({ user })
+    },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (payload: ChangePasswordRequest) => authApi.changePassword(payload),
+  })
 }

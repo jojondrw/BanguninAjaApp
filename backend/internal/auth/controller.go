@@ -92,6 +92,40 @@ func (c *Controller) Profile(ctx *gin.Context) {
 	httpresponse.OK(ctx, user)
 }
 
+func (c *Controller) UpdateProfile(ctx *gin.Context) {
+	userID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	var request UpdateProfileRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	user, err := c.service.UpdateProfile(ctx.Request.Context(), userID, request)
+	httpresponse.Respond(ctx, user, err)
+}
+
+func (c *Controller) ChangePassword(ctx *gin.Context) {
+	userID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	var request ChangePasswordRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	err = c.service.ChangePassword(ctx.Request.Context(), userID, c.refreshCookie.Read(ctx), request)
+	httpresponse.RespondNoContent(ctx, err)
+}
+
 func (c *Controller) ListUsers(ctx *gin.Context) {
 	var query UserQuery
 	if err := httprequest.BindQuery(ctx, &query); err != nil {

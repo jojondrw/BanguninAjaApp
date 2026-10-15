@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 )
 
 type fakeRepository struct {
@@ -23,7 +25,7 @@ func TestCreateReportRecordsCreator(t *testing.T) {
 	repository := &fakeRepository{}
 	userID := uuid.New()
 
-	report, err := NewService(repository).CreateReport(context.Background(), userID, ReportRequest{
+	report, err := NewService(repository).CreateReport(context.Background(), userID, access.RoleAdmin, ReportRequest{
 		Name: "  Arus kas konsolidasi ", Type: "cash_flow", Format: "pdf",
 	})
 	if err != nil {
@@ -39,7 +41,7 @@ func TestReportPeriodMustBeOrdered(t *testing.T) {
 	end := start.AddDate(0, 0, -1)
 	repository := &fakeRepository{}
 
-	_, err := NewService(repository).CreateReport(context.Background(), uuid.New(), ReportRequest{Type: typeBudget, PeriodStart: &start, PeriodEnd: &end})
+	_, err := NewService(repository).CreateReport(context.Background(), uuid.New(), access.RoleAdmin, ReportRequest{Type: typeBudget, PeriodStart: &start, PeriodEnd: &end})
 	if !errors.Is(err, errInvalidDateRange) || repository.created != nil {
 		t.Fatalf("got %v created %v", err, repository.created)
 	}
@@ -49,7 +51,7 @@ func TestCreateReportStoresCanonicalTypeAndDefaultMonth(t *testing.T) {
 	repository := &fakeRepository{}
 	reports := &service{repository: repository, now: func() time.Time { return time.Date(2026, 10, 3, 8, 0, 0, 0, time.UTC) }}
 
-	_, err := reports.CreateReport(context.Background(), uuid.New(), ReportRequest{Name: "UJI kas", Type: "cash_flow", Format: "csv"})
+	_, err := reports.CreateReport(context.Background(), uuid.New(), access.RoleAdmin, ReportRequest{Name: "UJI kas", Type: "cash_flow", Format: "csv"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -70,7 +72,7 @@ func TestCreateReportRejectsUnknownTypeAndPeriodForStock(t *testing.T) {
 	}
 	for _, tc := range cases {
 		repository := &fakeRepository{}
-		_, err := NewService(repository).CreateReport(context.Background(), uuid.New(), tc.request)
+		_, err := NewService(repository).CreateReport(context.Background(), uuid.New(), access.RoleAdmin, tc.request)
 		if !errors.Is(err, tc.want) || repository.created != nil {
 			t.Fatalf("%s: got %v", tc.request.Type, err)
 		}

@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Database,
   FileBarChart,
   FolderKanban,
   Handshake,
@@ -54,6 +55,7 @@ export const MENU: MenuGroup[] = [
   {
     label: 'Pengaturan',
     items: [
+      { to: '/data-master', label: 'Data Master', icon: Database, keywords: 'master bagan akun coa wilayah provinsi kota satuan', module: 'master' },
       { to: '/pengguna', label: 'Pengguna', icon: UserCog, keywords: 'user peran role akses admin', module: 'users' },
     ],
   },

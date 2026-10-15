@@ -55,12 +55,12 @@ type ReportFile struct {
 }
 
 type Service interface {
-	ListReports(ctx context.Context, query ReportQuery) (pagination.Page[ReportResponse], error)
-	GetReport(ctx context.Context, id uuid.UUID) (ReportResponse, error)
-	CreateReport(ctx context.Context, userID uuid.UUID, request ReportRequest) (ReportResponse, error)
-	DeleteReport(ctx context.Context, id uuid.UUID) error
-	PreviewReport(ctx context.Context, query PreviewQuery) (PreviewResponse, error)
-	DownloadReport(ctx context.Context, id uuid.UUID) (ReportFile, error)
+	ListReports(ctx context.Context, role string, query ReportQuery) (pagination.Page[ReportResponse], error)
+	GetReport(ctx context.Context, role string, id uuid.UUID) (ReportResponse, error)
+	CreateReport(ctx context.Context, userID uuid.UUID, role string, request ReportRequest) (ReportResponse, error)
+	DeleteReport(ctx context.Context, role string, id uuid.UUID) error
+	PreviewReport(ctx context.Context, role string, query PreviewQuery) (PreviewResponse, error)
+	DownloadReport(ctx context.Context, role string, id uuid.UUID) (ReportFile, error)
 }
 
 type service struct {
@@ -72,10 +72,15 @@ func NewService(repository Repository) Service {
 	return &service{repository: repository, now: time.Now}
 }
 
-func (s *service) ListReports(ctx context.Context, query ReportQuery) (pagination.Page[ReportResponse], error) {
+func (s *service) ListReports(ctx context.Context, role string, query ReportQuery) (pagination.Page[ReportResponse], error) {
+	types := readableKinds(role)
+	if len(types) == 0 {
+		return pagination.New([]ReportResponse{}, query.Query, 0), nil
+	}
 	reports, total, err := s.repository.ListReports(ctx, ReportFilter{
 		Search:    query.Search,
 		Type:      strings.TrimSpace(query.Type),
+		Types:     types,
 		Format:    query.Format,
 		ProjectID: query.ProjectID,
 		Offset:    query.Offset(),
@@ -87,16 +92,16 @@ func (s *service) ListReports(ctx context.Context, query ReportQuery) (paginatio
 	return pagination.New(pagination.Map(reports, newReportResponse), query.Query, total), nil
 }
 
-func (s *service) GetReport(ctx context.Context, id uuid.UUID) (ReportResponse, error) {
-	report, err := s.repository.FindReport(ctx, id)
+func (s *service) GetReport(ctx context.Context, role string, id uuid.UUID) (ReportResponse, error) {
+	report, err := s.readableReport(ctx, role, id)
 	if err != nil {
-		return ReportResponse{}, reportReadErrors.Resolve(err)
+		return ReportResponse{}, err
 	}
 	return newReportResponse(report), nil
 }
 
-func (s *service) CreateReport(ctx context.Context, userID uuid.UUID, request ReportRequest) (ReportResponse, error) {
-	spec, err := newReportSpec(request.Type, request.ProjectID, request.PeriodStart, request.PeriodEnd, s.today())
+func (s *service) CreateReport(ctx context.Context, userID uuid.UUID, role string, request ReportRequest) (ReportResponse, error) {
+	spec, err := s.readableSpec(role, request.Type, request.ProjectID, request.PeriodStart, request.PeriodEnd)
 	if err != nil {
 		return ReportResponse{}, err
 	}
@@ -108,12 +113,15 @@ func (s *service) CreateReport(ctx context.Context, userID uuid.UUID, request Re
 	return newReportResponse(ReportRow{Report: report}), nil
 }
 
-func (s *service) DeleteReport(ctx context.Context, id uuid.UUID) error {
+func (s *service) DeleteReport(ctx context.Context, role string, id uuid.UUID) error {
+	if _, err := s.readableReport(ctx, role, id); err != nil {
+		return err
+	}
 	return reportReadErrors.Resolve(s.repository.DeleteReport(ctx, id))
 }
 
-func (s *service) PreviewReport(ctx context.Context, query PreviewQuery) (PreviewResponse, error) {
-	spec, err := newReportSpec(query.Type, query.ProjectID, query.PeriodStart, query.PeriodEnd, s.today())
+func (s *service) PreviewReport(ctx context.Context, role string, query PreviewQuery) (PreviewResponse, error) {
+	spec, err := s.readableSpec(role, query.Type, query.ProjectID, query.PeriodStart, query.PeriodEnd)
 	if err != nil {
 		return PreviewResponse{}, err
 	}
@@ -124,10 +132,10 @@ func (s *service) PreviewReport(ctx context.Context, query PreviewQuery) (Previe
 	return newPreviewResponse(spec, document), nil
 }
 
-func (s *service) DownloadReport(ctx context.Context, id uuid.UUID) (ReportFile, error) {
-	report, err := s.repository.FindReport(ctx, id)
+func (s *service) DownloadReport(ctx context.Context, role string, id uuid.UUID) (ReportFile, error) {
+	report, err := s.readableReport(ctx, role, id)
 	if err != nil {
-		return ReportFile{}, reportReadErrors.Resolve(err)
+		return ReportFile{}, err
 	}
 	format, ok := fileFormats[report.Format]
 	if !ok {
@@ -150,6 +158,26 @@ func (s *service) DownloadReport(ctx context.Context, id uuid.UUID) (ReportFile,
 		ContentType: format.contentType,
 		Content:     content.Bytes(),
 	}, nil
+}
+
+func (s *service) readableSpec(role, typeName string, projectID *uuid.UUID, start, end *time.Time) (reportSpec, error) {
+	if kind, known := resolveKind(typeName); known {
+		if err := authorizeType(role, kind.key); err != nil {
+			return reportSpec{}, err
+		}
+	}
+	return newReportSpec(typeName, projectID, start, end, s.today())
+}
+
+func (s *service) readableReport(ctx context.Context, role string, id uuid.UUID) (ReportRow, error) {
+	report, err := s.repository.FindReport(ctx, id)
+	if err != nil {
+		return ReportRow{}, reportReadErrors.Resolve(err)
+	}
+	if err := authorizeType(role, report.Type); err != nil {
+		return ReportRow{}, err
+	}
+	return report, nil
 }
 
 func (s *service) buildDocument(ctx context.Context, spec reportSpec) (export.Document, ProjectLabel, error) {
