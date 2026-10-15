@@ -53,7 +53,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600">
             {isStaleChunk
               ? 'Sebagian berkas aplikasi sudah diperbarui di server. Muat ulang untuk memakai versi terbaru.'
-              : 'Terjadi kesalahan di tampilan, bukan di data kamu. Muat ulang halaman atau kembali ke Ringkasan.'}
+              : 'Terjadi kesalahan di tampilan, bukan di data Anda. Muat ulang halaman atau kembali ke Ringkasan.'}
           </p>
           <div className="mt-5 flex gap-2">
             <button type="button" onClick={() => window.location.reload()} className={`h-9 ${BUTTON_BASE} ${BUTTON_PRIMARY}`}>

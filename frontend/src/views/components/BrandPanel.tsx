@@ -3,9 +3,9 @@ import { type ReactNode, useEffect } from 'react'
 import { BrandName } from './Brand'
 
 const figures = [
-  { value: '2,89 jt', label: 'zona harga tanah' },
-  { value: '458 rb', label: 'objek lahan' },
-  { value: '12', label: 'indeks bahaya' },
+  { value: '2,89 jt', label: 'Zona harga tanah' },
+  { value: '458 rb', label: 'Objek lahan' },
+  { value: '12', label: 'Indeks bahaya' },
 ]
 
 export function AuthLayout({ pageTitle, children }: { pageTitle: string; children: ReactNode }) {
@@ -45,7 +45,7 @@ export function BrandPanel() {
         </p>
         <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70">
           BanguninAja menyatukan harga tanah resmi ATR/BPN, indeks bahaya BNPB, dan sebaran penduduk jadi satu skor
-          yang bisa kamu telusuri asal usulnya.
+          yang bisa Anda telusuri asal usulnya.
         </p>
 
         <dl className="mt-10 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10 backdrop-blur-md">
