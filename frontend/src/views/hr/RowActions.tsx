@@ -41,7 +41,7 @@ export function TextAction({ label, srLabel, onClick, tone = 'accent', isPending
 }
 
 export function ActionGroup({ children }: { children: ReactNode }) {
-  return <div className="inline-flex flex-wrap items-center justify-end gap-1">{children}</div>
+  return <div className="inline-flex items-center justify-end gap-1">{children}</div>
 }
 
 interface ConfirmActionProps {
