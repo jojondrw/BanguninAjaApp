@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
@@ -78,11 +79,13 @@ func wrongChain(expected int64, actual *big.Int) *apperror.Error {
 	))
 }
 
+func etherText(wei *big.Int, chainID int64) string {
+	return strings.Replace(ethereum.FormatEther(wei), ".", ",", 1) + " " + currencyName(chainID)
+}
+
 func valueTooLow(sent, wanted *big.Int, chainID int64) *apperror.Error {
-	currency := currencyName(chainID)
 	return apperror.Unprocessable("onchain_value_too_low", fmt.Sprintf(
-		"Nilai transaksi kurang: terkirim %s %s, seharusnya minimal %s %s",
-		ethereum.FormatEther(sent), currency, ethereum.FormatEther(wanted), currency,
+		"Nilai transaksi kurang: terkirim %s, seharusnya minimal %s", etherText(sent, chainID), etherText(wanted, chainID),
 	))
 }
 

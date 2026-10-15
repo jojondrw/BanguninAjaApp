@@ -131,7 +131,7 @@ func TestVerifierRejectsTooLittleValueWithBothAmounts(t *testing.T) {
 
 	_, err := verifierAt(chain, onchainNow).verify(context.Background(), pendingRequest("50000000000000"), testHash)
 	appError := assertAppError(t, err, http.StatusUnprocessableEntity, "onchain_value_too_low")
-	if !strings.Contains(appError.Message, "0.000049999999999999 SepoliaETH") || !strings.Contains(appError.Message, "0.00005 SepoliaETH") {
+	if !strings.Contains(appError.Message, "terkirim 0,000049999999999999 SepoliaETH") || !strings.Contains(appError.Message, "minimal 0,00005 SepoliaETH") {
 		t.Fatalf("got %q", appError.Message)
 	}
 }
