@@ -61,7 +61,7 @@ export function BillingKpis() {
       <Kpi
         label="Piutang sudah diterima"
         value={kpiText(receivables, (data) => rupiahShort(data.paidAmount))}
-        note="total semua waktu, server belum mencatat tanggal tiap pembayaran"
+        note="total pembayaran pelanggan sejak awal"
       />
     </KpiRow>
   )
