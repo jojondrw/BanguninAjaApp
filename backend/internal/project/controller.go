@@ -27,7 +27,12 @@ func (c *Controller) ListProjects(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	page, err := c.service.ListProjects(ctx.Request.Context(), query)
+	viewerID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	page, err := c.service.ListProjects(ctx.Request.Context(), viewerID, query)
 	httpresponse.Respond(ctx, page, err)
 }
 
@@ -245,6 +250,70 @@ func (c *Controller) DeletePermit(ctx *gin.Context) {
 		return
 	}
 	httpresponse.RespondNoContent(ctx, c.service.DeletePermit(ctx.Request.Context(), projectID, permitID))
+}
+
+func (c *Controller) ListMembers(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	members, err := c.service.ListMembers(ctx.Request.Context(), projectID)
+	httpresponse.Respond(ctx, members, err)
+}
+
+func (c *Controller) ListMemberCandidates(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var query MemberCandidateQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	page, err := c.service.ListMemberCandidates(ctx.Request.Context(), projectID, query)
+	httpresponse.Respond(ctx, page, err)
+}
+
+func (c *Controller) AddMember(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request MemberCreateRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	member, err := c.service.AddMember(ctx.Request.Context(), projectID, request)
+	httpresponse.RespondCreated(ctx, member, err)
+}
+
+func (c *Controller) UpdateMember(ctx *gin.Context) {
+	projectID, memberID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request MemberUpdateRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	member, err := c.service.UpdateMember(ctx.Request.Context(), projectID, memberID, request)
+	httpresponse.Respond(ctx, member, err)
+}
+
+func (c *Controller) RemoveMember(ctx *gin.Context) {
+	projectID, memberID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	httpresponse.RespondNoContent(ctx, c.service.RemoveMember(ctx.Request.Context(), projectID, memberID))
 }
 
 func nestedIDs(ctx *gin.Context) (uuid.UUID, uuid.UUID, error) {

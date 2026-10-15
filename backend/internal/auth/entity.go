@@ -42,19 +42,8 @@ func (Role) TableName() string {
 	return "role"
 }
 
-type ProjectMember struct {
-	entity.Base
-	UserID    uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_user"`
-	ProjectID uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_project"`
-	RoleID    uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_role"`
-}
-
-func (ProjectMember) TableName() string {
-	return "project_member"
-}
-
 func Entities() []any {
-	return []any{&Role{}, &User{}, &RefreshToken{}, &ProjectMember{}}
+	return []any{&Role{}, &User{}, &RefreshToken{}}
 }
 
 func Indexes() []string {
@@ -70,9 +59,5 @@ func Constraints() []string {
 	return []string{
 		database.ForeignKey("users", "role_id", "role", database.DeleteSetNull),
 		database.ForeignKey("refresh_tokens", "user_id", "users", database.DeleteCascade),
-		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
-		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
-		database.ForeignKey("project_member", "role_id", "role", database.DeleteRestrict),
-		database.Unique("project_member", "user_project", "user_id, project_id"),
 	}
 }
