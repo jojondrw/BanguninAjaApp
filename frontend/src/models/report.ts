@@ -1,5 +1,6 @@
 import { monthLabel, number, shortDate } from '../shared/format'
 import { currentPeriod } from '../shared/localDate'
+import type { ModuleKey } from './auth'
 
 // Jenis laporan sama dengan katalog backend (internal/reporting/catalog.go).
 export type ReportType = 'arus_kas' | 'anggaran' | 'proyek' | 'piutang_utang' | 'stok' | 'penggajian' | 'penjualan'
@@ -13,6 +14,9 @@ export type ReportValue = string | number | null
 export interface ReportTypeInfo {
   value: ReportType
   label: string
+  // Modul yang datanya dibaca laporan ini. Sama dengan pemetaan di backend
+  // (reportKinds di catalog.go): laporan hanya tersedia kalau modul ini boleh dibaca.
+  module: ModuleKey
   description: string
   usesPeriod: boolean
   // Laporan bulanan memakai bulan berjalan kalau periode dikosongkan.
@@ -24,6 +28,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'arus_kas',
     label: 'Arus kas',
+    module: 'finance',
     description: 'Kas masuk, kas keluar, dan saldo per bulan beserta semua transaksi kas di periode itu.',
     usesPeriod: true,
     monthly: true,
@@ -32,6 +37,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'anggaran',
     label: 'Anggaran dan realisasi',
+    module: 'finance',
     description: 'Anggaran per proyek per tahun dibanding kas keluar, sisa, dan persentase serapan.',
     usesPeriod: true,
     monthly: false,
@@ -40,6 +46,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'proyek',
     label: 'Proyek',
+    module: 'projects',
     description: 'Daftar proyek dengan status, progres, jadwal, nilai kontrak, dan total RAB.',
     usesPeriod: true,
     monthly: false,
@@ -48,6 +55,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'piutang_utang',
     label: 'Umur piutang dan utang',
+    module: 'billing',
     description: 'Piutang dan utang yang belum lunas, dikelompokkan 0–30, 31–60, 61–90, dan lebih dari 90 hari.',
     usesPeriod: true,
     monthly: false,
@@ -56,6 +64,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'stok',
     label: 'Stok material',
+    module: 'inventory',
     description: 'Stok per gudang saat ini dan material yang di bawah stok minimum.',
     usesPeriod: false,
     monthly: false,
@@ -64,6 +73,7 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'penggajian',
     label: 'Penggajian',
+    module: 'hr',
     description: 'Ringkasan gaji per periode dan rincian slip gaji setiap karyawan.',
     usesPeriod: true,
     monthly: true,
@@ -72,12 +82,18 @@ export const REPORT_TYPES: ReportTypeInfo[] = [
   {
     value: 'penjualan',
     label: 'Penjualan',
+    module: 'sales',
     description: 'Kontrak penjualan dengan pembayaran, serta status cicilan yang jatuh tempo di periode itu.',
     usesPeriod: true,
     monthly: false,
     periodHint: 'Kontrak yang ditandatangani dan cicilan yang jatuh tempo di periode ini.',
   },
 ]
+
+// Jenis laporan yang boleh dibuka peran ini, urutannya tetap seperti katalog.
+export function readableReportTypes(canRead: (module: ModuleKey) => boolean): ReportTypeInfo[] {
+  return REPORT_TYPES.filter((type) => canRead(type.module))
+}
 
 export const REPORT_TYPE_LABEL: Record<ReportType, string> = Object.fromEntries(
   REPORT_TYPES.map((type) => [type.value, type.label]),

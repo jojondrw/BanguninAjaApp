@@ -608,15 +608,33 @@ berkasnya. Isinya selalu mengikuti data saat diunduh.
 
 Jenis laporan (`type`):
 
-| Jenis | Isi | Arti periode |
-|---|---|---|
-| `arus_kas` | Kas masuk, keluar, arus bersih, dan saldo per bulan mulai dari saldo awal, lalu semua transaksi kas | Tanggal transaksi. Kosong berarti bulan berjalan |
-| `anggaran` | Anggaran per proyek per tahun, realisasi (kas keluar proyek di tahun itu), sisa, serapan | Tahun anggaran dari tahun tanggal awal sampai tahun tanggal akhir |
-| `proyek` | Status, progres, jadwal, nilai kontrak, total RAB | Proyek yang jadwalnya beririsan dengan periode |
-| `piutang_utang` | Piutang dan utang yang belum lunas, kelompok umur 0–30, 31–60, 61–90, > 90 hari terlambat (belum jatuh tempo masuk 0–30) | Tanggal jatuh tempo. Umur dihitung sampai hari ini |
-| `stok` | Stok per gudang dan material di bawah stok minimum (stok minimum dibanding jumlah di semua gudang yang tersaring) | Tidak memakai periode, posisi hari ini |
-| `penggajian` | Ringkasan per periode gaji dan rincian slip | Periode gaji `YYYY-MM`. Kosong berarti bulan berjalan |
-| `penjualan` | Kontrak dengan nilai terbayar dan jumlah cicilan lunas atau terlambat, lalu status cicilan | Tanggal kontrak untuk kontrak, tanggal jatuh tempo untuk cicilan |
+| Jenis | Modul data | Isi | Arti periode |
+|---|---|---|---|
+| `arus_kas` | `finance` | Kas masuk, keluar, arus bersih, dan saldo per bulan mulai dari saldo awal, lalu semua transaksi kas | Tanggal transaksi. Kosong berarti bulan berjalan |
+| `anggaran` | `finance` | Anggaran per proyek per tahun, realisasi (kas keluar proyek di tahun itu), sisa, serapan | Tahun anggaran dari tahun tanggal awal sampai tahun tanggal akhir |
+| `proyek` | `projects` | Status, progres, jadwal, nilai kontrak, total RAB | Proyek yang jadwalnya beririsan dengan periode |
+| `piutang_utang` | `billing` | Piutang dan utang yang belum lunas, kelompok umur 0–30, 31–60, 61–90, > 90 hari terlambat (belum jatuh tempo masuk 0–30) | Tanggal jatuh tempo. Umur dihitung sampai hari ini |
+| `stok` | `inventory` | Stok per gudang dan material di bawah stok minimum (stok minimum dibanding jumlah di semua gudang yang tersaring) | Tidak memakai periode, posisi hari ini |
+| `penggajian` | `hr` | Ringkasan per periode gaji dan rincian slip | Periode gaji `YYYY-MM`. Kosong berarti bulan berjalan |
+| `penjualan` | `sales` | Kontrak dengan nilai terbayar dan jumlah cicilan lunas atau terlambat, lalu status cicilan | Tanggal kontrak untuk kontrak, tanggal jatuh tempo untuk cicilan |
+
+### Hak akses per jenis laporan
+
+Middleware hanya memeriksa modul `reports` (baca untuk GET, ubah untuk POST dan
+DELETE). Karena isi laporan berasal dari modul lain, service juga mewajibkan hak
+**baca** pada modul data di kolom "Modul data" di atas, memakai peran yang sudah
+disimpan middleware di context (`middleware.AuthenticatedRole`), tanpa query
+tambahan. Pemetaannya ada di `reportKinds` pada `internal/reporting/catalog.go`.
+
+| Endpoint | Pemeriksaan tambahan |
+|---|---|
+| `GET /api/reports/preview`, `POST /api/reports` | Jenis yang diminta harus terbaca. Ditolak sebelum data apa pun dibaca |
+| `GET /api/reports/:id`, `GET /api/reports/:id/download`, `DELETE /api/reports/:id` | Jenis laporan yang tersimpan harus terbaca. Jenis lama yang tidak dikenal hanya untuk admin |
+| `GET /api/reports` | Hanya laporan dengan jenis yang terbaca (`report.type IN (...)`), jadi total halaman ikut benar |
+
+Penolakan dibalas 403 `forbidden` dengan pesan yang sama dengan middleware,
+misalnya "Peran Anda tidak punya akses melihat modul SDM". Frontend memakai
+pemetaan yang sama di `models/report.ts` dan hanya menawarkan jenis yang terbaca.
 
 Filter proyek berlaku untuk semua jenis: kas, anggaran, piutang, dan utang lewat
 `project_id`, stok lewat gudang proyek, penggajian lewat proyek karyawan,
@@ -638,6 +656,7 @@ Format berkas (`format`), ditulis tanpa dependensi tambahan di paket
 | Aturan | Kode error |
 |---|---|
 | Jenis laporan harus salah satu dari tabel di atas | `report_type_invalid` |
+| Peran harus bisa membaca modul data jenis laporan itu | `forbidden` (403) |
 | Laporan stok tidak menerima periode | `report_period_unsupported` |
 | Tanggal akhir tidak boleh sebelum tanggal awal | `invalid_date_range` |
 | Proyek pada filter harus ada | `project_not_found` |

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 
+import { useCan } from '../../controllers/useAccess'
 import { useDeleteReport, useDownloadReport, useReports } from '../../controllers/useReports'
 import {
   createdAtLabel,
   REPORT_FORMAT_LABEL,
-  REPORT_TYPES,
   reportPeriodLabel,
   reportTypeLabel,
   type Report,
+  type ReportTypeInfo,
 } from '../../models/report'
 import { errorMessage } from '../../shared/errorMessage'
 import { Card, type Column, LoadFailed, Loading, Table } from '../components/Data'
@@ -16,7 +17,9 @@ import { ActionGroup, ConfirmAction, RowNotice, TextAction } from '../hr/RowActi
 
 const PAGE_SIZE = 10
 
-export function ReportHistory() {
+// Server hanya mengirim laporan dengan jenis yang boleh dibaca peran ini, jadi
+// saringan jenis juga hanya menawarkan jenis itu.
+export function ReportHistory({ types }: { types: ReportTypeInfo[] }) {
   const [type, setType] = useState('')
   const [page, setPage] = useState(1)
   const [asking, setAsking] = useState<string | null>(null)
@@ -24,6 +27,7 @@ export function ReportHistory() {
   const reports = useReports({ type: type || undefined, page, pageSize: PAGE_SIZE })
   const download = useDownloadReport()
   const remove = useDeleteReport()
+  const canCreate = useCan('reports', 'write')
 
   const clearNotes = () => {
     setNotice(null)
@@ -110,7 +114,7 @@ export function ReportHistory() {
           }}
         >
           <option value="">Semua jenis</option>
-          {REPORT_TYPES.map((option) => (
+          {types.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -128,7 +132,7 @@ export function ReportHistory() {
           <Table
             rows={reports.data.items}
             columns={columns}
-            emptyMessage={type ? 'Belum ada laporan jenis ini.' : 'Belum ada laporan. Buat laporan pertama dari formulir di atas.'}
+            emptyMessage={emptyMessage(type !== '', canCreate)}
           />
           <Pager
             page={reports.data.page}
@@ -141,4 +145,11 @@ export function ReportHistory() {
       )}
     </Card>
   )
+}
+
+function emptyMessage(isFiltered: boolean, canCreate: boolean): string {
+  if (isFiltered) {
+    return 'Belum ada laporan jenis ini.'
+  }
+  return canCreate ? 'Belum ada laporan. Buat laporan pertama dari formulir di atas.' : 'Belum ada laporan yang bisa Anda lihat.'
 }

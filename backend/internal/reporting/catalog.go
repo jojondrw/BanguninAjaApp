@@ -2,10 +2,14 @@ package reporting
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 )
 
 const (
@@ -26,18 +30,19 @@ const (
 type reportKind struct {
 	key         string
 	title       string
+	module      access.Module
 	usesPeriod  bool
 	monthlyOnly bool
 }
 
 var reportKinds = map[string]reportKind{
-	typeCashFlow: {key: typeCashFlow, title: "Arus Kas", usesPeriod: true, monthlyOnly: true},
-	typeBudget:   {key: typeBudget, title: "Anggaran dan Realisasi", usesPeriod: true},
-	typeProjects: {key: typeProjects, title: "Proyek", usesPeriod: true},
-	typeAging:    {key: typeAging, title: "Umur Piutang dan Utang", usesPeriod: true},
-	typeStock:    {key: typeStock, title: "Stok Material"},
-	typePayroll:  {key: typePayroll, title: "Penggajian", usesPeriod: true, monthlyOnly: true},
-	typeSales:    {key: typeSales, title: "Penjualan", usesPeriod: true},
+	typeCashFlow: {key: typeCashFlow, title: "Arus Kas", module: access.ModuleFinance, usesPeriod: true, monthlyOnly: true},
+	typeBudget:   {key: typeBudget, title: "Anggaran dan Realisasi", module: access.ModuleFinance, usesPeriod: true},
+	typeProjects: {key: typeProjects, title: "Proyek", module: access.ModuleProjects, usesPeriod: true},
+	typeAging:    {key: typeAging, title: "Umur Piutang dan Utang", module: access.ModuleBilling, usesPeriod: true},
+	typeStock:    {key: typeStock, title: "Stok Material", module: access.ModuleInventory},
+	typePayroll:  {key: typePayroll, title: "Penggajian", module: access.ModuleHR, usesPeriod: true, monthlyOnly: true},
+	typeSales:    {key: typeSales, title: "Penjualan", module: access.ModuleSales, usesPeriod: true},
 }
 
 var reportKindAliases = map[string]string{
@@ -72,6 +77,37 @@ func resolveKind(value string) (reportKind, bool) {
 	}
 	kind, ok := reportKinds[key]
 	return kind, ok
+}
+
+func (k reportKind) isReadableBy(role string) bool {
+	return access.Allows(role, k.module, access.LevelRead)
+}
+
+func readableKinds(role string) []string {
+	keys := make([]string, 0, len(reportKinds))
+	for key, kind := range reportKinds {
+		if kind.isReadableBy(role) {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func moduleOfType(typeName string) access.Module {
+	kind, ok := resolveKind(typeName)
+	if !ok {
+		return access.ModuleUnmapped
+	}
+	return kind.module
+}
+
+func authorizeType(role, typeName string) error {
+	module := moduleOfType(typeName)
+	if access.Allows(role, module, access.LevelRead) {
+		return nil
+	}
+	return apperror.Forbidden("forbidden", access.DeniedMessage(module, access.LevelRead))
 }
 
 func newReportSpec(typeName string, projectID *uuid.UUID, start, end *time.Time, today time.Time) (reportSpec, error) {

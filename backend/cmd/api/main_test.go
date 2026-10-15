@@ -51,6 +51,10 @@ func TestRouterBlocksModulesOutsideTheRoleBeforeTheHandlerRuns(t *testing.T) {
 		{"pengamat", http.MethodDelete, "/api/projects/" + uuid.NewString()},
 		{"keuangan", http.MethodGet, "/api/users"},
 		{"pengadaan", http.MethodPost, "/api/reports"},
+		{"penjualan", http.MethodGet, "/api/reports/preview?type=penggajian"},
+		{"penjualan", http.MethodGet, "/api/reports/preview?type=arus_kas"},
+		{"sdm", http.MethodGet, "/api/reports/preview?type=piutang_utang"},
+		{"keuangan", http.MethodGet, "/api/reports/preview?type=stok"},
 	}
 	for _, current := range cases {
 		response, recorder := callRouter(t, current.method, current.path, subjectResult(current.role, true))

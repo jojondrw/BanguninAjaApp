@@ -8,6 +8,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 )
 
 const reportParam = "id"
@@ -26,7 +27,7 @@ func (c *Controller) ListReports(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	page, err := c.service.ListReports(ctx.Request.Context(), query)
+	page, err := c.service.ListReports(ctx.Request.Context(), viewerRole(ctx), query)
 	httpresponse.Respond(ctx, page, err)
 }
 
@@ -36,7 +37,7 @@ func (c *Controller) GetReport(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	report, err := c.service.GetReport(ctx.Request.Context(), id)
+	report, err := c.service.GetReport(ctx.Request.Context(), viewerRole(ctx), id)
 	httpresponse.Respond(ctx, report, err)
 }
 
@@ -51,7 +52,7 @@ func (c *Controller) CreateReport(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	report, err := c.service.CreateReport(ctx.Request.Context(), userID, request)
+	report, err := c.service.CreateReport(ctx.Request.Context(), userID, viewerRole(ctx), request)
 	httpresponse.RespondCreated(ctx, report, err)
 }
 
@@ -61,7 +62,7 @@ func (c *Controller) DeleteReport(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	httpresponse.RespondNoContent(ctx, c.service.DeleteReport(ctx.Request.Context(), id))
+	httpresponse.RespondNoContent(ctx, c.service.DeleteReport(ctx.Request.Context(), viewerRole(ctx), id))
 }
 
 func (c *Controller) PreviewReport(ctx *gin.Context) {
@@ -70,7 +71,7 @@ func (c *Controller) PreviewReport(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	preview, err := c.service.PreviewReport(ctx.Request.Context(), query)
+	preview, err := c.service.PreviewReport(ctx.Request.Context(), viewerRole(ctx), query)
 	httpresponse.Respond(ctx, preview, err)
 }
 
@@ -80,7 +81,7 @@ func (c *Controller) DownloadReport(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	file, err := c.service.DownloadReport(ctx.Request.Context(), id)
+	file, err := c.service.DownloadReport(ctx.Request.Context(), viewerRole(ctx), id)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -89,4 +90,9 @@ func (c *Controller) DownloadReport(ctx *gin.Context) {
 	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
 	ctx.Header("Cache-Control", "no-store")
 	ctx.Data(http.StatusOK, file.ContentType, file.Content)
+}
+
+func viewerRole(ctx *gin.Context) string {
+	role, _ := middleware.AuthenticatedRole(ctx)
+	return role
 }

@@ -19,6 +19,7 @@ const reportColumns = "report.id, report.name, report.type, report.scope, report
 type ReportFilter struct {
 	Search    string
 	Type      string
+	Types     []string
 	Format    string
 	ProjectID *uuid.UUID
 	Offset    int
@@ -117,5 +118,5 @@ func (f ReportFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.ProjectID != nil {
 		db = db.Where("report.project_id = ?", *f.ProjectID)
 	}
-	return db
+	return db.Where("report.type IN ?", f.Types)
 }
