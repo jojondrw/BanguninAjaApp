@@ -49,7 +49,7 @@ export function FilterSelect({ id, label, children, ...rest }: FilterSelectProps
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <select id={id} className={`${CONTROL_CLASS} h-8 px-2.5 text-[13px]`} {...rest}>
+      <select id={id} className={`${CONTROL_CLASS} h-8 w-full px-2.5 text-[13px]`} {...rest}>
         {children}
       </select>
     </div>
@@ -71,7 +71,7 @@ export function ToolbarInput({ id, label, showLabel = false, className = '', ...
       <label htmlFor={id} className={showLabel ? 'text-[13px] text-slate-600' : 'sr-only'}>
         {label}
       </label>
-      <div className="relative">
+      <div className="relative max-sm:flex-1">
         {isSearch ? (
           <Search
             aria-hidden="true"
@@ -83,7 +83,7 @@ export function ToolbarInput({ id, label, showLabel = false, className = '', ...
           id={id}
           autoComplete="off"
           {...rest}
-          className={`${CONTROL_CLASS} h-8 text-[13px] ${isSearch ? 'pr-3 pl-8' : 'px-2.5'} ${className}`}
+          className={`${CONTROL_CLASS} h-8 text-[13px] ${isSearch ? 'pr-3 pl-8' : 'px-2.5'} ${className} max-sm:w-full`}
         />
       </div>
     </div>
@@ -91,7 +91,7 @@ export function ToolbarInput({ id, label, showLabel = false, className = '', ...
 }
 
 export function Toolbar({ children }: { children: ReactNode }) {
-  return <div className="mb-4 flex flex-wrap items-center gap-2">{children}</div>
+  return <div className="mb-4 flex flex-wrap items-center gap-2 max-sm:*:w-full">{children}</div>
 }
 
 export function Chip({ tone, children }: { tone: string; children: ReactNode }) {
