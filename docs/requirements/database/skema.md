@@ -20,8 +20,8 @@ mengulang nama. Di sini semuanya dinormalkan.
 | Slice | Entity |
 |---|---|
 | `master` | Region, UnitOfMeasure, Account |
-| `auth` | Role, User, RefreshToken, ProjectMember |
-| `project` | Project, ProjectPhase, BudgetItem, Permit |
+| `auth` | Role, User, RefreshToken |
+| `project` | Project, ProjectPhase, BudgetItem, Permit, ProjectMember |
 | `inventory` | Material, Warehouse, Stock, StockMovement |
 | `procurement` | Vendor, PurchaseRequest, PurchaseRequestItem, PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem |
 | `asset` | Asset, Equipment |

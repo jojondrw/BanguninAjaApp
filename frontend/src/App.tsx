@@ -15,6 +15,7 @@ const BillingPage = lazy(() => import('./views/BillingPage').then((module) => ({
 const FinancialPage = lazy(() => import('./views/FinancialPage').then((module) => ({ default: module.FinancialPage })))
 const HrPage = lazy(() => import('./views/HrPage').then((module) => ({ default: module.HrPage })))
 const InventoryPage = lazy(() => import('./views/InventoryPage').then((module) => ({ default: module.InventoryPage })))
+const MasterDataPage = lazy(() => import('./views/master/MasterDataPage').then((module) => ({ default: module.MasterDataPage })))
 const LocationPage = lazy(() => import('./views/LocationPage').then((module) => ({ default: module.LocationPage })))
 const OverviewPage = lazy(() => import('./views/OverviewPage').then((module) => ({ default: module.OverviewPage })))
 const ProcurementPage = lazy(() => import('./views/ProcurementPage').then((module) => ({ default: module.ProcurementPage })))
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="/pengadaan" element={<RequireSession><ProcurementPage /></RequireSession>} />
                 <Route path="/sdm" element={<RequireSession><HrPage /></RequireSession>} />
                 <Route path="/inventaris" element={<RequireSession><InventoryPage /></RequireSession>} />
+                <Route path="/data-master" element={<RequireSession><MasterDataPage /></RequireSession>} />
                 <Route path="/pengguna" element={<RequireSession><UsersPage /></RequireSession>} />
                 <Route path="/laporan" element={<RequireSession><ReportsPage /></RequireSession>} />
                 <Route path="*" element={<Navigate to="/" replace />} />

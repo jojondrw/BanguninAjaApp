@@ -20,11 +20,13 @@ import { ProjectFinanceTab } from './project/ProjectFinanceTab'
 import { ProjectSiteTab } from './project/ProjectSiteTab'
 import { ProjectStatusCard } from './project/ProjectStatusCard'
 import { ProjectSummaryTab } from './project/ProjectSummaryTab'
+import { ProjectTeamTab } from './project/ProjectTeamTab'
 
-type WorkspaceTab = 'ringkasan' | 'lokasi' | 'keuangan'
+type WorkspaceTab = 'ringkasan' | 'tim' | 'lokasi' | 'keuangan'
 
 const TABS: readonly TabItem<WorkspaceTab>[] = [
   { id: 'ringkasan', label: 'Ringkasan' },
+  { id: 'tim', label: 'Tim' },
   { id: 'lokasi', label: 'Analisis Lokasi' },
   { id: 'keuangan', label: 'Keuangan' },
 ]
@@ -144,6 +146,7 @@ export function ProjectWorkspacePage() {
 
         <Tabs idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={tabs} active={tab} onChange={changeTab}>
           {tab === 'ringkasan' ? <ProjectSummaryTab project={data} /> : null}
+          {tab === 'tim' ? <ProjectTeamTab project={data} /> : null}
           {tab === 'lokasi' ? (
             <AccessScope module="locations">
               <ProjectSiteTab project={data} />

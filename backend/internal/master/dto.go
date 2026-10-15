@@ -23,13 +23,15 @@ type RegionQuery struct {
 }
 
 type RegionResponse struct {
-	ID        uuid.UUID  `json:"id"`
-	Code      string     `json:"code"`
-	Name      string     `json:"name"`
-	Type      string     `json:"type"`
-	ParentID  *uuid.UUID `json:"parentId"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
+	ID         uuid.UUID  `json:"id"`
+	Code       string     `json:"code"`
+	Name       string     `json:"name"`
+	Type       string     `json:"type"`
+	ParentID   *uuid.UUID `json:"parentId"`
+	ParentCode *string    `json:"parentCode"`
+	ParentName *string    `json:"parentName"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
 }
 
 type UnitOfMeasureRequest struct {
@@ -62,28 +64,33 @@ type AccountQuery struct {
 	Search   string     `form:"search" binding:"omitempty,max=120"`
 	Type     string     `form:"type" binding:"omitempty,oneof=asset liability equity revenue expense"`
 	ParentID *uuid.UUID `form:"parentId,parser=encoding.TextUnmarshaler"`
-	Postable bool       `form:"postable"`
+	Postable *bool      `form:"postable"`
 }
 
 type AccountResponse struct {
-	ID        uuid.UUID  `json:"id"`
-	Code      string     `json:"code"`
-	Name      string     `json:"name"`
-	Type      string     `json:"type"`
-	ParentID  *uuid.UUID `json:"parentId"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
+	ID         uuid.UUID  `json:"id"`
+	Code       string     `json:"code"`
+	Name       string     `json:"name"`
+	Type       string     `json:"type"`
+	ParentID   *uuid.UUID `json:"parentId"`
+	ParentCode *string    `json:"parentCode"`
+	ParentName *string    `json:"parentName"`
+	Postable   bool       `json:"postable"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
 }
 
-func newRegionResponse(region Region) RegionResponse {
+func newRegionResponse(row RegionRow) RegionResponse {
 	return RegionResponse{
-		ID:        region.ID,
-		Code:      region.Code,
-		Name:      region.Name,
-		Type:      region.Type,
-		ParentID:  region.ParentID,
-		CreatedAt: region.CreatedAt,
-		UpdatedAt: region.UpdatedAt,
+		ID:         row.ID,
+		Code:       row.Code,
+		Name:       row.Name,
+		Type:       row.Type,
+		ParentID:   row.ParentID,
+		ParentCode: row.ParentCode,
+		ParentName: row.ParentName,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
 	}
 }
 
@@ -97,14 +104,17 @@ func newUnitOfMeasureResponse(unit UnitOfMeasure) UnitOfMeasureResponse {
 	}
 }
 
-func newAccountResponse(account Account) AccountResponse {
+func newAccountResponse(row AccountRow) AccountResponse {
 	return AccountResponse{
-		ID:        account.ID,
-		Code:      account.Code,
-		Name:      account.Name,
-		Type:      account.Type,
-		ParentID:  account.ParentID,
-		CreatedAt: account.CreatedAt,
-		UpdatedAt: account.UpdatedAt,
+		ID:         row.ID,
+		Code:       row.Code,
+		Name:       row.Name,
+		Type:       row.Type,
+		ParentID:   row.ParentID,
+		ParentCode: row.ParentCode,
+		ParentName: row.ParentName,
+		Postable:   row.Postable,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
 	}
 }

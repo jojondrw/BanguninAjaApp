@@ -63,7 +63,7 @@ var (
 )
 
 type Service interface {
-	ListProjects(ctx context.Context, query ProjectQuery) (pagination.Page[ProjectResponse], error)
+	ListProjects(ctx context.Context, viewerID uuid.UUID, query ProjectQuery) (pagination.Page[ProjectResponse], error)
 	SummarizeProjects(ctx context.Context) (ProjectSummaryResponse, error)
 	GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse, error)
 	CreateProject(ctx context.Context, request ProjectRequest) (ProjectResponse, error)
@@ -85,6 +85,12 @@ type Service interface {
 	CreatePermit(ctx context.Context, projectID uuid.UUID, request PermitRequest) (PermitResponse, error)
 	UpdatePermit(ctx context.Context, projectID, permitID uuid.UUID, request PermitRequest) (PermitResponse, error)
 	DeletePermit(ctx context.Context, projectID, permitID uuid.UUID) error
+
+	ListMembers(ctx context.Context, projectID uuid.UUID) ([]MemberResponse, error)
+	ListMemberCandidates(ctx context.Context, projectID uuid.UUID, query MemberCandidateQuery) (pagination.Page[MemberCandidateResponse], error)
+	AddMember(ctx context.Context, projectID uuid.UUID, request MemberCreateRequest) (MemberResponse, error)
+	UpdateMember(ctx context.Context, projectID, memberID uuid.UUID, request MemberUpdateRequest) (MemberResponse, error)
+	RemoveMember(ctx context.Context, projectID, memberID uuid.UUID) error
 }
 
 type service struct {
@@ -95,14 +101,19 @@ func NewService(repository Repository) Service {
 	return &service{repository: repository}
 }
 
-func (s *service) ListProjects(ctx context.Context, query ProjectQuery) (pagination.Page[ProjectResponse], error) {
-	projects, total, err := s.repository.ListProjects(ctx, ProjectFilter{
+func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, query ProjectQuery) (pagination.Page[ProjectResponse], error) {
+	filter := ProjectFilter{
 		Search:   query.Search,
 		Status:   query.Status,
 		RegionID: query.RegionID,
 		Offset:   query.Offset(),
 		Limit:    query.Size(),
-	})
+	}
+	if query.Mine {
+		filter.MemberID = &viewerID
+	}
+
+	projects, total, err := s.repository.ListProjects(ctx, filter)
 	if err != nil {
 		return pagination.Page[ProjectResponse]{}, apperror.Internal(err)
 	}

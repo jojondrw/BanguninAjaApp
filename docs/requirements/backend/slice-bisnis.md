@@ -71,7 +71,7 @@ Semua di bawah `/api/projects`.
 
 | Method | Path | Keterangan |
 |---|---|---|
-| GET, POST | `/` | Filter `search` (nama atau kode), `status`, `regionId` |
+| GET, POST | `/` | Filter `search` (nama atau kode), `status`, `regionId`, `mine=true` (hanya proyek yang timnya memuat pemanggil) |
 | GET, PUT, DELETE | `/:id` | PUT tidak mengubah status dan progres |
 | PATCH | `/:id/status` | Body `{ "status": "ongoing" }` |
 | GET, POST | `/:id/phases` | Daftar tahap urut `sortOrder` |
@@ -80,6 +80,9 @@ Semua di bawah `/api/projects`.
 | PUT, DELETE | `/:id/budget-items/:childId` | |
 | GET, POST | `/:id/permits` | |
 | PUT, DELETE | `/:id/permits/:childId` | |
+| GET, POST | `/:id/members` | Tim proyek, urut nama. Body tambah `{ "userId", "position"?, "role"? }` |
+| PATCH, DELETE | `/:id/members/:childId` | Body ubah `{ "position"?, "role"? }`, field yang tidak dikirim tidak berubah |
+| GET | `/:id/member-candidates` | Pengguna aktif yang belum masuk tim, hanya `id`, `name`, `email`. Query `search`, `page`, `pageSize` |
 
 ### Status proyek
 
@@ -113,6 +116,33 @@ dari frontend.
 | `total` item RAB selalu dihitung dari volume dikali harga satuan, dibulatkan ke rupiah penuh. Volume dibulatkan dua desimal mengikuti `numeric(14,2)` | |
 | Total RAB proyek tidak disimpan, dihitung dengan `SUM` saat daftar diminta | |
 | Izin berstatus `issued` wajib punya tanggal terbit | `permit_issued_date_required` |
+
+### Tim proyek
+
+Tabel `project_member` milik slice `project` (sebelumnya entity-nya ada di
+`auth`, nama tabel, index, dan constraint tidak berubah). Satu baris berarti
+satu pengguna masuk tim satu proyek.
+
+| Kolom | Arti |
+|---|---|
+| `role_id` | Peran pengguna di proyek ini, salah satu dari 7 peran aplikasi di tabel `role`. Kalau tidak dipilih saat ditambahkan, diisi peran akun pengguna saat itu |
+| `position` | Posisi bebas di proyek, misalnya "Site manager" atau "Estimator". Boleh kosong |
+| `created_at` | Tanggal masuk tim, dikirim sebagai `joinedAt` |
+
+Semua endpoint tim ikut modul akses `projects`: GET butuh hak baca, selain itu
+butuh hak tulis. `GET /api/users` tetap khusus admin, jadi pencarian pengguna
+untuk formulir tambah anggota memakai `member-candidates`.
+
+| Aturan | Kode error |
+|---|---|
+| Proyek harus ada | `project_not_found` (404) |
+| Anggota yang diubah atau dihapus harus ada di proyek itu | `project_member_not_found` (404) |
+| Satu pengguna hanya sekali di satu tim, dijaga unique `(user_id, project_id)` | `project_member_exists` (409) |
+| Pengguna harus ada dan aktif | `member_user_not_found`, `member_user_inactive` (422) |
+| Kode peran harus ada di tabel `role`. Pengguna tanpa peran akun wajib dipilihkan peran | `member_role_not_found`, `member_role_required` (422) |
+
+Keanggotaan belum membatasi proyek mana yang bisa dilihat atau diubah. Hak akses
+masih mengikuti peran akun di semua proyek, dan `mine=true` hanya penyaring.
 
 ## Inventory
 

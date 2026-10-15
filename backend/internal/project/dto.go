@@ -27,6 +27,7 @@ type ProjectQuery struct {
 	Search   string     `form:"search" binding:"omitempty,max=160"`
 	Status   string     `form:"status" binding:"omitempty,oneof=planning ongoing on_hold completed cancelled"`
 	RegionID *uuid.UUID `form:"regionId,parser=encoding.TextUnmarshaler"`
+	Mine     bool       `form:"mine"`
 }
 
 type ProjectSummaryResponse struct {
@@ -131,6 +132,46 @@ type PermitResponse struct {
 	UpdatedAt  time.Time  `json:"updatedAt"`
 }
 
+type MemberCreateRequest struct {
+	UserID   uuid.UUID `json:"userId" binding:"required"`
+	Position string    `json:"position" binding:"max=80"`
+	Role     string    `json:"role" binding:"omitempty,max=30"`
+}
+
+type MemberUpdateRequest struct {
+	Position *string `json:"position" binding:"omitempty,max=80"`
+	Role     *string `json:"role" binding:"omitempty,max=30"`
+}
+
+type MemberRoleResponse struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+type MemberResponse struct {
+	ID        uuid.UUID          `json:"id"`
+	ProjectID uuid.UUID          `json:"projectId"`
+	UserID    uuid.UUID          `json:"userId"`
+	Name      string             `json:"name"`
+	Email     string             `json:"email"`
+	Active    bool               `json:"active"`
+	Position  *string            `json:"position"`
+	Role      MemberRoleResponse `json:"role"`
+	JoinedAt  time.Time          `json:"joinedAt"`
+	UpdatedAt time.Time          `json:"updatedAt"`
+}
+
+type MemberCandidateQuery struct {
+	pagination.Query
+	Search string `form:"search" binding:"omitempty,max=160"`
+}
+
+type MemberCandidateResponse struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+}
+
 func newProjectSummaryResponse(totals ProjectTotals) ProjectSummaryResponse {
 	return ProjectSummaryResponse{
 		Count: totals.Count,
@@ -205,4 +246,23 @@ func newPermitResponse(permit Permit) PermitResponse {
 		CreatedAt:  permit.CreatedAt,
 		UpdatedAt:  permit.UpdatedAt,
 	}
+}
+
+func newMemberResponse(row MemberRow) MemberResponse {
+	return MemberResponse{
+		ID:        row.ID,
+		ProjectID: row.ProjectID,
+		UserID:    row.UserID,
+		Name:      row.Name,
+		Email:     row.Email,
+		Active:    row.Active,
+		Position:  row.Position,
+		Role:      MemberRoleResponse{Code: row.RoleCode, Name: row.RoleName},
+		JoinedAt:  row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func newMemberCandidateResponse(candidate MemberCandidate) MemberCandidateResponse {
+	return MemberCandidateResponse{ID: candidate.ID, Name: candidate.Name, Email: candidate.Email}
 }
