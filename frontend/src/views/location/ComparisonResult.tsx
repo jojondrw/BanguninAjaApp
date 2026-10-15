@@ -10,6 +10,7 @@ import {
   useSavedLocationDetails,
   useUpdateComparison,
 } from '../../controllers/useLocations'
+import { useDownloadComparisonReport, useDownloadSiteReport } from '../../controllers/useLocationReports'
 import {
   COMPARISON_NAME_MAX,
   compareLocations,
@@ -22,6 +23,7 @@ import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { ROW_BUTTON } from './buttons'
 import { ComparisonGrid, type LocationNames } from './ComparisonGrid'
+import { DownloadNotes, REPORT_BUTTON_LABEL, REPORT_PENDING_LABEL, ReportIcon } from './ReportDownload'
 
 export const COMPARISON_RESULT_ID = 'hasil-perbandingan'
 
@@ -53,6 +55,8 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
   const projectNames = useProjectNames(details.locations.flatMap((location) => (location.projectId ? [location.projectId] : [])))
   const profiles = useBuildingProfiles()
   const regionNames = useRegionNames(details.locations.flatMap((location) => (location.regionId ? [location.regionId] : [])))
+  const comparisonReport = useDownloadComparisonReport()
+  const siteReport = useDownloadSiteReport()
 
   const hasEnough = selectedIds.length >= MIN_COMPARED
   const table =
@@ -68,11 +72,27 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
     region: (id) => (id ? (regionNames.get(id) ?? 'Memuat wilayah...') : '-'),
   }
 
+  // PDF perbandingan dibuat dari versi yang tersimpan. Kalau pilihan di layar
+  // sudah diubah, label tombolnya menegaskan bahwa yang diunduh versi tersimpan.
+  const reportAction = opened ? (
+    <Button
+      variant="subtle"
+      isPending={comparisonReport.isPending}
+      pendingLabel={REPORT_PENDING_LABEL}
+      onClick={() => comparisonReport.mutate(opened.id)}
+    >
+      <ReportIcon />
+      {isChanged ? 'Unduh laporan tersimpan (PDF)' : REPORT_BUTTON_LABEL}
+    </Button>
+  ) : null
+  const isOpenedReport = opened !== null && comparisonReport.variables === opened.id
+
   return (
     <div id={COMPARISON_RESULT_ID} className="scroll-mt-6">
       <Card
         title="Hasil perbandingan"
         description="Skor berskala 0 sampai 100: makin tinggi makin baik. Nilai paling unggul di tiap baris ditandai terbaik."
+        action={reportAction}
       >
         {opened ? (
           <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-navy-50 px-4 py-2.5 text-[13px] text-navy-900">
@@ -80,6 +100,12 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
               Dibuka dari perbandingan tersimpan <span className="font-semibold">{opened.name}</span>.
             </span>
             {isChanged ? <span className="text-navy-700">Pilihan lokasi sudah diubah dan belum disimpan.</span> : null}
+          </div>
+        ) : null}
+
+        {isOpenedReport ? (
+          <div className="mb-4">
+            <DownloadNotes fileName={comparisonReport.data} error={comparisonReport.error} />
           </div>
         ) : null}
 
@@ -112,7 +138,20 @@ export function ComparisonResult({ selectedIds, opened, isChanged, onRemove, onD
               </p>
             ) : null}
 
-            <ComparisonGrid locations={details.locations} table={table} names={names} onRemove={onRemove} />
+            <ComparisonGrid
+              locations={details.locations}
+              table={table}
+              names={names}
+              onRemove={onRemove}
+              downloadingId={siteReport.isPending ? (siteReport.variables ?? null) : null}
+              onDownloadReport={(id) => siteReport.mutate(id)}
+            />
+
+            {siteReport.isError || siteReport.isSuccess ? (
+              <div className="mt-3">
+                <DownloadNotes fileName={siteReport.data} error={siteReport.error} />
+              </div>
+            ) : null}
 
             {table.hasEstimatedRisk ? (
               <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -178,7 +217,7 @@ function SaveComparisonForm({ selectedIds, opened, isChanged, onSaved }: {
     <form onSubmit={handleSubmit} className="mt-6 border-t border-slate-100 pt-5">
       <h3 className="text-[15px] font-semibold text-slate-900">Simpan perbandingan</h3>
       <p className="mt-0.5 text-[13px] text-slate-500">
-        Beri nama supaya pilihan {selectedIds.length} lokasi ini bisa dibuka lagi nanti.
+        Beri nama supaya pilihan {selectedIds.length} lokasi ini bisa dibuka lagi nanti dan diunduh sebagai PDF.
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
