@@ -103,7 +103,7 @@ func TestBlankCodeOrNameIsRefusedBeforeTouchingTheDatabase(t *testing.T) {
 	}{
 		{"create account", second(service.CreateAccount(ctx, AccountRequest{Code: "   ", Name: "Kas", Type: "asset"})), errAccountBlank},
 		{"update account", second(service.UpdateAccount(ctx, id, AccountRequest{Code: "1110", Name: " ", Type: "asset"})), errAccountBlank},
-		{"create region", second(service.CreateRegion(ctx, RegionRequest{Code: "	", Name: "Bogor", Type: "province"})), errRegionBlank},
+		{"create region", second(service.CreateRegion(ctx, RegionRequest{Code: "\t", Name: "Bogor", Type: "province"})), errRegionBlank},
 		{"update region", second(service.UpdateRegion(ctx, id, RegionRequest{Code: "32", Name: "  ", Type: "province"})), errRegionBlank},
 		{"create unit", second(service.CreateUnitOfMeasure(ctx, UnitOfMeasureRequest{Code: " ", Name: "Meter"})), errUnitOfMeasureBlank},
 		{"update unit", second(service.UpdateUnitOfMeasure(ctx, id, UnitOfMeasureRequest{Code: "m", Name: "  "})), errUnitOfMeasureBlank},
@@ -111,6 +111,36 @@ func TestBlankCodeOrNameIsRefusedBeforeTouchingTheDatabase(t *testing.T) {
 	for _, tc := range cases {
 		if !errors.Is(tc.err, tc.want) {
 			t.Errorf("%s: got %v, want %v", tc.name, tc.err, tc.want)
+		}
+	}
+}
+
+func TestCashAccountKeepsItsCodeAndCannotBeDeleted(t *testing.T) {
+	cash := Account{Code: cashAccountCode, Name: "Kas", Type: "asset"}
+	cash.ID = uuid.New()
+	service := &service{repository: &fakeRepository{accounts: map[uuid.UUID]Account{cash.ID: cash}}}
+	ctx := context.Background()
+
+	if _, err := service.UpdateAccount(ctx, cash.ID, AccountRequest{Code: "1111", Name: "Kas", Type: "asset"}); !errors.Is(err, errAccountCashLocked) {
+		t.Errorf("recode cash account: got %v", err)
+	}
+	if err := service.DeleteAccount(ctx, cash.ID); !errors.Is(err, errAccountCashLocked) {
+		t.Errorf("delete cash account: got %v", err)
+	}
+}
+
+func TestJoinLabels(t *testing.T) {
+	cases := []struct {
+		labels []string
+		want   string
+	}{
+		{[]string{"jurnal"}, "jurnal"},
+		{[]string{"proyek", "lokasi tersimpan"}, "proyek dan lokasi tersimpan"},
+		{[]string{"material", "RAB proyek", "pesanan pembelian"}, "material, RAB proyek, dan pesanan pembelian"},
+	}
+	for _, tc := range cases {
+		if got := joinLabels(tc.labels); got != tc.want {
+			t.Errorf("joinLabels(%v) = %q, want %q", tc.labels, got, tc.want)
 		}
 	}
 }
