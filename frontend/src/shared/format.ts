@@ -17,10 +17,10 @@ export function rupiahShort(amount: number): string {
   const sign = amount < 0 ? '−' : ''
   const size = Math.abs(amount)
   if (size >= BILLION) {
-    return `${sign}Rp ${NUMBER.format(Number((size / BILLION).toFixed(1)))} M`
+    return `${sign}Rp ${NUMBER.format(Number((size / BILLION).toFixed(1)))} M`
   }
   if (size >= MILLION) {
-    return `${sign}Rp ${NUMBER.format(Math.round(size / MILLION))} jt`
+    return `${sign}Rp ${NUMBER.format(Math.round(size / MILLION))} jt`
   }
   return RUPIAH.format(amount)
 }

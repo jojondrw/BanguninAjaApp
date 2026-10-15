@@ -58,7 +58,7 @@ export function RegisterPage() {
           label="Email"
           type="email"
           autoComplete="email"
-          placeholder="nama@kampus.ac.id"
+          placeholder="nama@perusahaan.co.id"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}

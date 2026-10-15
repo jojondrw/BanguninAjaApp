@@ -51,7 +51,7 @@ export function ReconciliationBanner() {
       </div>
 
       {isOpen ? (
-        <div id={listId} className="mt-3 overflow-x-auto rounded-xl bg-white">
+        <div id={listId} className="relative mt-3 overflow-x-auto rounded-xl bg-white">
           <table className="w-full text-[13px] text-slate-700">
             <thead>
               <tr className="text-left text-xs text-slate-500">

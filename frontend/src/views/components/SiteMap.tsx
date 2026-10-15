@@ -1,6 +1,7 @@
 import { Layers } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
+  LngLatBounds,
   MapLibreMap,
   Marker,
   NavigationControl,
@@ -28,6 +29,8 @@ export interface MapPoint {
 const INDONESIA_CENTER: [number, number] = [118, -2]
 const INDONESIA_ZOOM = 4.3
 const FOCUS_ZOOM = 13
+const FRAME_PADDING = 48
+const FRAME_MAX_ZOOM = 11
 const MAX_TILE_ZOOM = 19
 const COORDINATE_DIGITS = 6
 
@@ -62,6 +65,7 @@ interface SiteMapProps {
 export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
+  const hasFramedSitesRef = useRef(false)
   const [isMapReady, setIsMapReady] = useState(false)
   const [layerId, setLayerId] = useState<MapLayerId | null>(null)
   const [zoom, setZoom] = useState(INDONESIA_ZOOM)
@@ -85,6 +89,7 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
           : { url }
       },
     })
+    hasFramedSitesRef.current = false
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     map.on('load', () => setIsMapReady(true))
     map.on('zoomend', () => setZoom(map.getZoom()))
@@ -162,6 +167,12 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
       return
     }
     const markers = sites.map((site) => savedSiteMarker(site).addTo(map))
+    if (!hasFramedSitesRef.current && sites.length > 0) {
+      hasFramedSitesRef.current = true
+      const bounds = new LngLatBounds()
+      sites.forEach((site) => bounds.extend([site.longitude, site.latitude]))
+      map.fitBounds(bounds, { padding: FRAME_PADDING, maxZoom: FRAME_MAX_ZOOM, duration: 0 })
+    }
 
     return () => {
       markers.forEach((marker) => marker.remove())
@@ -173,6 +184,7 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
     if (!map || !focus) {
       return
     }
+    hasFramedSitesRef.current = true
     map.flyTo({
       center: [focus.longitude, focus.latitude],
       zoom: Math.max(map.getZoom(), FOCUS_ZOOM),

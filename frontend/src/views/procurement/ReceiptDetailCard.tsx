@@ -27,6 +27,7 @@ import { Chip } from '../components/ListTools'
 import { useLookupLabel } from '../components/searchSelectLogic'
 import { ManualStockLine } from './ManualStockLine'
 import { ConfirmAction, Facts } from './parts'
+import { unitText } from '../inventory/inventoryShared'
 
 const WAREHOUSES = warehouseOptions()
 
@@ -133,7 +134,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
           { header: 'Material', cell: (row) => row.materialName },
           { header: 'Diterima baik', align: 'right', cell: (row) => number(row.acceptedQuantity) },
           { header: 'Ditolak', align: 'right', cell: (row) => number(row.rejectedQuantity) },
-          { header: 'Satuan', cell: (row) => row.unitOfMeasureCode || '-' },
+          { header: 'Satuan', cell: (row) => (row.unitOfMeasureCode ? unitText(row.unitOfMeasureCode) : '-') },
           {
             header: 'Stok gudang',
             cell: (row) =>
@@ -200,7 +201,7 @@ export function ReceiptDetailCard({ id, onClose }: { id: string; onClose?: () =>
                       key={line.receiptItemId}
                       receiptId={detail.id}
                       line={line}
-                      orderUnit={line.unitOfMeasureCode || '-'}
+                      orderUnit={line.unitOfMeasureCode ? unitText(line.unitOfMeasureCode) : '-'}
                       stockUnit={line.stockUnitOfMeasureCode || '-'}
                       warehouseName={warehouseName}
                       isPending={recordManualStock.isPending && manualLine?.receiptItemId === line.receiptItemId}
