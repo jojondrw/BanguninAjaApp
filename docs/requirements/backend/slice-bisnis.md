@@ -576,6 +576,18 @@ sedang masuk. Lokasi atau perbandingan milik orang lain dibalas 404.
 | GET, PUT, DELETE | `/saved/:id` | Berisi skor per dimensi. PUT mengganti seluruh skor dimensi |
 | GET, POST | `/comparisons` | Body berisi dua sampai lima `savedLocationIds` |
 | GET, PUT, DELETE | `/comparisons/:id` | GET berisi skor per dimensi setiap lokasi |
+| GET | `/saved/:id/report` | PDF Laporan Analisis Lokasi. `Content-Disposition: attachment; filename=analisis-lokasi-<nama>-<tanggal>.pdf` |
+| GET | `/comparisons/:id/report` | PDF Laporan Perbandingan Lokasi, satu kolom per lokasi. `filename=perbandingan-lokasi-<nama>-<tanggal>.pdf` |
+
+Kedua laporan PDF disusun hanya dari data tersimpan dan tidak memanggil layanan
+skoring: skor keseluruhan, skor dimensi, penanda risiko, indeks banjir dan
+gempa, serta harga tanah dari `saved_location` dan `dimension_score`; nama,
+deskripsi, dan bobot dimensi dari tabel `dimension`, `weight`, dan
+`building_profile`; konteks regulasi dari tabel `regulation` di titik lokasi
+(nilai simulasi kalau RDTR belum ada). Penjelasan per dimensi dari layanan
+skoring tidak disimpan, jadi laporan memakai deskripsi dimensi sebagai kolom
+"Yang diukur". `risk_flags` kosong (`null`) ditulis "tidak tercatat", bukan
+"tidak ada risiko". Waktu di laporan dan tanggal di nama berkas memakai WIB.
 
 Area peta disaring dengan `point && ST_MakeEnvelope(...)` supaya index GiST
 `idx_saved_location_point` terpakai. Skor lokasi dikirim dari hasil analisis
