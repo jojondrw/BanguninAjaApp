@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -41,6 +42,7 @@ const (
 	fieldLabelCap    = 170.0
 	fieldLabelGap    = 12.0
 	paragraphGap     = 4.0
+	openingTextLines = 3
 
 	pdfObjectsBeforePages = 5
 	continuedSuffix       = " (lanjutan)"
@@ -139,7 +141,7 @@ func hasContent(section Section) bool {
 
 func openingHeight(section Section, plan tablePlan) float64 {
 	if len(section.Fields) > 0 || len(section.Columns) == 0 {
-		return fieldPadding + bodyLeading
+		return fieldPadding + openingTextLines*bodyLeading
 	}
 	return plan.headerBand + rowHeight
 }
@@ -148,7 +150,7 @@ func (l *pdfLayout) planTable(section Section) tablePlan {
 	if len(section.Columns) == 0 {
 		return tablePlan{}
 	}
-	widths := fitWidths(section.Columns, desiredWidths(section), l.usableWidth())
+	widths := fitWidths(section.Columns, preferredWidths(section, l.usableWidth()), l.usableWidth())
 	header := make([][][]byte, len(section.Columns))
 	for index, column := range section.Columns {
 		header[index] = cellLines(helveticaBold, column.Header, column.Wrap, widths[index])
@@ -397,31 +399,43 @@ func (w *pdfWriter) finish() []byte {
 }
 
 func desiredWidths(section Section) []float64 {
+	return measuredWidths(section, wrappedColumnCap)
+}
+
+func preferredWidths(section Section, available float64) []float64 {
+	natural := measuredWidths(section, math.Inf(1))
+	if sumWidths(natural) <= available {
+		return natural
+	}
+	return desiredWidths(section)
+}
+
+func measuredWidths(section Section, wrapLimit float64) []float64 {
 	widths := make([]float64, len(section.Columns))
 	for index, column := range section.Columns {
-		width := measure(helveticaBold, column.Header, column.Wrap)
+		width := measure(helveticaBold, column.Header, column.Wrap, wrapLimit)
 		for rowIndex, row := range section.Rows {
 			if rowIndex >= measuredRows {
 				break
 			}
 			if index < len(row) {
-				width = max(width, measure(helvetica, DisplayText(column.Kind, row[index]), column.Wrap))
+				width = max(width, measure(helvetica, DisplayText(column.Kind, row[index]), column.Wrap, wrapLimit))
 			}
 		}
 		if index < len(section.Total) {
-			width = max(width, measure(helveticaBold, DisplayText(column.Kind, section.Total[index]), column.Wrap))
+			width = max(width, measure(helveticaBold, DisplayText(column.Kind, section.Total[index]), column.Wrap, wrapLimit))
 		}
 		widths[index] = max(width+2*cellPadding, minimumColumn)
 	}
 	return widths
 }
 
-func measure(font pdfFont, text string, wrap bool) float64 {
+func measure(font pdfFont, text string, wrap bool, wrapLimit float64) float64 {
 	full := font.width(encodeWinAnsi(text), cellSize)
 	if !wrap {
 		return full
 	}
-	return max(font.longestWord(text, cellSize), min(full, wrappedColumnCap))
+	return max(font.longestWord(text, cellSize), min(full, wrapLimit))
 }
 
 func fitWidths(columns []Column, desired []float64, available float64) []float64 {

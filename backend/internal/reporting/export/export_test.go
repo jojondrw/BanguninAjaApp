@@ -282,7 +282,7 @@ func textDocument(note string) Document {
 				Title: "Penanda risiko",
 				Columns: []Column{
 					{Header: "Kode", Kind: Text},
-					{Header: "Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek", Kind: Text, Wrap: true},
+					{Header: "Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek serta catatan tambahan dari surveyor lapangan", Kind: Text, Wrap: true},
 				},
 				Rows:       [][]any{{"lereng_curam", "Kemiringan lahan sekitar 25,3°, perlu kajian geoteknik sebelum perencanaan tapak dan struktur pondasi dimulai."}},
 				Paragraphs: []string{"Penanda risiko dihitung terpisah dan tidak mengubah skor keseluruhan lokasi."},
@@ -312,7 +312,7 @@ func TestPDFDrawsFieldsParagraphsAndWrappedColumns(t *testing.T) {
 			t.Errorf("missing %s", fragment)
 		}
 	}
-	if bytes.Contains(data, []byte("(Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek)")) {
+	if bytes.Contains(data, []byte("(Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek serta catatan tambahan dari surveyor lapangan)")) {
 		t.Fatalf("a long wrapped header must be split over several lines")
 	}
 	if bytes.Contains(data, []byte(emptySectionText)) {
@@ -329,5 +329,21 @@ func TestPDFContinuesLongFieldsOnTheNextPage(t *testing.T) {
 	assertValidXref(t, data)
 	if !bytes.Contains(data, []byte(`(Identitas lokasi \(lanjutan\))`)) {
 		t.Fatalf("continued pages must repeat the section title")
+	}
+}
+
+func TestPDFKeepsWrappedCellsOnOneLineWhenThereIsRoom(t *testing.T) {
+	document := Document{Title: "Laporan Analisis Lokasi", GeneratedAt: generatedAt, Sections: []Section{{
+		Title: "Skor kelayakan",
+		Columns: []Column{
+			{Header: "Dimensi", Kind: Text, Wrap: true},
+			{Header: "Yang diukur", Kind: Text, Wrap: true},
+			{Header: "Skor", Kind: Integer},
+		},
+		Rows: [][]any{{"Pasar & Kompetisi", "Kepadatan pesaing sejenis dan aktivitas komersial sekitar", int64(64)}},
+	}}}
+	data := writePDF(t, document)
+	if !bytes.Contains(data, []byte("(Kepadatan pesaing sejenis dan aktivitas komersial sekitar)")) {
+		t.Fatalf("a wrapped column that fits the page must not be broken into lines")
 	}
 }
