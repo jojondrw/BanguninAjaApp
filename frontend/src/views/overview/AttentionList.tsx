@@ -22,24 +22,35 @@ interface Attention {
   severity: Severity
 }
 
+const SALES_PATH = '/penjualan'
+const PROCUREMENT_PATH = '/pengadaan'
+const INVENTORY_PATH = '/inventaris'
+const HR_PATH = '/sdm'
+
 const SEVERITY_TONE: Record<Severity, string> = {
   urgent: 'bg-red-50 text-red-600',
   pending: 'bg-amber-50 text-amber-700',
 }
 
 export function AttentionList() {
-  const overdue = useInstallmentCount('overdue')
-  const due = useInstallmentCount('due')
-  const requests = usePurchaseRequestCount('submitted')
-  const lowStock = useLowStockMaterials(1)
-  const payroll = usePayrollTotals(currentPeriod())
   const permissions = usePermissions()
+  // Hanya hal dari modul yang boleh dibaca peran ini, dan permintaannya pun
+  // tidak dikirim untuk modul lain supaya tidak ada 403 di latar belakang.
+  const canRead = (path: string) => {
+    const module = moduleForPath(path)
+    return module === null || canAccess(permissions, module, 'read')
+  }
+  const overdue = useInstallmentCount('overdue', { enabled: canRead(SALES_PATH) })
+  const due = useInstallmentCount('due', { enabled: canRead(SALES_PATH) })
+  const requests = usePurchaseRequestCount('submitted', { enabled: canRead(PROCUREMENT_PATH) })
+  const lowStock = useLowStockMaterials(1, { enabled: canRead(INVENTORY_PATH) })
+  const payroll = usePayrollTotals(currentPeriod(), { enabled: canRead(HR_PATH) })
 
   const allItems: Attention[] = [
     {
       key: 'overdue',
       icon: AlarmClock,
-      to: '/penjualan',
+      to: SALES_PATH,
       label: 'Cicilan terlambat',
       count: countOf(overdue.data, overdue.isError),
       detail: 'Pembeli melewati jatuh tempo',
@@ -48,7 +59,7 @@ export function AttentionList() {
     {
       key: 'due',
       icon: CalendarClock,
-      to: '/penjualan',
+      to: SALES_PATH,
       label: 'Cicilan jatuh tempo',
       count: countOf(due.data, due.isError),
       detail: 'Perlu ditagih sekarang',
@@ -57,7 +68,7 @@ export function AttentionList() {
     {
       key: 'requests',
       icon: ClipboardCheck,
-      to: '/pengadaan',
+      to: PROCUREMENT_PATH,
       label: 'Permintaan pembelian',
       count: countOf(requests.data, requests.isError),
       detail: 'Menunggu persetujuan',
@@ -66,7 +77,7 @@ export function AttentionList() {
     {
       key: 'stock',
       icon: PackageMinus,
-      to: '/inventaris',
+      to: INVENTORY_PATH,
       label: 'Stok menipis',
       count: countOf(lowStock.data?.totalItems, lowStock.isError),
       detail: 'Material di bawah stok minimum',
@@ -75,18 +86,14 @@ export function AttentionList() {
     {
       key: 'payroll',
       icon: Wallet,
-      to: '/sdm',
+      to: HR_PATH,
       label: 'Gaji belum dibayar',
       count: countOf(payroll.data?.unpaidCount, payroll.isError),
       detail: payroll.data ? `${rupiahShort(payroll.data.unpaidNetPay)} bulan ini` : 'Slip gaji bulan ini',
       severity: 'pending',
     },
   ]
-  // Hanya hal dari modul yang boleh dibaca peran ini.
-  const items = allItems.filter((item) => {
-    const module = moduleForPath(item.to)
-    return module === null || canAccess(permissions, module, 'read')
-  })
+  const items = allItems.filter((item) => canRead(item.to))
 
   const open = items.filter((item) => (item.count ?? 0) > 0)
   const isLoading = items.some((item) => item.count === undefined)
