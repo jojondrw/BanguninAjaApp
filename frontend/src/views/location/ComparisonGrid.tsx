@@ -76,7 +76,7 @@ export function ComparisonGrid({ locations, table, names, onRemove, downloadingI
   const minWidth = `${LABEL_COLUMN_REM + locations.length * LOCATION_COLUMN_REM}rem`
 
   return (
-    <div className="-mx-5 overflow-x-auto">
+    <div className="relative -mx-5 overflow-x-auto">
       <table className="w-full border-separate border-spacing-0 text-[13px]" style={{ minWidth }}>
         <caption className="sr-only">
           Perbandingan {locations.length} lokasi. Skor 0 sampai 100, makin tinggi makin baik.

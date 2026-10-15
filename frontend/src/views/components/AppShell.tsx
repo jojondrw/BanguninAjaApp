@@ -172,7 +172,7 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
 
             <nav
               ref={mobileNavRef}
-              className="flex gap-1 overflow-x-auto px-4 pt-3 [scrollbar-width:none] lg:hidden"
+              className="relative flex gap-1 overflow-x-auto px-4 pt-3 [scrollbar-width:none] lg:hidden"
               aria-label="Menu ponsel"
             >
               {menuItems.map((item) => (

@@ -10,7 +10,7 @@ export function Card({ title, description, action, children }: {
   children: ReactNode
 }) {
   return (
-    <section className="rounded-2xl bg-white shadow-hairline">
+    <section className="min-w-0 rounded-2xl bg-white shadow-hairline">
       <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
@@ -99,7 +99,7 @@ export function Table<T>({ rows, columns, emptyMessage }: {
   }
 
   return (
-    <div className="-mx-5 overflow-x-auto">
+    <div className="relative -mx-5 overflow-x-auto">
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-y border-slate-100 bg-slate-50/70">
