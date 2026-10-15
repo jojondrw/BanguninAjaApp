@@ -34,6 +34,10 @@ const (
 		"customer.name AS customer_name"
 	reconciliationMismatch = "invoice.paid_amount <> receivable.paid_amount"
 
+	onchainRequestColumns = "onchain_payment_request.*, users.name AS created_by_name"
+	onchainTxHashTaken    = "SELECT EXISTS (SELECT 1 FROM onchain_payment_request WHERE tx_hash = ? AND id <> ?) " +
+		"OR EXISTS (SELECT 1 FROM billing_payment WHERE method = ? AND lower(reference) = ?)"
+
 	invoicePaymentColumn    = "invoice_id"
 	receivablePaymentColumn = "receivable_id"
 	payablePaymentColumn    = "payable_id"
@@ -94,6 +98,22 @@ type ReconciliationRow struct {
 	ReceivableAmount     int64
 	ReceivablePaidAmount int64
 	CustomerName         *string
+}
+
+type OnchainRequestRow struct {
+	OnchainRequest
+	CreatedByName *string
+}
+
+type OnchainTargets struct {
+	InvoiceID    uuid.UUID
+	ReceivableID uuid.UUID
+}
+
+type OnchainRequestFilter struct {
+	Targets OnchainTargets
+	Offset  int
+	Limit   int
 }
 
 type ContractRef struct {
@@ -182,6 +202,15 @@ type Repository interface {
 	LinkPayments(ctx context.Context, invoiceID, receivableID uuid.UUID) error
 	BackfillPayments(ctx context.Context) (int64, error)
 	ListUnreconciledPairs(ctx context.Context, offset, limit int) ([]ReconciliationRow, int64, error)
+
+	CreateOnchainRequest(ctx context.Context, request *OnchainRequest) error
+	FindOnchainRequestRow(ctx context.Context, id uuid.UUID) (OnchainRequestRow, error)
+	FindOnchainRequestByToken(ctx context.Context, token string) (OnchainRequest, error)
+	LockOnchainRequest(ctx context.Context, id uuid.UUID) (OnchainRequest, error)
+	SaveOnchainRequest(ctx context.Context, request *OnchainRequest) error
+	ListOnchainRequests(ctx context.Context, filter OnchainRequestFilter) ([]OnchainRequestRow, int64, error)
+	ActiveOnchainRequestExists(ctx context.Context, targets OnchainTargets, now time.Time) (bool, error)
+	OnchainTxHashTaken(ctx context.Context, hash string, exceptID uuid.UUID) (bool, error)
 }
 
 type gormRepository struct {
@@ -390,6 +419,72 @@ func (r *gormRepository) ListUnreconciledPairs(ctx context.Context, offset, limi
 	return rows, total, database.Translate(err)
 }
 
+func (r *gormRepository) CreateOnchainRequest(ctx context.Context, request *OnchainRequest) error {
+	return database.Translate(r.db.WithContext(ctx).Create(request).Error)
+}
+
+func (r *gormRepository) FindOnchainRequestRow(ctx context.Context, id uuid.UUID) (OnchainRequestRow, error) {
+	var row OnchainRequestRow
+	err := r.onchainRequestRows(ctx).Select(onchainRequestColumns).Where("onchain_payment_request.id = ?", id).Take(&row).Error
+	return row, database.Translate(err)
+}
+
+func (r *gormRepository) FindOnchainRequestByToken(ctx context.Context, token string) (OnchainRequest, error) {
+	var request OnchainRequest
+	err := r.db.WithContext(ctx).Where("token = ?", token).Take(&request).Error
+	return request, database.Translate(err)
+}
+
+func (r *gormRepository) LockOnchainRequest(ctx context.Context, id uuid.UUID) (OnchainRequest, error) {
+	var request OnchainRequest
+	err := r.locked(ctx).Where("id = ?", id).Take(&request).Error
+	return request, database.Translate(err)
+}
+
+func (r *gormRepository) SaveOnchainRequest(ctx context.Context, request *OnchainRequest) error {
+	return database.Translate(r.db.WithContext(ctx).Save(request).Error)
+}
+
+func (r *gormRepository) ListOnchainRequests(ctx context.Context, filter OnchainRequestFilter) ([]OnchainRequestRow, int64, error) {
+	base := r.onchainRequestRows(ctx).Scopes(filter.Targets.scope)
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]OnchainRequestRow, 0, filter.Limit)
+	err := base.Session(&gorm.Session{}).
+		Select(onchainRequestColumns).
+		Order("onchain_payment_request.created_at DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
+}
+
+func (r *gormRepository) ActiveOnchainRequestExists(ctx context.Context, targets OnchainTargets, now time.Time) (bool, error) {
+	var exists bool
+	active := r.db.Model(&OnchainRequest{}).
+		Scopes(targets.scope).
+		Select("1").
+		Where("onchain_payment_request.status = ? AND onchain_payment_request.expires_at > ?", onchainPending, now)
+	err := r.db.WithContext(ctx).Raw("SELECT EXISTS (?)", active).Scan(&exists).Error
+	return exists, database.Translate(err)
+}
+
+func (r *gormRepository) OnchainTxHashTaken(ctx context.Context, hash string, exceptID uuid.UUID) (bool, error) {
+	var taken bool
+	err := r.db.WithContext(ctx).Raw(onchainTxHashTaken, hash, exceptID, onchainMethod, hash).Scan(&taken).Error
+	return taken, database.Translate(err)
+}
+
+func (r *gormRepository) onchainRequestRows(ctx context.Context) *gorm.DB {
+	return r.db.WithContext(ctx).
+		Model(&OnchainRequest{}).
+		Joins("LEFT JOIN users ON users.id = onchain_payment_request.created_by")
+}
+
 func (r *gormRepository) invoiceRows(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).
 		Model(&Invoice{}).
@@ -472,6 +567,14 @@ func (f DueFilter) scope(table string) func(*gorm.DB) *gorm.DB {
 		}
 		return db
 	}
+}
+
+func (t OnchainTargets) scope(db *gorm.DB) *gorm.DB {
+	return db.Where(
+		"((onchain_payment_request.target_kind = ? AND onchain_payment_request.target_id = ?) OR "+
+			"(onchain_payment_request.target_kind = ? AND onchain_payment_request.target_id = ?))",
+		onchainInvoiceTarget, t.InvoiceID, onchainReceivableTarget, t.ReceivableID,
+	)
 }
 
 func (f InvoiceFilter) apply(db *gorm.DB) *gorm.DB {

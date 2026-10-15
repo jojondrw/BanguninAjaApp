@@ -42,7 +42,7 @@ func TestReconciliationRouteListsLinkedPairsWhosePaidAmountsDiffer(t *testing.T)
 
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens, config.Onchain{}).RegisterRoutes(router.Group("/api"))
 	request := httptest.NewRequest(http.MethodGet, "/api/billing/reconciliation?pageSize=5", nil)
 	request.Header.Set("Authorization", "Bearer "+access.Value)
 	response := httptest.NewRecorder()
@@ -94,7 +94,7 @@ func TestReconciliationRouteNeedsAuthentication(t *testing.T) {
 
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens, config.Onchain{}).RegisterRoutes(router.Group("/api"))
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/billing/reconciliation", nil))
 

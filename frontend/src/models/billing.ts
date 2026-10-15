@@ -5,9 +5,9 @@ import { toApiDate } from '../shared/localDate'
 export type BillingKind = 'invoices' | 'receivables' | 'payables'
 export type BillingStatus = 'not_due' | 'due' | 'paid' | 'overdue'
 export type PartyType = 'customer' | 'vendor'
-// Mengikuti oneof di PaymentRequest backend. Daftarnya sengaja terbuka untuk
-// metode baru nanti.
-export type PaymentMethod = 'transfer' | 'tunai' | 'cek' | 'lainnya'
+// Mengikuti oneof di PaymentRequest backend. onchain dicatat otomatis oleh
+// halaman bayar Sepolia, tapi tetap bisa dipilih untuk pencatatan manual.
+export type PaymentMethod = 'transfer' | 'tunai' | 'cek' | 'lainnya' | 'onchain'
 
 // Bagian yang sama di ketiga respons: nominal, pembayaran, dan tenggat.
 export interface BillingBalance {
@@ -174,15 +174,17 @@ export const INVOICE_NOTE_MAX_LENGTH = 200
 export const REFERENCE_MAX_LENGTH = 60
 export const INVOICE_SEARCH_MAX_LENGTH = 200
 export const REFERENCE_SEARCH_MAX_LENGTH = 60
-export const PAYMENT_REFERENCE_MAX_LENGTH = 60
+// Cukup untuk hash transaksi on-chain (0x diikuti 64 karakter).
+export const PAYMENT_REFERENCE_MAX_LENGTH = 80
 export const PAYMENT_NOTE_MAX_LENGTH = 200
 
-export const PAYMENT_METHODS: PaymentMethod[] = ['transfer', 'tunai', 'cek', 'lainnya']
+export const PAYMENT_METHODS: PaymentMethod[] = ['transfer', 'tunai', 'cek', 'onchain', 'lainnya']
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   transfer: 'Transfer bank',
   tunai: 'Tunai',
   cek: 'Cek atau giro',
+  onchain: 'On-chain (Sepolia)',
   lainnya: 'Lainnya',
 }
 

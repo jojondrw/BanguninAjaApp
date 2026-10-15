@@ -4,18 +4,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/ethereum"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 )
 
 type Module struct {
 	controller *Controller
+	onchain    *OnchainController
 	tokens     *token.Manager
 }
 
-func NewModule(db *gorm.DB, tokens *token.Manager) *Module {
+func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain) *Module {
+	repository := NewRepository(db)
 	return &Module{
-		controller: NewController(NewService(NewRepository(db))),
+		controller: NewController(NewService(repository)),
+		onchain:    NewOnchainController(NewOnchainService(repository, ethereum.NewClient(onchain.RPCURL), onchain)),
 		tokens:     tokens,
 	}
 }
@@ -31,6 +36,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	invoices.DELETE("/:id", m.controller.DeleteInvoice)
 	invoices.POST("/:id/payments", m.controller.PayInvoice)
 	invoices.GET("/:id/payments", m.controller.InvoicePayments)
+	invoices.POST("/:id/onchain-requests", m.onchain.CreateInvoiceRequest)
+	invoices.GET("/:id/onchain-requests", m.onchain.InvoiceRequests)
 
 	receivables := routes.Group("/receivables")
 	receivables.GET("", m.controller.ListReceivables)
@@ -40,6 +47,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	receivables.DELETE("/:id", m.controller.DeleteReceivable)
 	receivables.POST("/:id/payments", m.controller.PayReceivable)
 	receivables.GET("/:id/payments", m.controller.ReceivablePayments)
+	receivables.POST("/:id/onchain-requests", m.onchain.CreateReceivableRequest)
+	receivables.GET("/:id/onchain-requests", m.onchain.ReceivableRequests)
 
 	payables := routes.Group("/payables")
 	payables.GET("", m.controller.ListPayables)
@@ -51,4 +60,12 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	payables.GET("/:id/payments", m.controller.PayablePayments)
 
 	routes.GET("/reconciliation", m.controller.ListUnreconciledPairs)
+
+	onchain := routes.Group("/onchain")
+	onchain.GET("/config", m.onchain.Config)
+	onchain.POST("/requests/:id/cancel", m.onchain.CancelRequest)
+
+	pay := router.Group("/pay")
+	pay.GET("/:token", m.onchain.PublicPayment)
+	pay.POST("/:token/confirm", m.onchain.ConfirmPayment)
 }

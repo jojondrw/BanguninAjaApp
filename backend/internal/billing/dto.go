@@ -150,8 +150,8 @@ type ReconciliationResponse struct {
 type PaymentRequest struct {
 	Amount    int64      `json:"amount" binding:"required,gt=0"`
 	PaidAt    *time.Time `json:"paidAt"`
-	Method    string     `json:"method" binding:"omitempty,oneof=transfer tunai cek lainnya"`
-	Reference string     `json:"reference" binding:"max=60"`
+	Method    string     `json:"method" binding:"omitempty,oneof=transfer tunai cek lainnya onchain"`
+	Reference string     `json:"reference" binding:"max=80"`
 	Note      string     `json:"note" binding:"max=200"`
 }
 

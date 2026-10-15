@@ -110,7 +110,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	asset.NewModule(db, tokens).RegisterRoutes(api)
 	sales.NewModule(db, tokens).RegisterRoutes(api)
 	finance.NewModule(db, tokens).RegisterRoutes(api)
-	billing.NewModule(db, tokens).RegisterRoutes(api)
+	billing.NewModule(db, tokens, cfg.Onchain).RegisterRoutes(api)
 	hr.NewModule(db, tokens).RegisterRoutes(api)
 	scoring.NewModule(db, tokens).RegisterRoutes(api)
 	location.NewModule(db, tokens).RegisterRoutes(api)
