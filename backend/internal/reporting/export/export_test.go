@@ -241,3 +241,93 @@ func assertValidXref(t *testing.T, data []byte) {
 		}
 	}
 }
+
+func TestWrapKeepsEveryCharacterWithinTheLimit(t *testing.T) {
+	const limit = 80.0
+	text := "Kemiringan lahan sekitar 25,3°, perlu kajian geoteknik.\nNamaLokasiTanpaSpasiYangSangatPanjangSekaliUntukDiuji selesai"
+	lines := helvetica.wrap(text, bodySize, limit)
+	if len(lines) < 4 {
+		t.Fatalf("got %d lines, want the text broken over several lines", len(lines))
+	}
+	var joined []byte
+	for _, line := range lines {
+		if width := helvetica.width(line, bodySize); width > limit {
+			t.Fatalf("line %q is %.1f wide, limit %.1f", line, width, limit)
+		}
+		joined = append(joined, line...)
+	}
+	want := strings.NewReplacer(" ", "", "\n", "").Replace(text)
+	if got := strings.ReplaceAll(string(joined), " ", ""); got != string(encodeWinAnsi(want)) {
+		t.Fatalf("wrapping lost characters: %q", got)
+	}
+	if first := string(lines[0]); first != "Kemiringan lahan" {
+		t.Fatalf("got first line %q", first)
+	}
+	if empty := helvetica.wrap("", bodySize, limit); len(empty) != 1 || len(empty[0]) != 0 {
+		t.Fatalf("empty text must give one empty line, got %q", empty)
+	}
+}
+
+func textDocument(note string) Document {
+	return Document{
+		Title:       "Laporan Analisis Lokasi",
+		Filters:     "UJI Kandidat Jakarta Barat · Perumahan",
+		GeneratedAt: generatedAt,
+		Sections: []Section{
+			{
+				Title:  "Identitas lokasi",
+				Fields: []Field{{Label: "Nama lokasi", Value: "UJI Kandidat Jakarta Barat"}, {Label: "Catatan", Value: note}},
+			},
+			{
+				Title: "Penanda risiko",
+				Columns: []Column{
+					{Header: "Kode", Kind: Text},
+					{Header: "Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek", Kind: Text, Wrap: true},
+				},
+				Rows:       [][]any{{"lereng_curam", "Kemiringan lahan sekitar 25,3°, perlu kajian geoteknik sebelum perencanaan tapak dan struktur pondasi dimulai."}},
+				Paragraphs: []string{"Penanda risiko dihitung terpisah dan tidak mengubah skor keseluruhan lokasi."},
+			},
+			{Title: "Cara membaca skor", Paragraphs: []string{"Skor keseluruhan 0–100 adalah jumlah berbobot dari lima skor dimensi."}},
+		},
+	}
+}
+
+func TestPDFDrawsFieldsParagraphsAndWrappedColumns(t *testing.T) {
+	note := "Nilai contoh untuk uji tata letak: skor, indeks risiko, dan harga tanah ini bukan hasil analisis nyata sehingga perlu dievaluasi ulang sebelum dipakai."
+	data := writePDF(t, textDocument(note))
+	if pages := pageCount(t, data); pages != 1 {
+		t.Fatalf("got %d pages", pages)
+	}
+	assertValidXref(t, data)
+	if bytes.IndexByte(data, ellipsisByte) >= 0 {
+		t.Fatalf("wrapped text must not be cut with an ellipsis")
+	}
+	for _, word := range strings.Fields(note + " geoteknik pondasi dievaluasi Penanda Skor 0–100") {
+		if !bytes.Contains(data, encodeWinAnsi(word)) {
+			t.Errorf("missing word %q", word)
+		}
+	}
+	for _, fragment := range []string{"(Nama lokasi)", "(UJI Kandidat Jakarta Barat)", "(Identitas lokasi)", "(Cara membaca skor)"} {
+		if !bytes.Contains(data, []byte(fragment)) {
+			t.Errorf("missing %s", fragment)
+		}
+	}
+	if bytes.Contains(data, []byte("(Pesan dari layanan penilaian lokasi untuk titik yang dievaluasi beserta saran tindak lanjut bagi tim perencana proyek)")) {
+		t.Fatalf("a long wrapped header must be split over several lines")
+	}
+	if bytes.Contains(data, []byte(emptySectionText)) {
+		t.Fatalf("text-only sections must not print the empty table note")
+	}
+}
+
+func TestPDFContinuesLongFieldsOnTheNextPage(t *testing.T) {
+	note := strings.Repeat("Catatan survei lapangan yang sangat panjang untuk menguji pindah halaman. ", 200)
+	data := writePDF(t, textDocument(note))
+	if pages := pageCount(t, data); pages < 2 {
+		t.Fatalf("got %d pages, want the note to continue on another page", pages)
+	}
+	assertValidXref(t, data)
+	if !bytes.Contains(data, []byte(`(Identitas lokasi \(lanjutan\))`)) {
+		t.Fatalf("continued pages must repeat the section title")
+	}
+}

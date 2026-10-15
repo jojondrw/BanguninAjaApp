@@ -1,5 +1,7 @@
 package export
 
+import "strings"
+
 type pdfFont struct {
 	resource string
 	widths   [95]int
@@ -80,6 +82,63 @@ func (f pdfFont) width(encoded []byte, size float64) float64 {
 		total += f.byteWidth(value)
 	}
 	return float64(total) * size / glyphUnits
+}
+
+func (f pdfFont) wrap(text string, size, limit float64) [][]byte {
+	var lines [][]byte
+	for _, paragraph := range strings.Split(text, "\n") {
+		lines = append(lines, f.wrapParagraph(paragraph, size, limit)...)
+	}
+	return lines
+}
+
+func (f pdfFont) wrapParagraph(text string, size, limit float64) [][]byte {
+	var lines [][]byte
+	var line []byte
+	for _, word := range strings.Fields(text) {
+		for _, piece := range f.splitWord(encodeWinAnsi(word), size, limit) {
+			line, lines = f.place(line, lines, piece, size, limit)
+		}
+	}
+	return append(lines, line)
+}
+
+func (f pdfFont) place(line []byte, lines [][]byte, piece []byte, size, limit float64) ([]byte, [][]byte) {
+	if len(line) == 0 {
+		return piece, lines
+	}
+	joined := make([]byte, 0, len(line)+1+len(piece))
+	joined = append(append(append(joined, line...), ' '), piece...)
+	if f.width(joined, size) <= limit {
+		return joined, lines
+	}
+	return piece, append(lines, line)
+}
+
+func (f pdfFont) splitWord(word []byte, size, limit float64) [][]byte {
+	var pieces [][]byte
+	for len(word) > 1 && f.width(word, size) > limit {
+		cut := f.fittingPrefix(word, size, limit)
+		pieces = append(pieces, word[:cut])
+		word = word[cut:]
+	}
+	return append(pieces, word)
+}
+
+func (f pdfFont) fittingPrefix(word []byte, size, limit float64) int {
+	cut := 1
+	for cut < len(word) && f.width(word[:cut+1], size) <= limit {
+		cut++
+	}
+	return cut
+}
+
+func (f pdfFont) longestWord(text string, size float64) float64 {
+	longest := 0.0
+	for _, word := range strings.Fields(text) {
+		longest = max(longest, f.width(encodeWinAnsi(word), size))
+	}
+	return longest
 }
 
 func (f pdfFont) fit(text string, size, limit float64) []byte {
