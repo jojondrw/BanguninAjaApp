@@ -34,6 +34,20 @@ const FILTERS: { value: ProjectStatus | ''; label: string }[] = [
   { value: 'cancelled', label: PROJECT_STATUS_LABEL.cancelled },
 ]
 
+function filterChipClass(isActive: boolean): string {
+  return `h-8 rounded-full px-3 text-[13px] font-medium transition-[background-color,color,transform]
+          motion-safe:active:scale-[0.97] ${
+            isActive ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 shadow-hairline hover:bg-slate-50 hover:text-slate-900'
+          }`
+}
+
+function emptyListMessage(onlyMine: boolean): string {
+  if (onlyMine) {
+    return 'Anda belum masuk tim proyek yang cocok dengan penyaringan ini. Anggota tim diatur di tab Tim ruang kerja proyek.'
+  }
+  return 'Tidak ada proyek yang cocok dengan penyaringan ini.'
+}
+
 const OPEN_LINK_CLASS =
   'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap text-navy-600 ' +
   'transition-[background-color,transform] hover:bg-navy-50 motion-safe:active:scale-95'
@@ -152,6 +166,7 @@ function NewProjectCard() {
 export function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus | ''>('')
   const [search, setSearch] = useState('')
+  const [onlyMine, setOnlyMine] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const canCreate = useCan('projects', 'write')
   const location = useLocation()
@@ -160,6 +175,7 @@ export function ProjectsPage() {
     pageSize: 50,
     status: status === '' ? undefined : status,
     search: search.trim() === '' ? undefined : search.trim(),
+    mine: onlyMine ? 'true' : undefined,
   })
 
   return (
@@ -201,19 +217,23 @@ export function ProjectsPage() {
             placeholder="Cari nama proyek"
             className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
           />
-          <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setOnlyMine((current) => !current)}
+            aria-pressed={onlyMine}
+            className={filterChipClass(onlyMine)}
+          >
+            Proyek saya
+          </button>
+          <span aria-hidden="true" className="h-5 w-px bg-slate-200" />
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Saring menurut status">
             {FILTERS.map((filter) => (
               <button
                 key={filter.label}
                 type="button"
                 onClick={() => setStatus(filter.value)}
                 aria-pressed={status === filter.value}
-                className={`h-8 rounded-full px-3 text-[13px] font-medium transition-[background-color,color,transform]
-                            motion-safe:active:scale-[0.97] ${
-                  status === filter.value
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white text-slate-600 shadow-hairline hover:bg-slate-50 hover:text-slate-900'
-                }`}
+                className={filterChipClass(status === filter.value)}
               >
                 {filter.label}
               </button>
@@ -226,7 +246,7 @@ export function ProjectsPage() {
         {projects.data ? (
           <Table
             rows={projects.data.items}
-            emptyMessage="Tidak ada proyek yang cocok dengan penyaringan ini."
+            emptyMessage={emptyListMessage(onlyMine)}
             columns={[
               { header: 'Kode', cell: (row) => row.code },
               {

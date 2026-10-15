@@ -70,8 +70,20 @@ func (Permit) TableName() string {
 	return "permit"
 }
 
+type ProjectMember struct {
+	entity.Base
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_user"`
+	ProjectID uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_project"`
+	RoleID    uuid.UUID `gorm:"type:uuid;not null;index:idx_project_member_role"`
+	Position  *string   `gorm:"type:varchar(80)"`
+}
+
+func (ProjectMember) TableName() string {
+	return "project_member"
+}
+
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &Permit{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &Permit{}, &ProjectMember{}}
 }
 
 func Indexes() []string {
@@ -88,6 +100,9 @@ func Constraints() []string {
 		database.ForeignKey("budget_item", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("budget_item", "unit_of_measure_id", "unit_of_measure", database.DeleteRestrict),
 		database.ForeignKey("permit", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
+		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("project_member", "role_id", "role", database.DeleteRestrict),
 		database.Check("project", "progress", "progress BETWEEN 0 AND 100"),
 		database.Check("project", "status", "status IN ('planning','ongoing','on_hold','completed','cancelled')"),
 		database.Check("project", "contract_value", "contract_value >= 0"),
@@ -97,5 +112,6 @@ func Constraints() []string {
 		database.Check("budget_item", "unit_price", "unit_price >= 0"),
 		database.Check("permit", "status", "status IN ('submitted','issued','expired','rejected')"),
 		database.Unique("budget_item", "project_code", "project_id, code"),
+		database.Unique("project_member", "user_project", "user_id, project_id"),
 	}
 }
