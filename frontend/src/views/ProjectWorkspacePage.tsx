@@ -47,10 +47,10 @@ type ManagePanel = 'status' | 'edit' | 'delete'
 
 const PANEL_ID = 'proyek-panel-kelola'
 
-const PANEL_TOGGLES: { panel: ManagePanel; label: string }[] = [
+const PANEL_TOGGLES: { panel: ManagePanel; label: string; tone?: 'danger' }[] = [
   { panel: 'status', label: 'Ubah status' },
   { panel: 'edit', label: 'Ubah proyek' },
-  { panel: 'delete', label: 'Hapus proyek' },
+  { panel: 'delete', label: 'Hapus proyek', tone: 'danger' },
 ]
 
 const BACK_LINK_CLASS = `h-9 pl-2.5 ${BUTTON_BASE} ${BUTTON_SUBTLE}`
@@ -125,6 +125,7 @@ export function ProjectWorkspacePage() {
             <PanelToggle
               key={toggle.panel}
               label={toggle.label}
+              tone={toggle.tone}
               panelId={PANEL_ID}
               isOpen={panel === toggle.panel}
               onToggle={() => togglePanel(toggle.panel)}
