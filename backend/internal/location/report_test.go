@@ -23,9 +23,9 @@ var reportGeneratedAt = time.Date(2026, 10, 15, 7, 5, 0, 0, time.UTC).In(reportZ
 var reportDimensions = []DimensionLabel{
 	{ID: uuid.MustParse("59162a34-7edd-4dfa-950e-3324721da9e2"), Code: "fisik_lingkungan", Name: "Fisik & Lingkungan", Description: "Risiko bencana gabungan (InaRISK) dan kemiringan lahan", SortOrder: 1},
 	{ID: uuid.MustParse("18af97ba-7592-4fb2-bc72-41c826aa4f70"), Code: "infrastruktur", Name: "Infrastruktur & Aksesibilitas", Description: "Jarak ke jalan, simpul transit, dan fasilitas kesehatan", SortOrder: 2},
-	{ID: uuid.MustParse("bbf521c4-bd06-4e69-bafb-bcf2a2d64c11"), Code: "demografi_sosial", Name: "Demografi & Sosial", Description: "Jumlah penduduk di sekitar lokasi (WorldPop)", SortOrder: 3},
-	{ID: uuid.MustParse("3a3c1f50-8d43-4c41-9f0e-7e2b1f0c9d21"), Code: "pasar_kompetisi", Name: "Pasar & Kompetisi", Description: "Kepadatan pesaing sejenis dan aktivitas komersial sekitar", SortOrder: 4},
-	{ID: uuid.MustParse("c6a0a5d2-3b8e-4f7a-a1d4-5e9f0b2c7e83"), Code: "finansial_proyek", Name: "Finansial Proyek", Description: "Harga tanah (ZNT) dan indeks kemahalan konstruksi", SortOrder: 5},
+	{ID: uuid.MustParse("bbf521c4-bd06-4e69-bafb-bcf0e25deef8"), Code: "demografi_sosial", Name: "Demografi & Sosial", Description: "Jumlah penduduk di sekitar lokasi (WorldPop)", SortOrder: 3},
+	{ID: uuid.MustParse("895e0c4e-a238-4dff-9432-12b6a7e97784"), Code: "pasar_kompetisi", Name: "Pasar & Kompetisi", Description: "Kepadatan pesaing sejenis dan aktivitas komersial sekitar", SortOrder: 4},
+	{ID: uuid.MustParse("5f42493e-f943-44c8-89e6-dc0f3c7f23a9"), Code: "finansial_proyek", Name: "Finansial Proyek", Description: "Harga tanah (ZNT) dan indeks kemahalan konstruksi", SortOrder: 5},
 }
 
 var housingWeights = []int{10, 10, 53, 10, 17}
@@ -57,7 +57,7 @@ func fullSiteReport() siteReport {
 	flags := stored(`[{"code":"rawan_gempabumi","severity":"medium","message":"Indeks bahaya gempa bumi sedang (0,47)."},` +
 		`{"code":"rawan_banjir","severity":"high","message":"Indeks bahaya banjir tinggi (0,78)."},` +
 		`{"code":"rawan_likuefaksi","severity":"medium","message":"Indeks bahaya likuefaksi sedang (0,44)."}]`)
-	location, scores := reportLocation("Kandidat Jakarta Barat", 78, []int{21, 88, 95, 64, 41}, flags)
+	location, scores := reportLocation("Kandidat Jakarta Barat", 78, []int{47, 95, 99, 98, 8}, flags)
 	location.AreaSqm = 9800
 	location.Note = "Akses dari Jl. Panjang; perlu cek genangan saat musim hujan."
 	weights := make(map[uuid.UUID]int, len(reportDimensions))
@@ -81,7 +81,7 @@ func fullSiteReport() siteReport {
 }
 
 func comparedReport() comparisonReport {
-	first, firstScores := reportLocation("Kandidat Jakarta Barat", 78, []int{21, 88, 95, 64, 41}, stored(`[{"code":"rawan_banjir","severity":"high","message":"Indeks bahaya banjir tinggi (0,78)."}]`))
+	first, firstScores := reportLocation("Kandidat Jakarta Barat", 78, []int{47, 95, 99, 98, 8}, stored(`[{"code":"rawan_banjir","severity":"high","message":"Indeks bahaya banjir tinggi (0,78)."}]`))
 	second, secondScores := reportLocation("Lahan Cibubur", 78, []int{70, 61, 82, 58, 49}, stored(`[]`))
 	third, thirdScores := reportLocation("Lahan Cibubur", 64, []int{66, 52, 70}, nil)
 	third.LandPricePerSqm = 0
@@ -164,7 +164,7 @@ func TestSiteDocumentCoversTheStoredEvaluation(t *testing.T) {
 	}
 	demography := score.Rows[2]
 	if demography[0] != "Demografi & Sosial" || demography[1] != "Jumlah penduduk di sekitar lokasi (WorldPop)" ||
-		demography[2] != int64(53) || demography[3] != int64(95) {
+		demography[2] != int64(53) || demography[3] != int64(99) {
 		t.Fatalf("got demography row %v", demography)
 	}
 	if score.Total[2] != int64(100) || score.Total[3] != int64(78) {
@@ -271,7 +271,7 @@ func TestComparisonDocumentPutsOneColumnPerLocation(t *testing.T) {
 	}
 	checks := map[string][]any{
 		"Skor keseluruhan (0–100)": {int64(78), int64(78), int64(64)},
-		"Pasar & Kompetisi":        {int64(64), int64(58), missingValue},
+		"Pasar & Kompetisi":        {int64(98), int64(58), missingValue},
 		"Penanda risiko (jumlah)":  {int64(1), int64(0), notRecorded},
 		"Harga tanah ZNT (Rp/m²)":  {int64(8580000), int64(8580000), notAvailable},
 	}
