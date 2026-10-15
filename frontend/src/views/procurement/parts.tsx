@@ -1,5 +1,6 @@
 import type { ReactNode, TextareaHTMLAttributes } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE, CONTROL_CLASS, LABEL_CLASS } from '../components/Form'
 
 type Tone = 'neutral' | 'danger'
@@ -97,6 +98,11 @@ export function ConfirmAction({
   tone?: Tone
   size?: Size
 }) {
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
   if (!isAsking && !isPending) {
     return (
       <button type="button" onClick={onAsk} className={ASK_CLASS[size][tone]}>

@@ -278,6 +278,7 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
                     align: 'right',
                     cell: (row) => (
                       <RowAction
+                        requires="read"
                         label="Rincian"
                         isActive={row.id === receiptId}
                         onClick={() => setReceiptId((current) => (current === row.id ? null : row.id))}
@@ -421,6 +422,7 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
                   align: 'right',
                   cell: (row) => (
                     <RowAction
+                      requires="read"
                       label="Rincian"
                       isActive={row.id === selectedId}
                       onClick={() => setSelectedId((current) => (current === row.id ? null : row.id))}

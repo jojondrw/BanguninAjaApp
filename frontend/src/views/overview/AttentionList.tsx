@@ -1,12 +1,14 @@
 import { AlarmClock, CalendarClock, ChevronRight, ClipboardCheck, PackageMinus, Wallet, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { canAccess, usePermissions } from '../../controllers/useAccess'
 import { usePayrollTotals } from '../../controllers/useHr'
 import { useLowStockMaterials } from '../../controllers/useInventory'
 import { usePurchaseRequestCount } from '../../controllers/useProcurement'
 import { useInstallmentCount } from '../../controllers/useSales'
 import { number, rupiahShort } from '../../shared/format'
 import { currentPeriod } from '../../shared/localDate'
+import { moduleForPath } from '../components/navigation'
 
 type Severity = 'urgent' | 'pending'
 
@@ -31,8 +33,9 @@ export function AttentionList() {
   const requests = usePurchaseRequestCount('submitted')
   const lowStock = useLowStockMaterials(1)
   const payroll = usePayrollTotals(currentPeriod())
+  const permissions = usePermissions()
 
-  const items: Attention[] = [
+  const allItems: Attention[] = [
     {
       key: 'overdue',
       icon: AlarmClock,
@@ -79,6 +82,11 @@ export function AttentionList() {
       severity: 'pending',
     },
   ]
+  // Hanya hal dari modul yang boleh dibaca peran ini.
+  const items = allItems.filter((item) => {
+    const module = moduleForPath(item.to)
+    return module === null || canAccess(permissions, module, 'read')
+  })
 
   const open = items.filter((item) => (item.count ?? 0) > 0)
   const isLoading = items.some((item) => item.count === undefined)

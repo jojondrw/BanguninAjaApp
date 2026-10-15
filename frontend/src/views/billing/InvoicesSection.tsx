@@ -184,6 +184,7 @@ export function InvoicesSection({ today, onRecordReceivable }: {
                   align: 'right',
                   cell: (row) => (
                     <RowAction
+                      requires="read"
                       label="Rincian"
                       isActive={row.id === selectedId}
                       onClick={() => {

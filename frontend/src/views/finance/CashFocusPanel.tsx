@@ -48,7 +48,7 @@ export function CashFocusPanel({ id, isEditing, onEdit, onClose }: {
           {data?.journalEntryId ? (
             <RowLink to={journalLink(data.journalEntryId)} label="Lihat jurnal" icon={BookOpen} />
           ) : null}
-          <RowAction label="Tutup" onClick={onClose} />
+          <RowAction label="Tutup" requires="read" onClick={onClose} />
         </RowActions>
       </div>
 

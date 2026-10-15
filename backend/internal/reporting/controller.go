@@ -1,6 +1,9 @@
 package reporting
 
 import (
+	"mime"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
@@ -59,4 +62,31 @@ func (c *Controller) DeleteReport(ctx *gin.Context) {
 		return
 	}
 	httpresponse.RespondNoContent(ctx, c.service.DeleteReport(ctx.Request.Context(), id))
+}
+
+func (c *Controller) PreviewReport(ctx *gin.Context) {
+	var query PreviewQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	preview, err := c.service.PreviewReport(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, preview, err)
+}
+
+func (c *Controller) DownloadReport(ctx *gin.Context) {
+	id, err := httprequest.PathID(ctx, reportParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	file, err := c.service.DownloadReport(ctx.Request.Context(), id)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	ctx.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": file.Name}))
+	ctx.Header("Access-Control-Expose-Headers", "Content-Disposition")
+	ctx.Header("Cache-Control", "no-store")
+	ctx.Data(http.StatusOK, file.ContentType, file.Content)
 }

@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { type ReactNode, type SelectHTMLAttributes, useRef } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
+import type { AccessLevel } from '../../models/auth'
 import { number } from '../../shared/format'
 import { CONTROL_CLASS, LABEL_CLASS } from './Form'
 import { SegmentIndicator } from './Segmented'
@@ -86,11 +88,20 @@ export function Pager({ page, totalPages, totalItems, onChange }: {
   )
 }
 
-export function RowAction({ label, onClick, isActive = false }: {
+// Aksi baris dianggap mengubah data kecuali diberi requires="read" (misalnya
+// "Rincian"), dan disembunyikan bila peran tidak punya hak itu di modul halaman.
+export function RowAction({ label, onClick, isActive = false, requires = 'write' }: {
   label: string
   onClick: () => void
   isActive?: boolean
+  requires?: AccessLevel
 }) {
+  const isAllowed = useScopedCan(requires)
+
+  if (!isAllowed) {
+    return null
+  }
+
   return (
     <button
       type="button"

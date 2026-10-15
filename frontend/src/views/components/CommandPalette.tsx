@@ -2,8 +2,10 @@ import { CornerDownLeft, FolderOpen, type LucideIcon, Search } from 'lucide-reac
 import { type KeyboardEvent, useDeferredValue, useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { canAccess, usePermissions } from '../../controllers/useAccess'
 import { useProjects } from '../../controllers/useErp'
-import { MENU_ITEMS } from './navigation'
+import type { ModuleKey } from '../../models/auth'
+import { isVisible, MENU_ITEMS, type MenuItem } from './navigation'
 
 interface Command {
   id: string
@@ -14,7 +16,8 @@ interface Command {
   to: string
 }
 
-const PAGE_COMMANDS: Command[] = MENU_ITEMS.map((item) => ({
+const PAGE_COMMANDS: (Command & { item: MenuItem })[] = MENU_ITEMS.map((item) => ({
+  item,
   id: `page:${item.to}`,
   group: 'Halaman',
   label: item.label,
@@ -51,9 +54,12 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const search = useDeferredValue(query.trim())
+  const permissions = usePermissions()
+  const canRead = (module: ModuleKey) => canAccess(permissions, module, 'read')
   const projects = useProjects({ search: search || undefined, pageSize: PROJECT_LIMIT })
 
-  const projectCommands: Command[] = (projects.data?.items ?? []).map((project) => ({
+  const projectItems = canRead('projects') ? (projects.data?.items ?? []) : []
+  const projectCommands: Command[] = projectItems.map((project) => ({
     id: `project:${project.id}`,
     group: search ? 'Proyek' : 'Proyek terbaru',
     label: project.name,
@@ -61,7 +67,8 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
     icon: FolderOpen,
     to: `/proyek/${project.id}`,
   }))
-  const commands = [...PAGE_COMMANDS.filter((command) => matches(command, search)), ...projectCommands]
+  const pageCommands = PAGE_COMMANDS.filter((command) => isVisible(command.item, canRead) && matches(command, search))
+  const commands = [...pageCommands, ...projectCommands]
   const current = Math.min(active, Math.max(0, commands.length - 1))
 
   useEffect(() => {

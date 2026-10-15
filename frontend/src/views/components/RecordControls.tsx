@@ -1,6 +1,7 @@
 import { Plus, Search, X } from 'lucide-react'
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { number } from '../../shared/format'
 import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE, CONTROL_CLASS, LABEL_CLASS } from './Form'
 import { CHIP_CLASS, PageButtons } from './ListTools'
@@ -128,6 +129,14 @@ export function FormToggle({ isOpen, openLabel, onToggle }: {
   openLabel: string
   onToggle: () => void
 }) {
+  const canWrite = useScopedCan('write')
+
+  // Tombol pembuka formulir selalu berarti membuat data, jadi disembunyikan
+  // untuk peran yang hanya boleh melihat modul halaman ini.
+  if (!canWrite) {
+    return null
+  }
+
   return (
     <button
       type="button"
