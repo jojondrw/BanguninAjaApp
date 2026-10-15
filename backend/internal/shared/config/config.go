@@ -22,6 +22,7 @@ type Config struct {
 	Cookie   Cookie
 	CORS     CORS
 	Score    Score
+	Onchain  Onchain
 }
 
 type App struct {
@@ -64,6 +65,20 @@ type CORS struct {
 type Score struct {
 	BaseURL string
 	Timeout time.Duration
+}
+
+type Onchain struct {
+	ReceiverAddress  string
+	RPCURL           string
+	ChainID          int64
+	IDRPerETH        int64
+	MinConfirmations uint64
+	RequestTTL       time.Duration
+	ExplorerURL      string
+}
+
+func (o Onchain) Enabled() bool {
+	return o.ReceiverAddress != ""
 }
 
 func (a App) IsProduction() bool {
@@ -110,6 +125,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	onchain, err := loadOnchain()
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		App: App{
 			Environment: env("APP_ENV", "development"),
@@ -144,6 +164,7 @@ func Load() (Config, error) {
 			BaseURL: env("SCORE_SERVICE_URL", ""),
 			Timeout: scoreTimeout,
 		},
+		Onchain: onchain,
 	}, nil
 }
 

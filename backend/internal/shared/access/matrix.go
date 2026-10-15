@@ -87,6 +87,7 @@ var routeModules = map[string]Module{
 
 var openSegments = map[string]bool{
 	"auth": true,
+	"pay":  true,
 }
 
 var roles = []Role{

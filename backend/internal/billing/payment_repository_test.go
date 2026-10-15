@@ -179,7 +179,7 @@ func servePaymentRoute(t *testing.T, db *gorm.DB, method, path, body string) (*h
 	}
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens, config.Onchain{}).RegisterRoutes(router.Group("/api"))
 	request := httptest.NewRequest(method, path, strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer "+access.Value)
 	request.Header.Set("Content-Type", "application/json")

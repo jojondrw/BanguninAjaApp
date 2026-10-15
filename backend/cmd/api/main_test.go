@@ -84,3 +84,25 @@ func TestRouterKeepsLoginOpenWithoutRoleLookup(t *testing.T) {
 		t.Fatalf("got %d queries", len(queries))
 	}
 }
+
+func TestRouterServesThePublicPayLinkWithoutLoginButGuardsBilling(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, recorder := databasetest.Open(t)
+	tokens := token.NewManager(config.Token{AccessSecret: "router-test", AccessTTL: time.Minute, Issuer: "router-test"})
+	router := buildRouter(config.Config{}, db, tokens, cookie.NewRefreshWriter(config.Cookie{}))
+
+	public := httptest.NewRecorder()
+	router.ServeHTTP(public, httptest.NewRequest(http.MethodGet, "/api/pay/AbCdEfGhIjKlMnOpQrStUvWxYz012345", nil))
+	if public.Code != http.StatusNotFound || !strings.Contains(public.Body.String(), "onchain_request_not_found") {
+		t.Fatalf("got %d %s", public.Code, public.Body.String())
+	}
+	if queries := recorder.Queries(); len(queries) != 1 || !strings.Contains(queries[0].SQL, "onchain_payment_request") {
+		t.Fatalf("the pay handler must run without a role lookup, got %+v", queries)
+	}
+
+	guarded := httptest.NewRecorder()
+	router.ServeHTTP(guarded, httptest.NewRequest(http.MethodGet, "/api/billing/onchain/config", nil))
+	if guarded.Code != http.StatusUnauthorized {
+		t.Fatalf("got %d", guarded.Code)
+	}
+}
