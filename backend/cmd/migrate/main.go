@@ -141,10 +141,10 @@ func prepareRoles(db *gorm.DB) error {
 	}
 	slog.Info("roles ready", slog.Int("roles", seeded))
 
-	assigned, err := auth.AssignAdminToUnassignedUsers(context.Background(), repository)
+	assigned, err := auth.PromoteLegacyUsersToAdmin(context.Background(), repository)
 	if err != nil {
 		return err
 	}
-	slog.Info("users without role promoted to admin", slog.Int64("users", assigned))
+	slog.Info("users from before roles promoted to admin", slog.Int64("users", assigned))
 	return nil
 }

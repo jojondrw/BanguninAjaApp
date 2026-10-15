@@ -2,14 +2,17 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   defaultReportName,
+  readableReportTypes,
   type Report,
   type ReportCriteria,
   type ReportFilter,
   type ReportFormValues,
   type ReportRequest,
+  type ReportTypeInfo,
 } from '../models/report'
 import { reportApi, type FileSession } from '../models/reportApi'
 import { toApiDate } from '../shared/localDate'
+import { canAccess, usePermissions } from './useAccess'
 import { clearSession, getAccessToken } from './sessionStore'
 
 const REPORTS_KEY = 'reports'
@@ -19,6 +22,13 @@ const ONE_MINUTE = 60_000
 const URL_RELEASE_DELAY_MS = 1_000
 
 const FILE_SESSION: FileSession = { accessToken: getAccessToken, onExpired: clearSession }
+
+// Jenis laporan yang datanya boleh dibaca peran ini. Backend menolak jenis
+// lain dengan 403, jadi jenis itu tidak ditawarkan sama sekali.
+export function useReadableReportTypes(): ReportTypeInfo[] {
+  const permissions = usePermissions()
+  return readableReportTypes((module) => canAccess(permissions, module, 'read'))
+}
 
 export function useReports(filter: ReportFilter) {
   return useQuery({

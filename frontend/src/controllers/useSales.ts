@@ -28,6 +28,7 @@ import {
   type UnitFormValues,
 } from '../models/sales'
 import { salesApi } from '../models/salesApi'
+import type { QueryToggle } from './queryToggle'
 
 const ONE_MINUTE = 60_000
 const SALES_KEY = 'sales'
@@ -134,11 +135,12 @@ export function useInstallmentSummary(contractId: string, enabled = true) {
 }
 
 // Hanya butuh totalItems, jadi cukup satu baris per permintaan.
-export function useInstallmentCount(status: InstallmentStatus) {
+export function useInstallmentCount(status: InstallmentStatus, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [SALES_KEY, 'installment-count', status],
     queryFn: () => salesApi.installments({ status, pageSize: 1 }),
     select: (page) => page.totalItems,
+    enabled,
     ...DATA_QUERY,
   })
 }

@@ -1,5 +1,5 @@
 import { request } from '../shared/apiClient'
-import type { LoginRequest, RegisterRequest, Session, User } from './auth'
+import type { ChangePasswordRequest, LoginRequest, RegisterRequest, Session, UpdateProfileRequest, User } from './auth'
 
 export const authApi = {
   register: (payload: RegisterRequest) =>
@@ -11,4 +11,10 @@ export const authApi = {
   logout: () => request<void>('/auth/logout', { method: 'POST', skipTokenRefresh: true }),
 
   profile: () => request<User>('/auth/me'),
+
+  updateProfile: (payload: UpdateProfileRequest) => request<User>('/auth/me', { method: 'PATCH', body: payload }),
+
+  // Sesi yang sedang dipakai tetap berlaku; refresh token di perangkat lain dicabut.
+  changePassword: (payload: ChangePasswordRequest) =>
+    request<void>('/auth/password', { method: 'PATCH', body: payload }),
 }

@@ -23,6 +23,7 @@ import {
   type WarehouseFormValues,
 } from '../models/inventory'
 import { assetApi, inventoryApi } from '../models/inventoryApi'
+import type { QueryToggle } from './queryToggle'
 
 const ONE_MINUTE = 60_000
 
@@ -55,10 +56,11 @@ export function useMaterials(filter: MaterialFilter) {
   })
 }
 
-export function useLowStockMaterials(page: number) {
+export function useLowStockMaterials(page: number, { enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [...LOW_STOCK_KEY, page],
     queryFn: () => inventoryApi.lowStockMaterials({ page, pageSize: 10 }),
+    enabled,
     ...PAGED_QUERY,
   })
 }

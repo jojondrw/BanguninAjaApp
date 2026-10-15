@@ -20,10 +20,10 @@ func EnsureRoles(ctx context.Context, repository Repository) (int, error) {
 	return len(rows), nil
 }
 
-func AssignAdminToUnassignedUsers(ctx context.Context, repository Repository) (int64, error) {
-	assigned, err := repository.AssignRoleToUnassigned(ctx, access.RoleAdmin)
+func PromoteLegacyUsersToAdmin(ctx context.Context, repository Repository) (int64, error) {
+	assigned, err := repository.AssignRoleToLegacyUsers(ctx, access.RoleAdmin)
 	if err != nil {
-		return 0, fmt.Errorf("assign admin role to unassigned users: %w", err)
+		return 0, fmt.Errorf("promote users from before roles to admin: %w", err)
 	}
 	return assigned, nil
 }

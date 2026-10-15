@@ -241,11 +241,20 @@ func TestAuthorizationRejectsDeactivatedAndUnknownUsers(t *testing.T) {
 
 func TestAuthorizationTreatsUserWithoutRoleAsNoAccess(t *testing.T) {
 	harness := newAuthorizationHarness(t)
+	accessToken := harness.userWith(t, "", true)
+	methods := []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}
 
-	response := harness.call(http.MethodGet, "/api/projects/x", harness.userWith(t, "", true))
+	for _, prefix := range guardedRoutes {
+		for _, method := range methods {
+			response := harness.call(method, "/api"+prefix+"/x", accessToken)
+			if code, _ := errorCode(t, response); response.Code != http.StatusForbidden || code != "forbidden" {
+				t.Errorf("%s %s: got %d %s", method, prefix, response.Code, code)
+			}
+		}
+	}
 
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("got %d", response.Code)
+	if response := harness.call(http.MethodGet, "/api/auth/me", accessToken); response.Code != http.StatusOK {
+		t.Fatalf("a user without role must still read the profile, got %d", response.Code)
 	}
 }
 

@@ -54,6 +54,9 @@ type Repository interface {
 	FindRefreshTokenByHash(ctx context.Context, hash string) (RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, id uuid.UUID, revokedAt time.Time) error
 	RevokeUserRefreshTokens(ctx context.Context, userID uuid.UUID, revokedAt time.Time) error
+	RevokeOtherRefreshTokens(ctx context.Context, userID uuid.UUID, keptHash string, revokedAt time.Time) error
+	UpdateUserName(ctx context.Context, id uuid.UUID, name string) error
+	UpdateUserPassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	CreateUserWithRole(ctx context.Context, user *User, chooseRole func(existingUsers int64) string) error
 	FindRoleByID(ctx context.Context, id uuid.UUID) (Role, error)
 	FindRoleByCode(ctx context.Context, code string) (Role, error)
@@ -65,7 +68,7 @@ type Repository interface {
 	CountActiveAdmins(ctx context.Context) (int64, error)
 	LockAdminChanges(ctx context.Context) error
 	UpsertRoles(ctx context.Context, roles []Role) error
-	AssignRoleToUnassigned(ctx context.Context, roleCode string) (int64, error)
+	AssignRoleToLegacyUsers(ctx context.Context, roleCode string) (int64, error)
 	Transaction(ctx context.Context, work func(Repository) error) error
 }
 
@@ -132,6 +135,32 @@ func (r *gormRepository) RevokeUserRefreshTokens(ctx context.Context, userID uui
 		Update("revoked_at", revokedAt).Error
 }
 
+func (r *gormRepository) RevokeOtherRefreshTokens(ctx context.Context, userID uuid.UUID, keptHash string, revokedAt time.Time) error {
+	return r.db.WithContext(ctx).
+		Model(&RefreshToken{}).
+		Where("user_id = ? AND revoked_at IS NULL AND token_hash <> ?", userID, keptHash).
+		Update("revoked_at", revokedAt).Error
+}
+
+func (r *gormRepository) UpdateUserName(ctx context.Context, id uuid.UUID, name string) error {
+	return r.updateUser(ctx, id, map[string]any{"name": name, "updated_at": time.Now()})
+}
+
+func (r *gormRepository) UpdateUserPassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	return r.updateUser(ctx, id, map[string]any{"password_hash": passwordHash, "updated_at": time.Now()})
+}
+
+func (r *gormRepository) updateUser(ctx context.Context, id uuid.UUID, changes map[string]any) error {
+	result := r.db.WithContext(ctx).Model(&User{}).Where("id = ?", id).Updates(changes)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errUserNotFound
+	}
+	return nil
+}
+
 func (r *gormRepository) Transaction(ctx context.Context, work func(Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return work(&gormRepository{db: tx})
@@ -150,7 +179,12 @@ func (r *gormRepository) CreateUserWithRole(ctx context.Context, user *User, cho
 			return err
 		}
 
-		role, err := transactional.FindRoleByCode(ctx, chooseRole(existing))
+		code := chooseRole(existing)
+		if code == "" {
+			return transactional.CreateUser(ctx, user)
+		}
+
+		role, err := transactional.FindRoleByCode(ctx, code)
 		if err != nil {
 			return err
 		}
@@ -238,11 +272,19 @@ func (f UserFilter) apply(db *gorm.DB) *gorm.DB {
 		pattern := database.ContainsPattern(f.Search)
 		db = db.Where("users.name ILIKE ? OR users.email ILIKE ?", pattern, pattern)
 	}
-	if f.Role != "" {
-		db = db.Where("role.code = ?", f.Role)
-	}
+	db = f.applyRole(db)
 	if f.Active != nil {
 		db = db.Where("users.active = ?", *f.Active)
+	}
+	return db
+}
+
+func (f UserFilter) applyRole(db *gorm.DB) *gorm.DB {
+	if f.Role == pendingRoleFilter {
+		return db.Where("users.role_id IS NULL")
+	}
+	if f.Role != "" {
+		return db.Where("role.code = ?", f.Role)
 	}
 	return db
 }
@@ -286,10 +328,11 @@ func (r *gormRepository) UpsertRoles(ctx context.Context, roles []Role) error {
 	}).Create(&roles).Error
 }
 
-func (r *gormRepository) AssignRoleToUnassigned(ctx context.Context, roleCode string) (int64, error) {
+func (r *gormRepository) AssignRoleToLegacyUsers(ctx context.Context, roleCode string) (int64, error) {
 	result := r.db.WithContext(ctx).Exec(
 		`UPDATE users SET role_id = (SELECT id FROM role WHERE code = ?), updated_at = now()
-		  WHERE role_id IS NULL AND EXISTS (SELECT 1 FROM role WHERE code = ?)`,
+		  WHERE role_id IS NULL AND EXISTS (SELECT 1 FROM role WHERE code = ?)
+		    AND NOT EXISTS (SELECT 1 FROM users AS assigned WHERE assigned.role_id IS NOT NULL)`,
 		roleCode, roleCode,
 	)
 	return result.RowsAffected, result.Error

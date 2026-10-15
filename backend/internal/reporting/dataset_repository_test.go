@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/databasetest"
 )
 
@@ -25,7 +26,7 @@ func previewWith(t *testing.T, query PreviewQuery, results ...databasetest.Resul
 	t.Helper()
 	db, recorder := databasetest.Open(t, results...)
 	reports := &service{repository: NewRepository(db), now: func() time.Time { return fixedNow }}
-	preview, err := reports.PreviewReport(context.Background(), query)
+	preview, err := reports.PreviewReport(context.Background(), access.RoleAdmin, query)
 	if err != nil {
 		t.Fatalf("preview %s: %v", query.Type, err)
 	}
@@ -168,7 +169,7 @@ func TestStockReportScopesWarehousesAndLowStockToProject(t *testing.T) {
 func TestStockReportRejectsAPeriod(t *testing.T) {
 	db, recorder := databasetest.Open(t)
 	reports := &service{repository: NewRepository(db), now: func() time.Time { return fixedNow }}
-	_, err := reports.PreviewReport(context.Background(), PreviewQuery{Type: typeStock, PeriodStart: &october1})
+	_, err := reports.PreviewReport(context.Background(), access.RoleAdmin, PreviewQuery{Type: typeStock, PeriodStart: &october1})
 	if !errors.Is(err, errReportPeriodUnsupported) || len(recorder.Queries()) != 0 {
 		t.Fatalf("got %v with %d queries", err, len(recorder.Queries()))
 	}
@@ -240,7 +241,7 @@ func TestUnknownProjectIsRejectedInPreview(t *testing.T) {
 	db, _ := databasetest.Open(t, databasetest.Result{Columns: []string{"code", "name"}})
 	reports := &service{repository: NewRepository(db), now: func() time.Time { return fixedNow }}
 	projectID := uuid.New()
-	_, err := reports.PreviewReport(context.Background(), PreviewQuery{Type: typeProjects, ProjectID: &projectID})
+	_, err := reports.PreviewReport(context.Background(), access.RoleAdmin, PreviewQuery{Type: typeProjects, ProjectID: &projectID})
 	if !errors.Is(err, errProjectNotFound) {
 		t.Fatalf("got %v", err)
 	}
@@ -253,7 +254,7 @@ func TestReportListReturnsProjectAndCreatorNames(t *testing.T) {
 		databasetest.Result{Columns: reportRowColumns, Rows: [][]driver.Value{reportRowValues(reportID, creatorID, "pdf")}},
 	)
 
-	page, err := NewService(NewRepository(db)).ListReports(context.Background(), ReportQuery{Type: typeCashFlow})
+	page, err := NewService(NewRepository(db)).ListReports(context.Background(), access.RoleAdmin, ReportQuery{Type: typeCashFlow})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -262,7 +263,7 @@ func TestReportListReturnsProjectAndCreatorNames(t *testing.T) {
 		t.Fatalf("got %+v", item)
 	}
 	assertSQLContains(t, recorder.Queries()[1].SQL, "(SELECT users.name FROM users WHERE users.id = report.created_by) AS created_by_name",
-		"report.type = $1", "ORDER BY report.created_at DESC")
+		"report.type = $1", "report.type IN ($2,$3,$4,$5,$6,$7,$8)", "ORDER BY report.created_at DESC")
 }
 
 var reportRowColumns = []string{

@@ -1,4 +1,4 @@
-import { LogOut, Search } from 'lucide-react'
+import { CircleUserRound, LogOut, Search } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
@@ -117,14 +117,23 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
           ))}
         </nav>
 
-        <div className="mt-3 flex items-center gap-2.5 rounded-xl px-2 py-2">
-          <Avatar name={user?.name ?? user?.email ?? ''} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-medium text-slate-900">{user?.name ?? 'Pengguna'}</p>
-            <p className="truncate text-xs text-slate-500" title={user?.email ?? ''}>
-              {user?.role?.name ?? 'Tanpa peran'}
-            </p>
-          </div>
+        <div className="mt-3 flex items-center gap-1 rounded-xl px-1 py-1">
+          <NavLink
+            to="/akun"
+            aria-label="Akun saya"
+            className={({ isActive }) =>
+              `flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1 py-1 transition-[background-color,transform]
+               motion-safe:active:scale-[0.98] ${isActive ? 'bg-white shadow-hairline' : 'hover:bg-black/[0.045]'}`
+            }
+          >
+            <Avatar name={user?.name ?? user?.email ?? ''} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-slate-900">{user?.name ?? 'Pengguna'}</p>
+              <p className="truncate text-xs text-slate-500" title={user?.email ?? ''}>
+                {user?.role?.name ?? 'Tanpa peran'}
+              </p>
+            </div>
+          </NavLink>
           <SignOutButton isPending={logout.isPending} onClick={endSession} />
         </div>
       </aside>
@@ -149,6 +158,14 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
                 >
                   <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
                 </button>
+                <NavLink
+                  to="/akun"
+                  aria-label="Akun saya"
+                  title="Akun saya"
+                  className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-black/[0.05] hover:text-slate-900"
+                >
+                  <CircleUserRound aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                </NavLink>
                 <SignOutButton isPending={logout.isPending} onClick={endSession} />
               </div>
             </div>
