@@ -14,6 +14,7 @@ const PAD_TOP = 12
 const PAD_BOTTOM = 28
 const PAD_LEFT = 64
 const TICKS = 4
+const MIN_LABEL_SLOT = 32
 
 // Masuk digambar ke atas dan keluar ke bawah dari garis nol, jadi bulan yang
 // tekor langsung terlihat tanpa harus membandingkan dua batang berdampingan.
@@ -42,6 +43,7 @@ export function CashFlowChart({ periods }: { periods: CashFlowBar[] }) {
   const plotWidth = Math.max(0, width - PAD_LEFT)
   const slot = periods.length > 0 ? plotWidth / periods.length : 0
   const barWidth = Math.min(28, slot * 0.5)
+  const labelEvery = slot >= MIN_LABEL_SLOT ? 1 : Math.ceil(MIN_LABEL_SLOT / Math.max(slot, 1))
   const ticks = Array.from({ length: TICKS + 1 }, (_, index) => scale - (index * 2 * scale) / TICKS)
   const selected = active === null ? null : periods[active]
 
@@ -89,6 +91,7 @@ export function CashFlowChart({ periods }: { periods: CashFlowBar[] }) {
             const center = PAD_LEFT + slot * index + slot / 2
             const isActive = active === index
             const dimmed = active !== null && !isActive
+            const showLabel = isActive || (periods.length - 1 - index) % labelEvery === 0
             return (
               <g key={period.period} className="transition-opacity duration-150" opacity={dimmed ? 0.45 : 1}>
                 <rect
@@ -124,14 +127,16 @@ export function CashFlowChart({ periods }: { periods: CashFlowBar[] }) {
                     strokeWidth={1.5}
                   />
                 ) : null}
-                <text
-                  x={center}
-                  y={HEIGHT - 8}
-                  textAnchor="middle"
-                  className={`text-[11px] ${isActive ? 'fill-slate-900 font-medium' : 'fill-slate-500'}`}
-                >
-                  {shortMonth(period.period)}
-                </text>
+                {showLabel ? (
+                  <text
+                    x={center}
+                    y={HEIGHT - 8}
+                    textAnchor="middle"
+                    className={`text-[11px] ${isActive ? 'fill-slate-900 font-medium' : 'fill-slate-500'}`}
+                  >
+                    {shortMonth(period.period)}
+                  </text>
+                ) : null}
               </g>
             )
           })}
