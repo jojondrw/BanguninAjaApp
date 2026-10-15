@@ -34,6 +34,21 @@ func (c *Controller) ListSavedLocations(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizeSavedLocations(ctx *gin.Context) {
+	userID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var query SavedLocationSummaryQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	summary, err := c.service.SummarizeSavedLocations(ctx.Request.Context(), userID, query)
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) GetSavedLocation(ctx *gin.Context) {
 	userID, id, err := ownerAndID(ctx)
 	if err != nil {

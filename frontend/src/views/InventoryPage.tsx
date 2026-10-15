@@ -4,7 +4,6 @@ import {
   useLowStockMaterials,
   useMaterials,
   useStockMovementCount,
-  useUnitsOfMeasure,
   useWarehouses,
 } from '../controllers/useInventory'
 import { number } from '../shared/format'
@@ -15,7 +14,6 @@ import { SectionTabs } from './components/ListTools'
 import { kpiText } from './components/kpiText'
 import { AssetsCard } from './inventory/AssetsCard'
 import { EquipmentCard } from './inventory/EquipmentCard'
-import type { Lookups } from './inventory/inventoryShared'
 import { MaterialsCard } from './inventory/MaterialsCard'
 import { MovementsCard } from './inventory/MovementsCard'
 import { LowStockCard, StockCard } from './inventory/StockCards'
@@ -34,13 +32,8 @@ export function InventoryPage() {
   const [tab, setTab] = useState<InventoryTab>('stock')
   const materials = useMaterials({ pageSize: 1 })
   const warehouses = useWarehouses({ pageSize: 1 })
-  const units = useUnitsOfMeasure()
   const lowStock = useLowStockMaterials(1)
   const movementsThisMonth = useStockMovementCount({ dateFrom: firstDayOfMonth(today), dateTo: today })
-
-  const lookups: Lookups = {
-    units: units.data?.items ?? [],
-  }
 
   const lowStockCount = lowStock.data?.totalItems ?? 0
 
@@ -77,9 +70,9 @@ export function InventoryPage() {
         <div className="grid gap-6">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <StockCard />
-            <LowStockCard lookups={lookups} />
+            <LowStockCard />
           </div>
-          <MovementsCard lookups={lookups} today={today} />
+          <MovementsCard today={today} />
         </div>
       ) : null}
 

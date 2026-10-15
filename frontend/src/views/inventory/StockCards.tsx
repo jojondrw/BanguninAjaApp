@@ -6,7 +6,7 @@ import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { materialOptions, warehouseOptions } from '../../models/lookupApi'
 import { Pager, Toolbar } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
-import { PAGE_SIZE, quantityText, unitCode, type Lookups } from './inventoryShared'
+import { PAGE_SIZE, quantityText } from './inventoryShared'
 
 const ALL_WAREHOUSES = warehouseOptions()
 
@@ -98,7 +98,7 @@ export function StockCard() {
   )
 }
 
-export function LowStockCard({ lookups }: { lookups: Lookups }) {
+export function LowStockCard() {
   const [page, setPage] = useState(1)
   const lowStock = useLowStockMaterials(page)
 
@@ -126,14 +126,14 @@ export function LowStockCard({ lookups }: { lookups: Lookups }) {
                 align: 'right',
                 cell: (row) => (
                   <span className="text-red-700">
-                    {quantityText(row.totalQuantity, unitCode(lookups, row.unitOfMeasureId))}
+                    {quantityText(row.totalQuantity, row.unitOfMeasureCode)}
                   </span>
                 ),
               },
               {
                 header: 'Minimum',
                 align: 'right',
-                cell: (row) => quantityText(row.minimumStock, unitCode(lookups, row.unitOfMeasureId)),
+                cell: (row) => quantityText(row.minimumStock, row.unitOfMeasureCode),
               },
             ]}
           />

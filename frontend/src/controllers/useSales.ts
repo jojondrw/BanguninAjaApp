@@ -122,6 +122,17 @@ export function useInstallments(filter: InstallmentFilter, enabled = true) {
   })
 }
 
+// Total, terbayar, dan nomor terakhir dihitung backend dari semua angsuran,
+// jadi kontrak dengan jadwal panjang tetap benar walau daftarnya berhalaman.
+export function useInstallmentSummary(contractId: string, enabled = true) {
+  return useQuery({
+    queryKey: [SALES_KEY, 'installment-summary', contractId],
+    queryFn: () => salesApi.installmentSummary(contractId),
+    enabled,
+    ...DATA_QUERY,
+  })
+}
+
 // Hanya butuh totalItems, jadi cukup satu baris per permintaan.
 export function useInstallmentCount(status: InstallmentStatus) {
   return useQuery({

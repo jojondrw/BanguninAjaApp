@@ -297,6 +297,16 @@ func (c *Controller) ListInstallments(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizeInstallments(ctx *gin.Context) {
+	contractID, err := httprequest.PathID(ctx, idParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	summary, err := c.service.SummarizeInstallments(ctx.Request.Context(), contractID)
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) CreateInstallment(ctx *gin.Context) {
 	contractID, err := httprequest.PathID(ctx, idParam)
 	if err != nil {

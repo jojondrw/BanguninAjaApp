@@ -36,12 +36,13 @@ type MaterialResponse struct {
 }
 
 type LowStockResponse struct {
-	MaterialID      uuid.UUID `json:"materialId"`
-	Code            string    `json:"code"`
-	Name            string    `json:"name"`
-	UnitOfMeasureID uuid.UUID `json:"unitOfMeasureId"`
-	MinimumStock    float64   `json:"minimumStock"`
-	TotalQuantity   float64   `json:"totalQuantity"`
+	MaterialID        uuid.UUID `json:"materialId"`
+	Code              string    `json:"code"`
+	Name              string    `json:"name"`
+	UnitOfMeasureID   uuid.UUID `json:"unitOfMeasureId"`
+	UnitOfMeasureCode string    `json:"unitOfMeasureCode"`
+	MinimumStock      float64   `json:"minimumStock"`
+	TotalQuantity     float64   `json:"totalQuantity"`
 }
 
 type WarehouseRequest struct {
@@ -139,12 +140,13 @@ func newMaterialResponse(material Material) MaterialResponse {
 
 func newLowStockResponse(level StockLevel) LowStockResponse {
 	return LowStockResponse{
-		MaterialID:      level.MaterialID,
-		Code:            level.Code,
-		Name:            level.Name,
-		UnitOfMeasureID: level.UnitOfMeasureID,
-		MinimumStock:    level.MinimumStock,
-		TotalQuantity:   level.TotalQuantity,
+		MaterialID:        level.MaterialID,
+		Code:              level.Code,
+		Name:              level.Name,
+		UnitOfMeasureID:   level.UnitOfMeasureID,
+		UnitOfMeasureCode: level.UnitOfMeasureCode,
+		MinimumStock:      level.MinimumStock,
+		TotalQuantity:     level.TotalQuantity,
 	}
 }
 

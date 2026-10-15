@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { financeApi, locationApi, projectApi, scoringApi, siteApi } from '../models/erpApi'
 import type { CashFlowFilter } from '../models/finance'
@@ -82,6 +82,26 @@ export function useSiteEvaluate() {
   return useMutation({
     mutationFn: siteApi.evaluate,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [SAVED_LOCATIONS_KEY] }),
+  })
+}
+
+// Satu halaman lokasi tersimpan sebuah proyek, urut skor tertinggi dari backend.
+export function useSavedLocationPage(projectId: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: [SAVED_LOCATIONS_KEY, projectId, 'page', page, pageSize],
+    queryFn: () => locationApi.saved({ projectId, page, pageSize }),
+    placeholderData: keepPreviousData,
+    ...DATA_QUERY,
+  })
+}
+
+// Jumlah, skor tertinggi, rata-rata, dan evaluasi terakhir dari semua lokasi.
+// Kuncinya di bawah SAVED_LOCATIONS_KEY, jadi ikut segar setelah evaluasi baru.
+export function useSavedLocationSummary(projectId?: string) {
+  return useQuery({
+    queryKey: [SAVED_LOCATIONS_KEY, 'summary', projectId ?? 'all'],
+    queryFn: () => locationApi.savedSummary(projectId),
+    ...DATA_QUERY,
   })
 }
 

@@ -172,7 +172,27 @@ export interface SavedLocationFilter {
   pageSize?: number
 }
 
+export interface SavedLocationPick {
+  id: string
+  name: string
+  score: number
+  savedAt: string
+}
+
+// Ringkasan semua lokasi tersimpan milik pengguna, dihitung backend, jadi
+// tidak terbatas pada halaman daftar yang sedang diambil. best dan latest null
+// kalau belum ada lokasi.
+export interface SavedLocationSummary {
+  count: number
+  averageScore: number
+  best: SavedLocationPick | null
+  latest: SavedLocationPick | null
+}
+
 export const locationApi = {
   saved: (filter: SavedLocationFilter = {}) =>
     request<Page<SavedLocation>>(`/locations/saved${toQueryString({ ...filter })}`),
+
+  savedSummary: (projectId?: string) =>
+    request<SavedLocationSummary>(`/locations/saved/summary${toQueryString({ projectId })}`),
 }

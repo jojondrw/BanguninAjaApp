@@ -13,6 +13,9 @@ import (
 const (
 	lowStockCondition = "m.minimum_stock > 0 AND COALESCE(s.total, 0) < m.minimum_stock"
 	lowStockSource    = "material m LEFT JOIN (SELECT material_id, SUM(quantity) AS total FROM stock GROUP BY material_id) s ON s.material_id = m.id"
+	lowStockUnitJoin  = "LEFT JOIN unit_of_measure u ON u.id = m.unit_of_measure_id"
+	lowStockColumns   = "m.id AS material_id, m.code, m.name, m.unit_of_measure_id, COALESCE(u.code, '') AS unit_of_measure_code, " +
+		"m.minimum_stock, COALESCE(s.total, 0) AS total_quantity"
 
 	unitJoin     = "JOIN unit_of_measure ON unit_of_measure.id = material.unit_of_measure_id"
 	stockColumns = "stock.id, stock.material_id, material.code AS material_code, material.name AS material_name, " +
@@ -61,12 +64,13 @@ type StockMovementFilter struct {
 }
 
 type StockLevel struct {
-	MaterialID      uuid.UUID
-	Code            string
-	Name            string
-	UnitOfMeasureID uuid.UUID
-	MinimumStock    float64
-	TotalQuantity   float64
+	MaterialID        uuid.UUID
+	Code              string
+	Name              string
+	UnitOfMeasureID   uuid.UUID
+	UnitOfMeasureCode string
+	MinimumStock      float64
+	TotalQuantity     float64
 }
 
 type StockRow struct {
@@ -159,7 +163,8 @@ func (r *gormRepository) ListLowStockMaterials(ctx context.Context, offset, limi
 	levels := make([]StockLevel, 0, limit)
 	err = r.db.WithContext(ctx).
 		Table(lowStockSource).
-		Select("m.id AS material_id, m.code, m.name, m.unit_of_measure_id, m.minimum_stock, COALESCE(s.total, 0) AS total_quantity").
+		Select(lowStockColumns).
+		Joins(lowStockUnitJoin).
 		Where(lowStockCondition).
 		Order("m.code ASC").
 		Offset(offset).

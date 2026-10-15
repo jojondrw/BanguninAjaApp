@@ -57,14 +57,13 @@ export function useBillingPayments(kind: BillingKind, id: string, page: number, 
   })
 }
 
-// Pilihan faktur di formulir piutang: faktur pelanggan yang belum dicatat
-// sebagai piutang, dipersempit ke satu pelanggan kalau sudah dipilih.
-export function useUnrecordedInvoices(customerId: string) {
-  return useBillingList('invoices', {
-    partyType: 'customer',
-    partyId: customerId === '' ? undefined : customerId,
-    recorded: false,
-    pageSize: MAX_PAGE_SIZE,
+// Faktur dan piutang tertaut yang total bayarnya berbeda. Ikut dibatalkan
+// bersama query tagihan lain setelah pembayaran atau perubahan.
+export function useBillingReconciliation(page: number, pageSize: number) {
+  return useQuery({
+    queryKey: [BILLING_KEY, 'reconciliation', page, pageSize],
+    queryFn: () => billingApi.reconciliation(page, pageSize),
+    ...PAGED_QUERY,
   })
 }
 

@@ -43,6 +43,24 @@ type SavedLocationQuery struct {
 	MaxLatitude       *float64   `form:"maxLatitude" binding:"omitempty,min=-90,max=90"`
 }
 
+type SavedLocationSummaryQuery struct {
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type SavedLocationPickResponse struct {
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Score   int       `json:"score"`
+	SavedAt time.Time `json:"savedAt"`
+}
+
+type SavedLocationSummaryResponse struct {
+	Count        int64                      `json:"count"`
+	AverageScore int64                      `json:"averageScore"`
+	Best         *SavedLocationPickResponse `json:"best"`
+	Latest       *SavedLocationPickResponse `json:"latest"`
+}
+
 type DimensionScoreResponse struct {
 	DimensionID uuid.UUID `json:"dimensionId"`
 	Value       int       `json:"value"`
@@ -110,6 +128,22 @@ type ComparisonDetailResponse struct {
 	Items     []ComparisonItemResponse `json:"items"`
 	CreatedAt time.Time                `json:"createdAt"`
 	UpdatedAt time.Time                `json:"updatedAt"`
+}
+
+func newSavedLocationPickResponse(pick *SavedLocationPick) *SavedLocationPickResponse {
+	if pick == nil {
+		return nil
+	}
+	return &SavedLocationPickResponse{ID: pick.ID, Name: pick.Name, Score: pick.Score, SavedAt: pick.SavedAt}
+}
+
+func newSavedLocationSummaryResponse(totals SavedLocationTotals) SavedLocationSummaryResponse {
+	return SavedLocationSummaryResponse{
+		Count:        totals.Count,
+		AverageScore: totals.AverageScore,
+		Best:         newSavedLocationPickResponse(totals.Best),
+		Latest:       newSavedLocationPickResponse(totals.Latest),
+	}
 }
 
 func newSavedLocationResponse(location SavedLocation) SavedLocationResponse {

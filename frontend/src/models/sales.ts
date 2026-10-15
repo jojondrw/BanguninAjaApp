@@ -161,6 +161,17 @@ export interface Installment {
   updatedAt: string
 }
 
+// Ringkasan semua angsuran satu kontrak dari backend, bukan dari halaman
+// daftar yang sedang tampil. lastNumber adalah nomor angsuran tertinggi.
+export interface InstallmentSummary {
+  count: number
+  paidCount: number
+  total: number
+  paidTotal: number
+  overdueCount: number
+  lastNumber: number
+}
+
 export interface InstallmentFilter {
   contractId?: string
   customerId?: string

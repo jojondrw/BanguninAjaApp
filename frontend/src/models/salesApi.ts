@@ -14,6 +14,7 @@ import {
   type InstallmentFilter,
   type InstallmentPaymentRequest,
   type InstallmentRequest,
+  type InstallmentSummary,
   type Lead,
   type LeadConversion,
   type LeadFilter,
@@ -94,6 +95,9 @@ export const salesApi = {
 
   installments: (filter: InstallmentFilter = {}) =>
     request<Page<Installment>>(`/sales/installments${toQueryString({ ...filter })}`),
+
+  installmentSummary: (contractId: string) =>
+    request<InstallmentSummary>(`/sales/contracts/${contractId}/installments/summary`),
 
   createInstallment: (contractId: string, body: InstallmentRequest) =>
     request<Installment>(`/sales/contracts/${contractId}/installments`, { method: 'POST', body }),

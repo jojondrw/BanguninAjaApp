@@ -42,6 +42,7 @@ var (
 
 type Service interface {
 	ListSavedLocations(ctx context.Context, userID uuid.UUID, query SavedLocationQuery) (pagination.Page[SavedLocationResponse], error)
+	SummarizeSavedLocations(ctx context.Context, userID uuid.UUID, query SavedLocationSummaryQuery) (SavedLocationSummaryResponse, error)
 	GetSavedLocation(ctx context.Context, userID, id uuid.UUID) (SavedLocationDetailResponse, error)
 	CreateSavedLocation(ctx context.Context, userID uuid.UUID, request SavedLocationRequest) (SavedLocationDetailResponse, error)
 	UpdateSavedLocation(ctx context.Context, userID, id uuid.UUID, request SavedLocationRequest) (SavedLocationDetailResponse, error)
@@ -84,6 +85,14 @@ func (s *service) ListSavedLocations(ctx context.Context, userID uuid.UUID, quer
 		return pagination.Page[SavedLocationResponse]{}, apperror.Internal(err)
 	}
 	return pagination.New(pagination.Map(locations, newSavedLocationResponse), query.Query, total), nil
+}
+
+func (s *service) SummarizeSavedLocations(ctx context.Context, userID uuid.UUID, query SavedLocationSummaryQuery) (SavedLocationSummaryResponse, error) {
+	totals, err := s.repository.SummarizeSavedLocations(ctx, SavedLocationFilter{UserID: userID, ProjectID: query.ProjectID})
+	if err != nil {
+		return SavedLocationSummaryResponse{}, apperror.Internal(err)
+	}
+	return newSavedLocationSummaryResponse(totals), nil
 }
 
 func (s *service) GetSavedLocation(ctx context.Context, userID, id uuid.UUID) (SavedLocationDetailResponse, error) {

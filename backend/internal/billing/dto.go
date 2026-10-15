@@ -130,6 +130,23 @@ type PayableResponse struct {
 	UpdatedAt           time.Time  `json:"updatedAt"`
 }
 
+type ReconciliationQuery struct {
+	pagination.Query
+}
+
+type ReconciliationResponse struct {
+	InvoiceID            uuid.UUID `json:"invoiceId"`
+	InvoiceNumber        string    `json:"invoiceNumber"`
+	InvoiceAmount        int64     `json:"invoiceAmount"`
+	InvoicePaidAmount    int64     `json:"invoicePaidAmount"`
+	ReceivableID         uuid.UUID `json:"receivableId"`
+	ReceivableReference  string    `json:"receivableReference"`
+	ReceivableAmount     int64     `json:"receivableAmount"`
+	ReceivablePaidAmount int64     `json:"receivablePaidAmount"`
+	CustomerName         *string   `json:"customerName"`
+	Difference           int64     `json:"difference"`
+}
+
 type PaymentRequest struct {
 	Amount    int64      `json:"amount" binding:"required,gt=0"`
 	PaidAt    *time.Time `json:"paidAt"`
@@ -251,5 +268,20 @@ func newPayableResponse(row PayableRow, today time.Time) PayableResponse {
 		LastPaidAt:          row.LastPaidAt,
 		CreatedAt:           payable.CreatedAt,
 		UpdatedAt:           payable.UpdatedAt,
+	}
+}
+
+func newReconciliationResponse(row ReconciliationRow) ReconciliationResponse {
+	return ReconciliationResponse{
+		InvoiceID:            row.InvoiceID,
+		InvoiceNumber:        row.InvoiceNumber,
+		InvoiceAmount:        row.InvoiceAmount,
+		InvoicePaidAmount:    row.InvoicePaidAmount,
+		ReceivableID:         row.ReceivableID,
+		ReceivableReference:  row.ReceivableReference,
+		ReceivableAmount:     row.ReceivableAmount,
+		ReceivablePaidAmount: row.ReceivablePaidAmount,
+		CustomerName:         row.CustomerName,
+		Difference:           row.InvoicePaidAmount - row.ReceivablePaidAmount,
 	}
 }

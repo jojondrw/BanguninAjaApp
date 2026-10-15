@@ -47,6 +47,7 @@ export interface LowStockMaterial {
   code: string
   name: string
   unitOfMeasureId: string
+  unitOfMeasureCode: string
   minimumStock: number
   totalQuantity: number
 }
