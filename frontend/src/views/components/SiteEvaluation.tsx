@@ -8,6 +8,7 @@ import {
 import { useScopedCan } from '../../controllers/useAccess'
 import type { SavedLocation, SiteEvaluateResponse } from '../../models/erpApi'
 import { projectOptions } from '../../models/lookupApi'
+import { SiteReportPanel } from '../location/ReportDownload'
 import { suggestedProfileCode, type Project } from '../../models/project'
 import { Button, CONTROL_CLASS, ErrorNote, Field } from './Form'
 import { Card, Empty, Kpi, KpiRow, Loading } from './Data'
@@ -300,6 +301,8 @@ function ProjectSelect({ value, onChange }: { value: string; onChange: (projectI
 function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
   return (
     <>
+      <SiteReportPanel key={result.saved_location_id} savedLocationId={result.saved_location_id} />
+
       <KpiRow>
         <Kpi
           label="Skor keseluruhan"
