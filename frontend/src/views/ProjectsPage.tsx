@@ -1,5 +1,5 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus, X } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { useCan } from '../controllers/useAccess'
@@ -188,6 +188,11 @@ export function ProjectsPage() {
             variant={isFormOpen ? 'subtle' : 'primary'}
             onClick={() => setIsFormOpen((open) => !open)}
           >
+            {isFormOpen ? (
+              <X aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+            ) : (
+              <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+            )}
             {isFormOpen ? 'Tutup formulir' : 'Tambah proyek'}
           </Button>
         ) : undefined

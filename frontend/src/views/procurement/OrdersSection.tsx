@@ -26,7 +26,7 @@ import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
-import { ToolbarInput } from '../components/RecordControls'
+import { FormToggle, ToolbarInput } from '../components/RecordControls'
 import { useLookupLabel } from '../components/searchSelectLogic'
 import { OPTION_LIMIT, PAGE_SIZE, type OrderPrefill } from './lookup'
 import { ConfirmAction, Facts } from './parts'
@@ -384,9 +384,7 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
               }}
             />
           </div>
-          <Button variant={isFormOpen ? 'subtle' : 'primary'} onClick={toggleForm}>
-            {isFormOpen ? 'Tutup formulir' : 'Buat pesanan'}
-          </Button>
+          <FormToggle isOpen={isFormOpen} openLabel="Buat pesanan" onToggle={toggleForm} />
         </div>
 
         {notice ? (
