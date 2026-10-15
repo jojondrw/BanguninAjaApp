@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
 )
 
 type RegisterRequest struct {
@@ -17,11 +20,43 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required,min=8,max=72"`
 }
 
+type RoleResponse struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
 type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          uuid.UUID         `json:"id"`
+	Name        string            `json:"name"`
+	Email       string            `json:"email"`
+	Active      bool              `json:"active"`
+	Role        *RoleResponse     `json:"role"`
+	Permissions map[string]string `json:"permissions"`
+	CreatedAt   time.Time         `json:"createdAt"`
+}
+
+type UserQuery struct {
+	pagination.Query
+	Search string `form:"search" binding:"omitempty,max=160"`
+	Role   string `form:"role" binding:"omitempty,max=30"`
+	Active *bool  `form:"active"`
+}
+
+type ChangeRoleRequest struct {
+	Role string `json:"role" binding:"required,max=30"`
+}
+
+type ChangeActiveRequest struct {
+	Active *bool `json:"active" binding:"required"`
+}
+
+type ManagedUserResponse struct {
+	ID        uuid.UUID     `json:"id"`
+	Name      string        `json:"name"`
+	Email     string        `json:"email"`
+	Active    bool          `json:"active"`
+	Role      *RoleResponse `json:"role"`
+	CreatedAt time.Time     `json:"createdAt"`
 }
 
 type SessionResponse struct {
@@ -36,11 +71,39 @@ type Session struct {
 	RefreshExpiresAt time.Time
 }
 
-func newUserResponse(user User) UserResponse {
-	return UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+func newUserResponse(user User, role *Role) UserResponse {
+	response := UserResponse{
+		ID:          user.ID,
+		Name:        user.Name,
+		Email:       user.Email,
+		Active:      user.Active,
+		Permissions: map[string]string{},
+		CreatedAt:   user.CreatedAt,
 	}
+	if role != nil {
+		response.Role = &RoleResponse{Code: role.Code, Name: role.Name}
+		response.Permissions = access.Permissions(role.Code)
+	}
+	return response
+}
+
+func newManagedUserResponse(row UserRow) ManagedUserResponse {
+	response := ManagedUserResponse{
+		ID:        row.ID,
+		Name:      row.Name,
+		Email:     row.Email,
+		Active:    row.Active,
+		CreatedAt: row.CreatedAt,
+	}
+	if row.RoleCode != nil {
+		response.Role = &RoleResponse{Code: *row.RoleCode, Name: valueOf(row.RoleName)}
+	}
+	return response
+}
+
+func valueOf(text *string) string {
+	if text == nil {
+		return ""
+	}
+	return *text
 }

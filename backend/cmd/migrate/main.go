@@ -114,6 +114,10 @@ func run() error {
 }
 
 func backfill(db *gorm.DB) error {
+	if err := prepareRoles(db); err != nil {
+		return err
+	}
+
 	posted, err := finance.PostMissingCashJournals(context.Background(), finance.NewRepository(db))
 	if err != nil {
 		return err
@@ -125,5 +129,22 @@ func backfill(db *gorm.DB) error {
 		return err
 	}
 	slog.Info("billing payment history ready", slog.Int64("backfilled", payments))
+	return nil
+}
+
+func prepareRoles(db *gorm.DB) error {
+	repository := auth.NewRepository(db)
+
+	seeded, err := auth.EnsureRoles(context.Background(), repository)
+	if err != nil {
+		return err
+	}
+	slog.Info("roles ready", slog.Int("roles", seeded))
+
+	assigned, err := auth.AssignAdminToUnassignedUsers(context.Background(), repository)
+	if err != nil {
+		return err
+	}
+	slog.Info("users without role promoted to admin", slog.Int64("users", assigned))
 	return nil
 }

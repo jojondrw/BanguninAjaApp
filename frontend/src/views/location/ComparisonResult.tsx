@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { useBuildingProfiles } from '../../controllers/useErp'
 import {
   useCreateComparison,
@@ -139,6 +140,7 @@ function SaveComparisonForm({ selectedIds, opened, isChanged, onSaved }: {
   const [isBlank, setIsBlank] = useState(false)
   const create = useCreateComparison()
   const update = useUpdateComparison()
+  const canSave = useScopedCan('write')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -167,6 +169,10 @@ function SaveComparisonForm({ selectedIds, opened, isChanged, onSaved }: {
   // Catatan berhasil hanya relevan selama perbandingan yang baru disimpan
   // masih yang sedang dibuka dan pilihannya belum diubah lagi.
   const isCurrent = (detail: ComparisonDetail) => detail.id === opened?.id && !isChanged
+
+  if (!canSave) {
+    return null
+  }
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 border-t border-slate-100 pt-5">

@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react'
 
+import { useScopedCan } from '../../controllers/useAccess'
 import { ErrorNote, SuccessNote } from '../components/Form'
 
 // Tombol aksi baris untuk SDM dan Inventaris. Bentuknya sama dengan RowAction
@@ -75,6 +76,11 @@ export function ConfirmAction({
   onConfirm,
   children,
 }: ConfirmActionProps) {
+  const canWrite = useScopedCan('write')
+
+  if (!canWrite) {
+    return null
+  }
   if (!isAsking && !isPending) {
     return <TextAction label={label} srLabel={srLabel} tone={tone === 'danger' ? 'muted' : 'accent'} onClick={onAsk} />
   }

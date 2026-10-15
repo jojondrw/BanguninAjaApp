@@ -5,6 +5,7 @@ import {
   useSavedLocations,
   useSiteEvaluate,
 } from '../../controllers/useErp'
+import { useScopedCan } from '../../controllers/useAccess'
 import type { SavedLocation, SiteEvaluateResponse } from '../../models/erpApi'
 import { projectOptions } from '../../models/lookupApi'
 import { suggestedProfileCode, type Project } from '../../models/project'
@@ -68,6 +69,7 @@ interface SiteEvaluationProps {
 export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps) {
   const evaluate = useSiteEvaluate()
   const profiles = useBuildingProfiles()
+  const canEvaluate = useScopedCan('write')
 
   const [name, setName] = useState('')
   const [latitude, setLatitude] = useState('')
@@ -93,6 +95,9 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!canEvaluate) {
+      return
+    }
 
     const target = { latitude: Number(latitude), longitude: Number(longitude) }
     evaluate.mutate(
@@ -240,13 +245,19 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
               )}
             </div>
 
-            <Button
-              type="submit"
-              isPending={evaluate.isPending}
-              pendingLabel="Menganalisis..."
-            >
-              Evaluasi lokasi
-            </Button>
+            {canEvaluate ? (
+              <Button
+                type="submit"
+                isPending={evaluate.isPending}
+                pendingLabel="Menganalisis..."
+              >
+                Evaluasi lokasi
+              </Button>
+            ) : (
+              <p className="text-[13px] text-slate-500">
+                Evaluasi menyimpan lokasi baru, jadi hanya peran dengan akses ubah Analisis Lokasi yang bisa menjalankannya.
+              </p>
+            )}
 
             {evaluate.isError ? (
               <ErrorNote message={evaluate.error.message} />

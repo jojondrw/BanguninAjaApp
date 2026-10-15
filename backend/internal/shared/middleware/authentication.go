@@ -17,21 +17,31 @@ const (
 
 func Authentication(manager *token.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		value := bearerToken(c.GetHeader("Authorization"))
-		if value == "" {
-			abortUnauthorized(c, "missing_access_token", "Token akses tidak ditemukan")
-			return
+		if _, ok := authenticate(c, manager); ok {
+			c.Next()
 		}
-
-		userID, err := manager.ParseAccess(value)
-		if err != nil {
-			abortUnauthorized(c, "invalid_access_token", "Token akses tidak valid atau sudah kedaluwarsa")
-			return
-		}
-
-		c.Set(authenticatedUserKey, userID)
-		c.Next()
 	}
+}
+
+func authenticate(c *gin.Context, manager *token.Manager) (uuid.UUID, bool) {
+	if userID, ok := AuthenticatedUserID(c); ok {
+		return userID, true
+	}
+
+	value := bearerToken(c.GetHeader("Authorization"))
+	if value == "" {
+		abortUnauthorized(c, "missing_access_token", "Token akses tidak ditemukan")
+		return uuid.Nil, false
+	}
+
+	userID, err := manager.ParseAccess(value)
+	if err != nil {
+		abortUnauthorized(c, "invalid_access_token", "Token akses tidak valid atau sudah kedaluwarsa")
+		return uuid.Nil, false
+	}
+
+	c.Set(authenticatedUserKey, userID)
+	return userID, true
 }
 
 func AuthenticatedUserID(c *gin.Context) (uuid.UUID, bool) {
