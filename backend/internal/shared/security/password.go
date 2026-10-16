@@ -6,7 +6,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const hashCost = bcrypt.DefaultCost
+const (
+	hashCost         = bcrypt.DefaultCost
+	MaxPasswordBytes = 72
+)
+
+func PasswordTooLong(plain string) bool {
+	return len(plain) > MaxPasswordBytes
+}
 
 func HashPassword(plain string) (string, error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(plain), hashCost)
