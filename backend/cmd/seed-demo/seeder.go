@@ -59,6 +59,7 @@ type seeder struct {
 	services services
 	patcher  locationPatcher
 	history  progressRecorder
+	terms    termWriter
 	today    time.Time
 	owner    uuid.UUID
 	ids      map[string]uuid.UUID
@@ -84,6 +85,7 @@ func (s *seeder) run() error {
 		{"procurement", s.seedProcurement},
 		{"stock movements", s.seedStockMovements},
 		{"billing", s.seedBilling},
+		{"payment terms", s.seedPaymentTerms},
 		{"hr", s.seedHR},
 		{"assets", s.seedAssets},
 		{"locations", s.seedLocations},

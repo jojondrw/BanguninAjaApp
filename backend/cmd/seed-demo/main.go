@@ -106,6 +106,7 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 		services: newServices(ctx, tx, cfg),
 		patcher:  gormLocationPatcher{db: tx},
 		history:  gormProgressRecorder{db: tx},
+		terms:    gormTermWriter{db: tx},
 		today:    todayInJakarta(time.Now()),
 		owner:    owner,
 		ids:      map[string]uuid.UUID{},

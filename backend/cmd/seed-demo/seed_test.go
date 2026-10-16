@@ -252,6 +252,8 @@ func TestResetDeletesChildrenBeforeParents(t *testing.T) {
 		{"stock_movement", "material"},
 		{"purchase_order", "purchase_request"},
 		{"purchase_order", "vendor"},
+		{"payable", "vendor"},
+		{"construction_contract", "vendor"},
 		{"contract", "unit"},
 		{"contract", "customer"},
 		{"lead", "customer"},
