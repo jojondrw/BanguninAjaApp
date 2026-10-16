@@ -43,17 +43,29 @@ func (ProjectPhase) TableName() string {
 
 type BudgetItem struct {
 	entity.Base
-	ProjectID       uuid.UUID `gorm:"type:uuid;not null;index:idx_budget_item_project"`
-	Code            string    `gorm:"type:varchar(20);not null"`
-	Description     string    `gorm:"type:varchar(200);not null"`
-	Volume          float64   `gorm:"type:numeric(14,2);not null;default:0"`
-	UnitOfMeasureID uuid.UUID `gorm:"type:uuid;not null;index:idx_budget_item_unit_of_measure"`
-	UnitPrice       int64     `gorm:"not null;default:0"`
-	Total           int64     `gorm:"not null;default:0"`
+	ProjectID       uuid.UUID  `gorm:"type:uuid;not null;index:idx_budget_item_project"`
+	PhaseID         *uuid.UUID `gorm:"type:uuid;index:idx_budget_item_phase"`
+	Code            string     `gorm:"type:varchar(20);not null"`
+	Description     string     `gorm:"type:varchar(200);not null"`
+	Volume          float64    `gorm:"type:numeric(14,2);not null;default:0"`
+	UnitOfMeasureID uuid.UUID  `gorm:"type:uuid;not null;index:idx_budget_item_unit_of_measure"`
+	UnitPrice       int64      `gorm:"not null;default:0"`
+	Total           int64      `gorm:"not null;default:0"`
 }
 
 func (BudgetItem) TableName() string {
 	return "budget_item"
+}
+
+type ProgressSnapshot struct {
+	entity.Base
+	ProjectID  uuid.UUID `gorm:"type:uuid;not null;index:idx_project_progress_project"`
+	RecordedOn time.Time `gorm:"type:date;not null"`
+	Progress   int       `gorm:"not null"`
+}
+
+func (ProgressSnapshot) TableName() string {
+	return "project_progress"
 }
 
 type Permit struct {
@@ -83,7 +95,7 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &Permit{}, &ProjectMember{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &Permit{}, &ProjectMember{}}
 }
 
 func Indexes() []string {
@@ -99,6 +111,8 @@ func Constraints() []string {
 		database.ForeignKey("project_phase", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("budget_item", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("budget_item", "unit_of_measure_id", "unit_of_measure", database.DeleteRestrict),
+		database.ForeignKey("budget_item", "phase_id", "project_phase", database.DeleteSetNull),
+		database.ForeignKey("project_progress", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("permit", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
 		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
@@ -111,7 +125,9 @@ func Constraints() []string {
 		database.Check("budget_item", "volume", "volume >= 0"),
 		database.Check("budget_item", "unit_price", "unit_price >= 0"),
 		database.Check("permit", "status", "status IN ('submitted','issued','expired','rejected')"),
+		database.Check("project_progress", "progress", "progress BETWEEN 0 AND 100"),
 		database.Unique("budget_item", "project_code", "project_id, code"),
+		database.Unique("project_progress", "project_day", "project_id, recorded_on"),
 		database.Unique("project_member", "user_project", "user_id, project_id"),
 	}
 }

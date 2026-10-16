@@ -35,6 +35,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	projects.PUT("/:id/phases/:childId", m.controller.UpdatePhase)
 	projects.DELETE("/:id/phases/:childId", m.controller.DeletePhase)
 
+	projects.GET("/:id/progress-curve", m.controller.ProgressCurve)
 	projects.GET("/:id/budget-items", m.controller.ListBudgetItems)
 	projects.POST("/:id/budget-items", m.controller.CreateBudgetItem)
 	projects.PUT("/:id/budget-items/:childId", m.controller.UpdateBudgetItem)

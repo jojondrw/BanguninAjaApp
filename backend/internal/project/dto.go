@@ -82,11 +82,12 @@ type PhaseResponse struct {
 }
 
 type BudgetItemRequest struct {
-	Code            string    `json:"code" binding:"required,max=20"`
-	Description     string    `json:"description" binding:"required,max=200"`
-	Volume          float64   `json:"volume" binding:"min=0"`
-	UnitOfMeasureID uuid.UUID `json:"unitOfMeasureId" binding:"required"`
-	UnitPrice       int64     `json:"unitPrice" binding:"min=0"`
+	PhaseID         *uuid.UUID `json:"phaseId"`
+	Code            string     `json:"code" binding:"required,max=20"`
+	Description     string     `json:"description" binding:"required,max=200"`
+	Volume          float64    `json:"volume" binding:"min=0"`
+	UnitOfMeasureID uuid.UUID  `json:"unitOfMeasureId" binding:"required"`
+	UnitPrice       int64      `json:"unitPrice" binding:"min=0"`
 }
 
 type BudgetItemQuery struct {
@@ -95,16 +96,47 @@ type BudgetItemQuery struct {
 }
 
 type BudgetItemResponse struct {
-	ID              uuid.UUID `json:"id"`
-	ProjectID       uuid.UUID `json:"projectId"`
-	Code            string    `json:"code"`
-	Description     string    `json:"description"`
-	Volume          float64   `json:"volume"`
-	UnitOfMeasureID uuid.UUID `json:"unitOfMeasureId"`
-	UnitPrice       int64     `json:"unitPrice"`
-	Total           int64     `json:"total"`
-	CreatedAt       time.Time `json:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	ID              uuid.UUID  `json:"id"`
+	ProjectID       uuid.UUID  `json:"projectId"`
+	PhaseID         *uuid.UUID `json:"phaseId"`
+	Code            string     `json:"code"`
+	Description     string     `json:"description"`
+	Volume          float64    `json:"volume"`
+	UnitOfMeasureID uuid.UUID  `json:"unitOfMeasureId"`
+	UnitPrice       int64      `json:"unitPrice"`
+	Total           int64      `json:"total"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
+}
+
+type PhaseWeightResponse struct {
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	WeightPercent float64   `json:"weightPercent"`
+	Budget        int64     `json:"budget"`
+	Progress      int       `json:"progress"`
+	Dated         bool      `json:"dated"`
+}
+
+type CurvePointResponse struct {
+	Date    string   `json:"date"`
+	Planned float64  `json:"planned"`
+	Actual  *float64 `json:"actual"`
+}
+
+type CurveTodayResponse struct {
+	Date      string   `json:"date"`
+	Planned   *float64 `json:"planned"`
+	Actual    int      `json:"actual"`
+	Deviation *float64 `json:"deviation"`
+}
+
+type ProgressCurveResponse struct {
+	Weighting     string                `json:"weighting"`
+	UndatedPhases int                   `json:"undatedPhases"`
+	Phases        []PhaseWeightResponse `json:"phases"`
+	Points        []CurvePointResponse  `json:"points"`
+	Today         CurveTodayResponse    `json:"today"`
 }
 
 type BudgetItemPage struct {
@@ -223,6 +255,7 @@ func newBudgetItemResponse(item BudgetItem) BudgetItemResponse {
 	return BudgetItemResponse{
 		ID:              item.ID,
 		ProjectID:       item.ProjectID,
+		PhaseID:         item.PhaseID,
 		Code:            item.Code,
 		Description:     item.Description,
 		Volume:          item.Volume,

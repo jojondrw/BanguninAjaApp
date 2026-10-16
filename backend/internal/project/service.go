@@ -11,6 +11,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
 )
 
@@ -48,6 +49,7 @@ var (
 	errPhaseNotFound            = apperror.NotFound("phase_not_found", "Tahap proyek tidak ditemukan")
 	errBudgetItemNotFound       = apperror.NotFound("budget_item_not_found", "Item RAB tidak ditemukan")
 	errBudgetItemCodeUsed       = apperror.Conflict("budget_item_code_used", "Kode item RAB sudah dipakai di proyek ini")
+	errBudgetPhaseUnknown       = apperror.Unprocessable("budget_item_phase_unknown", "Tahap untuk item RAB ini tidak ada di proyek ini")
 	errUnitOfMeasureNotFound    = apperror.Unprocessable("unit_of_measure_not_found", "Satuan tidak ditemukan")
 	errPermitNotFound           = apperror.NotFound("permit_not_found", "Izin tidak ditemukan")
 	errPermitIssuedDateRequired = apperror.Unprocessable("permit_issued_date_required", "Izin yang sudah terbit wajib punya tanggal terbit")
@@ -58,6 +60,7 @@ var (
 	projectWriteErrors  = database.ErrorMap{NotFound: errProjectNotFound, Duplicate: errProjectCodeUsed, Referenced: errRegionNotFound}
 	projectDeleteErrors = database.ErrorMap{NotFound: errProjectNotFound, Referenced: errProjectInUse}
 	phaseErrors         = database.ErrorMap{NotFound: errPhaseNotFound}
+	budgetPhaseErrors   = database.ErrorMap{NotFound: errBudgetPhaseUnknown}
 	budgetItemErrors    = database.ErrorMap{NotFound: errBudgetItemNotFound, Duplicate: errBudgetItemCodeUsed, Referenced: errUnitOfMeasureNotFound}
 	permitErrors        = database.ErrorMap{NotFound: errPermitNotFound, Referenced: errProjectNotFound}
 )
@@ -80,6 +83,7 @@ type Service interface {
 	CreateBudgetItem(ctx context.Context, projectID uuid.UUID, request BudgetItemRequest) (BudgetItemResponse, error)
 	UpdateBudgetItem(ctx context.Context, projectID, itemID uuid.UUID, request BudgetItemRequest) (BudgetItemResponse, error)
 	DeleteBudgetItem(ctx context.Context, projectID, itemID uuid.UUID) error
+	ProgressCurve(ctx context.Context, projectID uuid.UUID) (ProgressCurveResponse, error)
 
 	ListPermits(ctx context.Context, projectID uuid.UUID) ([]PermitResponse, error)
 	CreatePermit(ctx context.Context, projectID uuid.UUID, request PermitRequest) (PermitResponse, error)
@@ -95,10 +99,15 @@ type Service interface {
 
 type service struct {
 	repository Repository
+	now        func() time.Time
 }
 
 func NewService(repository Repository) Service {
-	return &service{repository: repository}
+	return &service{repository: repository, now: time.Now}
+}
+
+func (s *service) today() time.Time {
+	return duedate.Today(s.now())
 }
 
 func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, query ProjectQuery) (pagination.Page[ProjectResponse], error) {
@@ -203,7 +212,7 @@ func (s *service) CreatePhase(ctx context.Context, projectID uuid.UUID, request 
 	phase := ProjectPhase{ProjectID: projectID}
 	applyPhaseRequest(&phase, request)
 	err := s.repository.Transaction(ctx, func(repository Repository) error {
-		return createPhase(ctx, repository, &phase)
+		return createPhase(ctx, repository, &phase, s.today())
 	})
 	if err != nil {
 		return PhaseResponse{}, apperror.From(err)
@@ -219,7 +228,7 @@ func (s *service) UpdatePhase(ctx context.Context, projectID, phaseID uuid.UUID,
 	var phase ProjectPhase
 	err := s.repository.Transaction(ctx, func(repository Repository) error {
 		var err error
-		phase, err = updatePhase(ctx, repository, projectID, phaseID, request)
+		phase, err = updatePhase(ctx, repository, projectID, phaseID, request, s.today())
 		return err
 	})
 	if err != nil {
@@ -230,7 +239,7 @@ func (s *service) UpdatePhase(ctx context.Context, projectID, phaseID uuid.UUID,
 
 func (s *service) DeletePhase(ctx context.Context, projectID, phaseID uuid.UUID) error {
 	err := s.repository.Transaction(ctx, func(repository Repository) error {
-		return deletePhase(ctx, repository, projectID, phaseID)
+		return deletePhase(ctx, repository, projectID, phaseID, s.today())
 	})
 	if err != nil {
 		return apperror.From(err)
@@ -264,40 +273,84 @@ func (s *service) ListBudgetItems(ctx context.Context, projectID uuid.UUID, quer
 }
 
 func (s *service) CreateBudgetItem(ctx context.Context, projectID uuid.UUID, request BudgetItemRequest) (BudgetItemResponse, error) {
-	if err := s.ensureOpenProject(ctx, projectID); err != nil {
-		return BudgetItemResponse{}, err
-	}
-
 	item := BudgetItem{ProjectID: projectID}
 	applyBudgetItemRequest(&item, request)
-	if err := s.repository.CreateBudgetItem(ctx, &item); err != nil {
-		return BudgetItemResponse{}, budgetItemErrors.Resolve(err)
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		if err := prepareBudgetChange(ctx, repository, projectID, item.PhaseID); err != nil {
+			return err
+		}
+		if err := repository.CreateBudgetItem(ctx, &item); err != nil {
+			return budgetItemErrors.Resolve(err)
+		}
+		return refreshProjectProgress(ctx, repository, projectID, s.today())
+	})
+	if err != nil {
+		return BudgetItemResponse{}, apperror.From(err)
 	}
 	return newBudgetItemResponse(item), nil
 }
 
 func (s *service) UpdateBudgetItem(ctx context.Context, projectID, itemID uuid.UUID, request BudgetItemRequest) (BudgetItemResponse, error) {
-	if err := s.ensureOpenProject(ctx, projectID); err != nil {
-		return BudgetItemResponse{}, err
-	}
-
-	item, err := s.repository.FindBudgetItem(ctx, projectID, itemID)
+	var item BudgetItem
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		if err := prepareBudgetChange(ctx, repository, projectID, request.PhaseID); err != nil {
+			return err
+		}
+		found, err := repository.FindBudgetItem(ctx, projectID, itemID)
+		if err != nil {
+			return budgetItemErrors.Resolve(err)
+		}
+		item = found
+		applyBudgetItemRequest(&item, request)
+		if err := repository.SaveBudgetItem(ctx, &item); err != nil {
+			return budgetItemErrors.Resolve(err)
+		}
+		return refreshProjectProgress(ctx, repository, projectID, s.today())
+	})
 	if err != nil {
-		return BudgetItemResponse{}, budgetItemErrors.Resolve(err)
-	}
-
-	applyBudgetItemRequest(&item, request)
-	if err := s.repository.SaveBudgetItem(ctx, &item); err != nil {
-		return BudgetItemResponse{}, budgetItemErrors.Resolve(err)
+		return BudgetItemResponse{}, apperror.From(err)
 	}
 	return newBudgetItemResponse(item), nil
 }
 
 func (s *service) DeleteBudgetItem(ctx context.Context, projectID, itemID uuid.UUID) error {
-	if err := s.ensureOpenProject(ctx, projectID); err != nil {
-		return err
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		if err := lockOpenProject(ctx, repository, projectID); err != nil {
+			return err
+		}
+		if err := repository.DeleteBudgetItem(ctx, projectID, itemID); err != nil {
+			return budgetItemErrors.Resolve(err)
+		}
+		return refreshProjectProgress(ctx, repository, projectID, s.today())
+	})
+	if err != nil {
+		return apperror.From(err)
 	}
-	return budgetItemErrors.Resolve(s.repository.DeleteBudgetItem(ctx, projectID, itemID))
+	return nil
+}
+
+func (s *service) ProgressCurve(ctx context.Context, projectID uuid.UUID) (ProgressCurveResponse, error) {
+	project, err := s.repository.FindProject(ctx, projectID)
+	if err != nil {
+		return ProgressCurveResponse{}, projectReadErrors.Resolve(err)
+	}
+	phases, err := s.repository.ListPhases(ctx, projectID)
+	if err != nil {
+		return ProgressCurveResponse{}, apperror.Internal(err)
+	}
+	budget, err := s.repository.SumBudgetByPhase(ctx, projectID)
+	if err != nil {
+		return ProgressCurveResponse{}, apperror.Internal(err)
+	}
+	snapshots, err := s.repository.ListProgressSnapshots(ctx, projectID)
+	if err != nil {
+		return ProgressCurveResponse{}, apperror.Internal(err)
+	}
+
+	weights := weighPhases(phases, budget)
+	today := s.today()
+	points := progressCurve(project, phases, weights, snapshots, today)
+	return newProgressCurveResponse(project, phases, weights, points, today), nil
 }
 
 func (s *service) ListPermits(ctx context.Context, projectID uuid.UUID) ([]PermitResponse, error) {
@@ -403,17 +456,17 @@ func completeProject(ctx context.Context, repository Repository, project *Projec
 	return nil
 }
 
-func createPhase(ctx context.Context, repository Repository, phase *ProjectPhase) error {
+func createPhase(ctx context.Context, repository Repository, phase *ProjectPhase, on time.Time) error {
 	if err := lockOpenProject(ctx, repository, phase.ProjectID); err != nil {
 		return err
 	}
 	if err := repository.CreatePhase(ctx, phase); err != nil {
 		return phaseErrors.Resolve(err)
 	}
-	return refreshProjectProgress(ctx, repository, phase.ProjectID)
+	return refreshProjectProgress(ctx, repository, phase.ProjectID, on)
 }
 
-func updatePhase(ctx context.Context, repository Repository, projectID, phaseID uuid.UUID, request PhaseRequest) (ProjectPhase, error) {
+func updatePhase(ctx context.Context, repository Repository, projectID, phaseID uuid.UUID, request PhaseRequest, on time.Time) (ProjectPhase, error) {
 	if err := lockOpenProject(ctx, repository, projectID); err != nil {
 		return ProjectPhase{}, err
 	}
@@ -427,17 +480,17 @@ func updatePhase(ctx context.Context, repository Repository, projectID, phaseID 
 	if err := repository.SavePhase(ctx, &phase); err != nil {
 		return ProjectPhase{}, phaseErrors.Resolve(err)
 	}
-	return phase, refreshProjectProgress(ctx, repository, projectID)
+	return phase, refreshProjectProgress(ctx, repository, projectID, on)
 }
 
-func deletePhase(ctx context.Context, repository Repository, projectID, phaseID uuid.UUID) error {
+func deletePhase(ctx context.Context, repository Repository, projectID, phaseID uuid.UUID, on time.Time) error {
 	if err := lockOpenProject(ctx, repository, projectID); err != nil {
 		return err
 	}
 	if err := repository.DeletePhase(ctx, projectID, phaseID); err != nil {
 		return phaseErrors.Resolve(err)
 	}
-	return refreshProjectProgress(ctx, repository, projectID)
+	return refreshProjectProgress(ctx, repository, projectID, on)
 }
 
 func lockOpenProject(ctx context.Context, repository Repository, id uuid.UUID) error {
@@ -448,15 +501,54 @@ func lockOpenProject(ctx context.Context, repository Repository, id uuid.UUID) e
 	return ensureOpen(project)
 }
 
-func refreshProjectProgress(ctx context.Context, repository Repository, projectID uuid.UUID) error {
+func prepareBudgetChange(ctx context.Context, repository Repository, projectID uuid.UUID, phaseID *uuid.UUID) error {
+	if err := lockOpenProject(ctx, repository, projectID); err != nil {
+		return err
+	}
+	if phaseID == nil {
+		return nil
+	}
+	if _, err := repository.FindPhase(ctx, projectID, *phaseID); err != nil {
+		return budgetPhaseErrors.Resolve(err)
+	}
+	return nil
+}
+
+func refreshProjectProgress(ctx context.Context, repository Repository, projectID uuid.UUID, on time.Time) error {
 	phases, err := repository.ListPhases(ctx, projectID)
 	if err != nil {
 		return apperror.Internal(err)
 	}
-	if err := repository.UpdateProjectProgress(ctx, projectID, averageProgress(phases)); err != nil {
+	budget, err := repository.SumBudgetByPhase(ctx, projectID)
+	if err != nil {
+		return apperror.Internal(err)
+	}
+
+	progress := weightedProgress(phases, weighPhases(phases, budget))
+	if err := repository.UpdateProjectProgress(ctx, projectID, progress); err != nil {
+		return apperror.Internal(err)
+	}
+	snapshot := ProgressSnapshot{ProjectID: projectID, RecordedOn: on, Progress: progress}
+	if err := repository.RecordProgress(ctx, snapshot); err != nil {
 		return apperror.Internal(err)
 	}
 	return nil
+}
+
+func RefreshAllProgress(ctx context.Context, repository Repository, on time.Time) (int, error) {
+	ids, err := repository.ListProjectIDs(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for _, id := range ids {
+		err := repository.Transaction(ctx, func(repository Repository) error {
+			return refreshProjectProgress(ctx, repository, id, on)
+		})
+		if err != nil {
+			return 0, err
+		}
+	}
+	return len(ids), nil
 }
 
 func ensureOpen(project Project) error {
@@ -477,18 +569,6 @@ func phasesFinished(phases []ProjectPhase) bool {
 		}
 	}
 	return true
-}
-
-func averageProgress(phases []ProjectPhase) int {
-	if len(phases) == 0 {
-		return 0
-	}
-
-	sum := 0
-	for _, phase := range phases {
-		sum += phase.Progress
-	}
-	return int(math.Round(float64(sum) / float64(len(phases))))
 }
 
 func phaseStatus(progress int) string {
@@ -544,6 +624,7 @@ func applyPhaseRequest(phase *ProjectPhase, request PhaseRequest) {
 }
 
 func applyBudgetItemRequest(item *BudgetItem, request BudgetItemRequest) {
+	item.PhaseID = request.PhaseID
 	item.Code = strings.TrimSpace(request.Code)
 	item.Description = strings.TrimSpace(request.Description)
 	item.Volume = roundVolume(request.Volume)

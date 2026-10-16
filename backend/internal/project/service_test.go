@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
 
 type fakeRepository struct {
@@ -16,6 +18,35 @@ type fakeRepository struct {
 	phases         []ProjectPhase
 	savedProject   *Project
 	storedProgress *int
+	budgetByPhase  map[uuid.UUID]int64
+	snapshots      []ProgressSnapshot
+	createdItem    *BudgetItem
+	missingPhase   bool
+}
+
+func (f *fakeRepository) SumBudgetByPhase(context.Context, uuid.UUID) (map[uuid.UUID]int64, error) {
+	return f.budgetByPhase, nil
+}
+
+func (f *fakeRepository) RecordProgress(_ context.Context, snapshot ProgressSnapshot) error {
+	f.snapshots = append(f.snapshots, snapshot)
+	return nil
+}
+
+func (f *fakeRepository) ListProgressSnapshots(context.Context, uuid.UUID) ([]ProgressSnapshot, error) {
+	return f.snapshots, nil
+}
+
+func (f *fakeRepository) FindPhase(_ context.Context, _, id uuid.UUID) (ProjectPhase, error) {
+	if f.missingPhase {
+		return ProjectPhase{}, database.ErrNotFound
+	}
+	return ProjectPhase{}, nil
+}
+
+func (f *fakeRepository) CreateBudgetItem(_ context.Context, item *BudgetItem) error {
+	f.createdItem = item
+	return nil
 }
 
 func (f *fakeRepository) Transaction(_ context.Context, work func(Repository) error) error {
@@ -72,15 +103,20 @@ func TestCanTransitionProject(t *testing.T) {
 	}
 }
 
-func TestAverageProgress(t *testing.T) {
-	phases := []ProjectPhase{{Progress: 100}, {Progress: 50}, {Progress: 0}}
-	if got := averageProgress(phases); got != 50 {
+func TestEqualWeightsKeepTheSimpleAverageWhenNoBudgetIsLinked(t *testing.T) {
+	phases := []ProjectPhase{withID(ProjectPhase{Progress: 100}), withID(ProjectPhase{Progress: 50}), withID(ProjectPhase{Progress: 0})}
+	weights := weighPhases(phases, nil)
+	if weights.method != weightingEqual {
+		t.Fatalf("method = %s, want equal", weights.method)
+	}
+	if got := weightedProgress(phases, weights); got != 50 {
 		t.Fatalf("got %d, want 50", got)
 	}
-	if got := averageProgress(nil); got != 0 {
+	if got := weightedProgress(nil, weighPhases(nil, nil)); got != 0 {
 		t.Fatalf("got %d for no phases, want 0", got)
 	}
-	if got := averageProgress([]ProjectPhase{{Progress: 33}, {Progress: 34}}); got != 34 {
+	pair := []ProjectPhase{withID(ProjectPhase{Progress: 33}), withID(ProjectPhase{Progress: 34})}
+	if got := weightedProgress(pair, weighPhases(pair, nil)); got != 34 {
 		t.Fatalf("got %d, want rounded 34", got)
 	}
 }
@@ -166,6 +202,9 @@ func TestCreatePhaseRefreshesProjectProgress(t *testing.T) {
 	}
 	if repository.storedProgress == nil || *repository.storedProgress != 75 {
 		t.Fatalf("got stored progress %v, want 75", repository.storedProgress)
+	}
+	if len(repository.snapshots) != 1 || repository.snapshots[0].Progress != 75 {
+		t.Fatalf("snapshots = %+v, want one entry with 75", repository.snapshots)
 	}
 }
 
