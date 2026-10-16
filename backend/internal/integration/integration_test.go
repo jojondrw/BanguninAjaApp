@@ -166,6 +166,14 @@ func TestDeletingAProjectRemovesItsDailyReportsAndProgressHistory(t *testing.T) 
 	}
 }
 
+func idWithPrefix(prefix byte) uuid.UUID {
+	id := uuid.New()
+	for i := 0; i < 4; i++ {
+		id[i] = prefix
+	}
+	return id
+}
+
 func TestRegulationLookupUsesTheNearestZoneWithinOneHundredFiftyMetres(t *testing.T) {
 	near := regulation.Regulation{
 		RTRID: uniqueCode("R"), RegionCode: "3273", ZoneName: "Perumahan Kepadatan Sedang", District: "Coblong",
@@ -175,6 +183,8 @@ func TestRegulationLookupUsesTheNearestZoneWithinOneHundredFiftyMetres(t *testin
 		RTRID: uniqueCode("R"), RegionCode: "3273", ZoneName: "Perdagangan dan Jasa", District: "Coblong",
 		Point: geo.Point{Lon: 107.6109, Lat: -6.8900}, KDB: 80, KLB: 3.2, KDH: 10,
 	}
+	near.ID = idWithPrefix(0xff)
+	farther.ID = idWithPrefix(0x00)
 	if err := db.Create(&near).Error; err != nil {
 		t.Fatalf("insert regulation: %v", err)
 	}
