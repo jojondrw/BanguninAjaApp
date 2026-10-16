@@ -115,7 +115,7 @@ describe('PayPage', () => {
     expect(confirm).not.toHaveBeenCalled()
 
     await user.clear(screen.getByLabelText('Hash transaksi'))
-    await user.type(screen.getByLabelText('Hash transaksi'), ` ${HASH.toUpperCase().replace('0X', '0x')} `)
+    await user.paste(` ${HASH.toUpperCase().replace('0X', '0x')} `)
     await user.click(screen.getByRole('button', { name: 'Periksa transaksi' }))
 
     expect(await screen.findByText(/Pembayaran diterima dan sudah tercatat/)).toBeInTheDocument()
@@ -166,7 +166,8 @@ describe('PayPage', () => {
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: 'Saya sudah bayar, tempel hash transaksi' }))
-    await user.type(screen.getByLabelText('Hash transaksi'), HASH)
+    await user.click(screen.getByLabelText('Hash transaksi'))
+    await user.paste(HASH)
     await user.click(screen.getByRole('button', { name: 'Periksa transaksi' }))
 
     expect(await screen.findByText(/dikirim ke alamat lain/)).toBeInTheDocument()
