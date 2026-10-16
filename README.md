@@ -136,9 +136,30 @@ kalau hostnya beda sesi hilang setiap halaman dimuat ulang.
 docker compose exec database psql -U $POSTGRES_USER -d $POSTGRES_DB
 ```
 
+## Menjalankan test
+
+| Test | Perintah | Butuh |
+|---|---|---|
+| Unit test backend | `docker compose exec backend go test ./...` | Container backend |
+| Integration test backend | lihat di bawah | Database `bangunin_aja_test` |
+| Test frontend | `cd frontend && npm test` | Node.js |
+| Test layanan penilaian | `cd scoring && python -m pytest` | Python dan dependensinya |
+
+Integration test berjalan ke PostgreSQL + PostGIS sungguhan dan menolak jalan
+kalau nama database tidak berakhiran `_test`, supaya database kerja tidak
+tersentuh. Buat database-nya sekali, lalu jalankan:
+
+```bash
+docker compose exec database createdb -U $POSTGRES_USER bangunin_aja_test
+docker compose exec -e POSTGRES_DB=bangunin_aja_test backend go test -tags integration -v ./internal/integration/
+```
+
+Di CI, keempatnya berjalan otomatis di setiap pull request.
+
 ## Dokumentasi
 
-Alasan di balik tiap keputusan ada di `docs/requirements`.
+Desain sistem (UML, ERD, deployment) ada di `docs/desain`. Alasan di balik
+tiap keputusan ada di `docs/requirements`.
 
 | Berkas | Isi |
 |---|---|
