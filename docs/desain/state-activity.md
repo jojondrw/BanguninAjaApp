@@ -12,6 +12,7 @@ Sumber aturan transisi:
 | Proyek | `projectTransitions` di `project/service.go` |
 | Tahap proyek | `phaseStatus` di `project/service.go` |
 | Termin kontraktor | `newPaymentScheduleResponse`, `claimBlocker`, `releasableRetention` di `project/payment_term.go` |
+| Adendum kontrak | `DecideContractChange` di `project/contract_change.go` |
 | Permintaan dan pesanan pembelian | `requestTransitions`, `orderTransitions`, `statusAfterReceipt` di `procurement/service.go` |
 | Kontrak dan unit | `contractTransitions`, `unitStatusAfterContract` di `sales/service.go` |
 | Jatuh tempo tagihan dan cicilan | `duedate.Status` di `shared/duedate` |
@@ -70,6 +71,21 @@ stateDiagram-v2
     planned --> [*] : dihapus
     ready --> [*] : dihapus
     paid --> [*]
+```
+
+### Adendum kontrak kontraktor
+
+Manajer Proyek mengusulkan, hanya Admin yang memutuskan, dan keputusan bersifat
+final. Hanya adendum yang disetujui yang mengubah nilai kontrak berjalan.
+
+```mermaid
+stateDiagram-v2
+    [*] --> proposed : Manajer Proyek mengusulkan
+    proposed --> approved : Admin menyetujui, nilai berjalan berubah
+    proposed --> rejected : Admin menolak
+    proposed --> [*] : usulan dihapus
+    approved --> [*]
+    rejected --> [*]
 ```
 
 ### Permintaan pembelian dan pesanan pembelian
@@ -244,6 +260,7 @@ flowchart TD
         m2[Susun termin: syarat progres dan persen nilai]
         m3[Perbarui progres tahap dan laporan harian]
         m4[Ajukan termin yang siap]
+        m6[Usulkan adendum pekerjaan tambah atau kurang]
         m5[Lepas retensi]
     end
     subgraph sys["Sistem"]
@@ -253,6 +270,9 @@ flowchart TD
         s4[Kunci kontrak dari perubahan]
         s5{Proyek selesai dan semua termin diajukan?}
         s6[Buat hutang sebesar retensi yang ditahan]
+    end
+    subgraph adm["Admin"]
+        a1{Setujui adendum?}
     end
     subgraph keu["Keuangan"]
         k1[Bayar hutang termin di Tagihan]
@@ -265,6 +285,8 @@ flowchart TD
     k1 --> s5
     s5 -- Belum --> m3
     s5 -- Sudah --> m5 --> s6 --> k2
+    m3 -.-> m6 --> a1
+    a1 -- Ya --> s1
 ```
 
 ### Penjualan unit sampai lunas

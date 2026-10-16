@@ -87,6 +87,9 @@ Semua di bawah `/api/projects`.
 | DELETE | `/:id/payment-terms/:childId` | Hanya termin yang belum diajukan |
 | POST | `/:id/payment-terms/:childId/claim` | Ajukan termin, membuat hutang di Tagihan |
 | POST | `/:id/retention-release` | Lepas retensi yang ditahan, membuat hutang di Tagihan |
+| POST | `/:id/contract-changes` | Usulkan adendum. Body `{ "description", "valueChange", "daysChange" }`, `valueChange` negatif untuk pekerjaan kurang |
+| PATCH | `/:id/contract-changes/:childId` | Putuskan adendum. Body `{ "status": "approved" }` atau `rejected`, hanya Admin |
+| DELETE | `/:id/contract-changes/:childId` | Hapus usulan yang belum diputuskan |
 | GET, POST | `/:id/permits` | |
 | PUT, DELETE | `/:id/permits/:childId` | |
 | GET, POST | `/:id/members` | Tim proyek, urut nama. Body tambah `{ "userId", "position"?, "role"? }` |
@@ -162,11 +165,39 @@ Tagihan yang butuh hak tulis `billing`, yaitu Keuangan atau Admin.
 | Semua termin progres harus sudah diajukan sebelum retensi dilepas | `retention_terms_open` (422) |
 | Retensi hanya dilepas sekali, dijaga juga oleh indeks unik parsial | `retention_released` (409) |
 
-Nilai termin = nilai kontrak x persen, retensi = nilai termin x persen retensi,
-keduanya dibulatkan ke rupiah penuh. Nilai termin yang belum diajukan selalu
-dihitung dari nilai kontrak sekarang; yang sudah diajukan memakai angka saat
-diajukan. Kalau hutang termin yang belum dibayar dihapus di Tagihan, `payable_id`
+Nilai termin dihitung **kumulatif**: persen kumulatif sampai termin itu dikali
+nilai kontrak berjalan, dikurangi nilai termin sebelumnya. Retensi = nilai
+termin x persen retensi. Semua dihitung dengan bilangan bulat dan dibulatkan ke
+rupiah penuh. Termin yang sudah diajukan memakai angka saat diajukan, jadi
+setelah adendum disetujui, termin sisanya menyesuaikan sendiri dan totalnya tetap
+sama dengan nilai kontrak berjalan. Kalau hutang termin yang belum dibayar dihapus di Tagihan, `payable_id`
 menjadi NULL dan termin itu kembali bisa diajukan.
+
+### Adendum (pekerjaan tambah-kurang)
+
+Setelah ada termin diajukan, nilai kontrak kontraktor terkunci. Perubahan
+nilai dan waktu sesudahnya lewat adendum: uraian dan alasan, selisih nilai
+(negatif untuk pekerjaan kurang), dan perpanjangan hari. Nilai kontrak berjalan =
+nilai awal + adendum yang disetujui.
+
+Manajer Proyek mengusulkan. Menyetujui atau menolak hanya boleh Admin: aturan
+ini diperiksa di service dengan peran yang sudah dibaca middleware otorisasi,
+karena matriks akses hanya mengenal hak per modul.
+
+| Aturan | Kode error |
+|---|---|
+| Adendum hanya diusulkan selama proyek belum `completed` atau `cancelled` | `project_closed` (409) |
+| Adendum butuh kontrak kontraktor | `construction_contract_not_found` (404) |
+| Adendum harus mengubah nilai atau waktu | `contract_change_empty` (422) |
+| Hanya Admin yang menyetujui atau menolak | `contract_change_approver` (403) |
+| Keputusan bersifat final; adendum yang sudah diputuskan tidak bisa diputuskan ulang atau dihapus | `contract_change_decided` (409) |
+| Nilai kontrak berjalan harus tetap lebih dari nol | `contract_change_non_positive` (422) |
+| Nilai kontrak berjalan tidak boleh di bawah nilai termin yang sudah diajukan | `contract_change_below_claimed` (422) |
+| Proyek `cancelled` tidak bisa memutuskan adendum | `contract_change_project_cancelled` (409) |
+| Kalau pengurangan membuat sisa nilai habis, termin berikutnya tidak bisa diajukan | `payment_term_nothing_to_claim` (422) |
+
+Nomor adendum (`sequence`) unik per proyek dan diambil dari nomor terbesar
+ditambah satu, di dalam transaksi yang mengunci baris proyek.
 
 ### Tim proyek
 

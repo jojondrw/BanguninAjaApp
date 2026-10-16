@@ -6,11 +6,11 @@ jadi setiap garis di bawah ada di database sungguhan.
 
 | | Jumlah |
 |---|---|
-| Tabel aplikasi | 54 (ditambah `spatial_ref_sys` milik PostGIS) |
-| Foreign key | 88 |
+| Tabel aplikasi | 55 (ditambah `spatial_ref_sys` milik PostGIS) |
+| Foreign key | 91 |
 | Slice backend yang memiliki tabel | 14 |
 
-Satu diagram berisi 54 tabel tidak terbaca, jadi ERD dipecah per domain. Tabel
+Satu diagram berisi 55 tabel tidak terbaca, jadi ERD dipecah per domain. Tabel
 dari domain lain hanya ditampilkan namanya supaya garis relasinya tetap kelihatan.
 
 ## Cara membaca
@@ -110,6 +110,8 @@ erDiagram
     project ||--o{ payment_term : "termin"
     payable |o--o| payment_term : "hutang termin"
     users |o--o{ payment_term : "diajukan oleh"
+    project ||--o{ contract_change : "adendum"
+    users |o--o{ contract_change : "diusulkan atau diputuskan oleh"
     project ||--o{ permit : "izin"
     project ||--o{ project_member : "anggota"
     project |o--o{ report : "laporan"
@@ -186,6 +188,18 @@ erDiagram
         date claimed_on
         int claimed_progress
         uuid claimed_by FK
+    }
+    contract_change {
+        uuid id PK
+        uuid project_id FK
+        int sequence "unik per proyek"
+        varchar description
+        bigint value_change "negatif untuk pekerjaan kurang"
+        int days_change
+        varchar status "proposed, approved, rejected"
+        uuid proposed_by FK
+        uuid decided_by FK
+        date decided_on
     }
     permit {
         uuid id PK

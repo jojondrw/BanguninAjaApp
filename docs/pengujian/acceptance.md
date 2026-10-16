@@ -36,6 +36,7 @@ disetujui.
 | AT-14 | Semua | Memakai aplikasi di ponsel | Lulus (UI) | 390 px: sepuluh halaman dan tab Lapangan tanpa geser ke samping | |
 | AT-15 | Manajer Proyek | Mengajukan termin kontraktor yang progresnya tercapai | Lulus (UI) | Proyek uji: konfirmasi dua langkah, hutang Rp 190 jt (20% dari Rp 1 M dikurangi retensi 5%) tercatat, jatuh tempo 30 hari, kontrak terkunci; 375 px tanpa geser halaman | |
 | AT-16 | Keuangan | Melihat termin tanpa bisa mengajukannya | Lulus (API) | Test render: tanpa tombol Ajukan dan Tambah termin, ada tautan ke Tagihan; endpoint pengajuan butuh hak tulis Proyek | |
+| AT-17 | Admin | Menyetujui adendum pekerjaan kurang | Lulus (UI) | RSIA Adendum 2 (−Rp 350 jt): nilai berjalan turun ke Rp 24,4 M, termin 5 dihitung ulang, jejak disetujui tercatat; dikembalikan ke usulan setelah uji | |
 
 ## Rincian skenario
 
