@@ -192,27 +192,28 @@ export function UsersPage() {
                 {
                   header: 'Aksi',
                   align: 'right',
-                  cell: (row) => (
-                    <ActionGroup>
-                      <ConfirmAction
-                        label={row.active ? 'Nonaktifkan' : 'Aktifkan lagi'}
-                        srLabel={row.active ? `Nonaktifkan ${row.name}` : `Aktifkan lagi ${row.name}`}
-                        question={
-                          row.active
-                            ? `Nonaktifkan ${row.name}? Sesinya dicabut dan ia tidak bisa masuk lagi.`
-                            : `Aktifkan lagi ${row.name}?`
-                        }
-                        confirmLabel={row.active ? 'Ya, nonaktifkan' : 'Ya, aktifkan'}
-                        pendingLabel={row.active ? 'Menonaktifkan' : 'Mengaktifkan'}
-                        tone={row.active ? 'danger' : 'primary'}
-                        isAsking={askingId === row.id}
-                        isPending={changeActive.isPending && changeActive.variables.user.id === row.id}
-                        onAsk={() => askToggle(row)}
-                        onCancel={() => setAskingId(null)}
-                        onConfirm={() => confirmToggle(row)}
-                      />
-                    </ActionGroup>
-                  ),
+                  cell: (row) =>
+                    row.id === me?.id ? null : (
+                      <ActionGroup>
+                        <ConfirmAction
+                          label={row.active ? 'Nonaktifkan' : 'Aktifkan lagi'}
+                          srLabel={row.active ? `Nonaktifkan ${row.name}` : `Aktifkan lagi ${row.name}`}
+                          question={
+                            row.active
+                              ? `Nonaktifkan ${row.name}? Sesinya dicabut dan ia tidak bisa masuk lagi.`
+                              : `Aktifkan lagi ${row.name}?`
+                          }
+                          confirmLabel={row.active ? 'Ya, nonaktifkan' : 'Ya, aktifkan'}
+                          pendingLabel={row.active ? 'Menonaktifkan' : 'Mengaktifkan'}
+                          tone={row.active ? 'danger' : 'primary'}
+                          isAsking={askingId === row.id}
+                          isPending={changeActive.isPending && changeActive.variables.user.id === row.id}
+                          onAsk={() => askToggle(row)}
+                          onCancel={() => setAskingId(null)}
+                          onConfirm={() => confirmToggle(row)}
+                        />
+                      </ActionGroup>
+                    ),
                 },
               ]}
             />

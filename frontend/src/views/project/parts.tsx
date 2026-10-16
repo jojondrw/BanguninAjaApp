@@ -106,13 +106,23 @@ export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, on
   )
 }
 
+const PANEL_TOGGLE_TONE = {
+  default: { open: BUTTON_PRIMARY, closed: BUTTON_SUBTLE },
+  danger: {
+    open: 'bg-red-600 text-white shadow-button hover:bg-red-700',
+    closed: 'border border-slate-200 bg-white text-red-600 shadow-control hover:border-red-200 hover:bg-red-50 hover:text-red-700',
+  },
+}
+
 // Tombol pembuka panel di kepala halaman. Gayanya berganti saat panel terbuka,
 // sama seperti FormToggle.
-export function PanelToggle({ label, panelId, isOpen, onToggle }: {
+// Nada danger untuk tindakan yang menghapus, merah seperti aksi Hapus di tabel.
+export function PanelToggle({ label, panelId, isOpen, onToggle, tone = 'default' }: {
   label: string
   panelId: string
   isOpen: boolean
   onToggle: () => void
+  tone?: keyof typeof PANEL_TOGGLE_TONE
 }) {
   const canWrite = useScopedCan('write')
 
@@ -126,7 +136,7 @@ export function PanelToggle({ label, panelId, isOpen, onToggle }: {
       onClick={onToggle}
       aria-expanded={isOpen}
       aria-controls={isOpen ? panelId : undefined}
-      className={`h-9 ${BUTTON_BASE} ${isOpen ? BUTTON_PRIMARY : BUTTON_SUBTLE}`}
+      className={`h-9 ${BUTTON_BASE} ${isOpen ? PANEL_TOGGLE_TONE[tone].open : PANEL_TOGGLE_TONE[tone].closed}`}
     >
       {label}
     </button>

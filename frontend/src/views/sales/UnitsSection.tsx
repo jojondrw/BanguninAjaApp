@@ -270,17 +270,19 @@ export function UnitsSection() {
                     {isUnitEditable(row) && askingId !== row.id ? (
                       <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
                     ) : null}
-                    <ConfirmAction
-                      label="Hapus"
-                      question={`Hapus unit ${row.code}?`}
-                      confirmLabel="Ya, hapus"
-                      pendingLabel="Menghapus"
-                      isAsking={askingId === row.id}
-                      isPending={deleteUnit.isPending && deleteUnit.variables.id === row.id}
-                      onAsk={() => askDelete(row)}
-                      onCancel={() => setAskingId(null)}
-                      onConfirm={() => confirmDelete(row)}
-                    />
+                    {isUnitEditable(row) ? (
+                      <ConfirmAction
+                        label="Hapus"
+                        question={`Hapus unit ${row.code}?`}
+                        confirmLabel="Ya, hapus"
+                        pendingLabel="Menghapus"
+                        isAsking={askingId === row.id}
+                        isPending={deleteUnit.isPending && deleteUnit.variables.id === row.id}
+                        onAsk={() => askDelete(row)}
+                        onCancel={() => setAskingId(null)}
+                        onConfirm={() => confirmDelete(row)}
+                      />
+                    ) : null}
                   </ActionGroup>
                 ),
               },

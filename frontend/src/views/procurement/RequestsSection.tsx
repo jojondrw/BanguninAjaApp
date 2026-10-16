@@ -30,7 +30,7 @@ import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
-import { ToolbarInput } from '../components/RecordControls'
+import { FormToggle, ToolbarInput } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
 import { useLookupLabel } from '../components/searchSelectLogic'
 import { MaterialLinesEditor } from './MaterialLines'
@@ -455,9 +455,7 @@ export function RequestsSection({ onCreateOrder }: {
               }}
             />
           </div>
-          <Button variant={isFormOpen ? 'subtle' : 'primary'} onClick={() => setIsFormOpen((open) => !open)}>
-            {isFormOpen ? 'Tutup formulir' : 'Buat permintaan'}
-          </Button>
+          <FormToggle isOpen={isFormOpen} openLabel="Buat permintaan" onToggle={() => setIsFormOpen((open) => !open)} />
         </div>
 
         {notice ? (
