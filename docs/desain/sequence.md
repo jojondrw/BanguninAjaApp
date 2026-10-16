@@ -64,8 +64,10 @@ pemakaian ulang dan mengeluarkan pengguna.
 ## 2. Pemeriksaan hak akses setiap request
 
 Hak akses tidak dibaca dari isi JWT. Peran dan status aktif diambil dari
-database di setiap request, jadi perubahan peran atau penonaktifan oleh Admin
-langsung berlaku tanpa menunggu token kedaluwarsa.
+database lewat cache kecil di memori (`access.Directory`, 30 detik). Setiap kali
+Admin mengubah peran atau status seseorang, entri cache orang itu langsung
+dihapus (`Forget`), jadi perubahan tetap berlaku di request berikutnya tanpa
+menunggu token kedaluwarsa.
 
 ```mermaid
 sequenceDiagram
@@ -83,7 +85,7 @@ sequenceDiagram
     alt Token tidak sah
         MW-->>FE: 401
     end
-    MW->>DB: Ambil users.active dan role.code
+    MW->>DB: Ambil users.active dan role.code (lewat cache 30 detik)
     alt Akun nonaktif
         MW-->>FE: 401 account_inactive
     end
@@ -99,14 +101,17 @@ sequenceDiagram
 
 ## 3. Evaluasi lokasi
 
-Skor prediktif dan konteks deskriptif sengaja dipisah. Kalau regulasi atau
-berita gagal diambil, evaluasi tetap berhasil dan bagian itu kosong.
+Skor prediktif dan konteks deskriptif sengaja dipisah. Berita diambil
+bersamaan dengan perhitungan skor dan ditunggu paling lama 2 detik; kalau
+regulasi atau berita gagal atau terlambat, evaluasi tetap berhasil dan bagian
+itu kosong. Berita disimpan di cache 15 menit per wilayah.
 
 Kalau layanan penilaian tidak bisa dihubungi (timeout, koneksi ditolak, galat
-5xx), backend tidak gagal tetapi memakai **skor cadangan** dari
-`stubScoreClient`: nilai semu 55 sampai 95 yang diturunkan dari hash koordinat,
-dengan penjelasan berlabel "data simulasi". Galat `scoring_unavailable` (502)
-hanya muncul kalau profil bangunan tidak dikenal.
+5xx), backend memakai **skor cadangan** dari `stubScoreClient`: nilai semu 55
+sampai 95 dari hash koordinat. Hasil itu ditandai `is_simulated` di respons
+dan `score_simulated` di lokasi tersimpan, sehingga tetap terlihat sebagai
+simulasi di daftar, perbandingan, dan laporan PDF. Galat `scoring_unavailable`
+(502) hanya muncul kalau profil bangunan tidak dikenal.
 
 ```mermaid
 sequenceDiagram
@@ -121,24 +126,30 @@ sequenceDiagram
     PM->>FE: Klik titik di peta, pilih profil bangunan
     FE->>API: POST /api/site/evaluate {lat, lon, building_profile_id, project_id?}
     API->>DB: Cari building_profile, pastikan project ada
-    API->>SC: POST /score {latitude, longitude, building_profile_code}
-    alt Layanan menjawab
-        SC->>SC: Baca bundle GIS, hitung 5 dimensi, kalikan bobot profil
-        SC-->>API: overall_score, dimension_scores, risk_flags, region
-    else Profil tidak dikenal
-        SC-->>API: 4xx unknown_building_profile
-        API-->>FE: 502 scoring_unavailable
-    else Timeout, koneksi ditolak, atau 5xx
-        API->>API: Skor cadangan (stubScoreClient), berlabel data simulasi
+    API->>DB: Cari regulasi terdekat (ST_DWithin 150 m)
+    par Berita, paling lama 2 detik
+        opt Kecamatan diketahui dari regulasi
+            API->>GN: Cari berita kecamatan (cache 15 menit)
+            GN-->>API: Daftar artikel
+        end
+    and Skor
+        API->>SC: POST /score {latitude, longitude, building_profile_code}
+        alt Layanan menjawab
+            SC->>SC: Baca bundle GIS, hitung 5 dimensi, kalikan bobot profil
+            SC-->>API: overall_score, dimension_scores, risk_flags, region
+        else Profil tidak dikenal
+            SC-->>API: 4xx unknown_building_profile
+            API-->>FE: 502 scoring_unavailable
+        else Timeout, koneksi ditolak, atau 5xx
+            API->>API: Skor cadangan, is_simulated = true
+        end
     end
-    API->>DB: Transaksi: simpan saved_location + 5 dimension_score
-    API->>DB: Cari regulasi terdekat (ST_DWithin pada titik)
-    opt Ada kata kunci wilayah
-        API->>GN: Cari berita kecamatan atau kabupaten
-        GN-->>API: Daftar artikel
+    API->>DB: Transaksi: simpan saved_location (score_simulated) + 5 dimension_score
+    opt Belum ada berita karena kecamatan tidak diketahui
+        API->>GN: Cari berita kabupaten dari region hasil skor
     end
-    API-->>FE: 200 {saved_location_id, predictive, descriptive}
-    FE-->>PM: Skor, rincian dimensi, risiko, regulasi, berita
+    API-->>FE: 201 {saved_location_id, predictive (is_simulated), descriptive}
+    FE-->>PM: Skor, dimensi, risiko, regulasi, berita, dan peringatan kalau simulasi
 ```
 
 ## 4. Pembayaran on-chain
