@@ -1,8 +1,11 @@
-import { useBudgetItems, usePermits, usePhases } from '../../controllers/useProjectWorkspace'
+import { useBudgetItems, usePermits, usePhases, useProgressCurve } from '../../controllers/useProjectWorkspace'
 import {
+  progressBasis,
+  scheduleStatus,
   summarizePermits,
   summarizePhases,
   type Permit,
+  type ProgressCurve,
   type Project,
   type ProjectPhase,
 } from '../../models/project'
@@ -11,6 +14,7 @@ import { Kpi, KpiRow } from '../components/Data'
 import { BudgetItemsCard } from './BudgetItemsCard'
 import { PermitsCard } from './PermitsCard'
 import { PhasesCard } from './PhasesCard'
+import { ProgressCurveCard } from './ProgressCurveCard'
 
 const NO_PHASES: ProjectPhase[] = []
 const NO_PERMITS: Permit[] = []
@@ -19,6 +23,7 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
   const phases = usePhases(project.id)
   const permits = usePermits(project.id)
   const budgetItems = useBudgetItems(project.id)
+  const curve = useProgressCurve(project.id)
 
   const phaseSummary = summarizePhases(phases.data ?? NO_PHASES)
   const permitSummary = summarizePermits(permits.data ?? NO_PERMITS)
@@ -30,7 +35,7 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
         <Kpi
           label="Progres proyek"
           value={`${project.progress}%`}
-          note={phaseSummary.total > 0 ? `rata-rata dari ${phaseSummary.total} tahap` : 'belum ada tahap'}
+          note={progressNote(curve.data, phaseSummary.total)}
         />
         <Kpi
           label="Tahap selesai"
@@ -49,6 +54,8 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
         />
       </KpiRow>
 
+      <ProgressCurveCard project={project} />
+
       <div className="grid gap-8 2xl:grid-cols-2">
         <PhasesCard project={project} />
         <PermitsCard project={project} />
@@ -57,6 +64,14 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
       <BudgetItemsCard project={project} />
     </div>
   )
+}
+
+function progressNote(curve: ProgressCurve | undefined, phaseCount: number): string {
+  const basis = progressBasis(curve, phaseCount)
+  if (!curve || curve.points.length === 0) {
+    return basis
+  }
+  return `${basis}, ${scheduleStatus(curve.today.deviation).label}`
 }
 
 function rabNote(total: number, contractValue: number, items: number): string {

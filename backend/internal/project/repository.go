@@ -104,6 +104,10 @@ type Repository interface {
 
 	ListBudgetItems(ctx context.Context, filter BudgetItemFilter) ([]BudgetItem, int64, error)
 	SumBudgetItems(ctx context.Context, projectID uuid.UUID) (int64, error)
+	SumBudgetByPhase(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]int64, error)
+	RecordProgress(ctx context.Context, snapshot ProgressSnapshot) error
+	ListProjectIDs(ctx context.Context) ([]uuid.UUID, error)
+	ListProgressSnapshots(ctx context.Context, projectID uuid.UUID) ([]ProgressSnapshot, error)
 	FindBudgetItem(ctx context.Context, projectID, id uuid.UUID) (BudgetItem, error)
 	CreateBudgetItem(ctx context.Context, item *BudgetItem) error
 	SaveBudgetItem(ctx context.Context, item *BudgetItem) error
@@ -234,6 +238,49 @@ func (r *gormRepository) SumBudgetItems(ctx context.Context, projectID uuid.UUID
 		Select("COALESCE(SUM(total), 0)").
 		Scan(&total).Error
 	return total, database.Translate(err)
+}
+
+func (r *gormRepository) SumBudgetByPhase(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]int64, error) {
+	var rows []struct {
+		PhaseID uuid.UUID
+		Total   int64
+	}
+	err := r.db.WithContext(ctx).
+		Model(&BudgetItem{}).
+		Select("phase_id, COALESCE(SUM(total), 0) AS total").
+		Where("project_id = ? AND phase_id IS NOT NULL", projectID).
+		Group("phase_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, database.Translate(err)
+	}
+	totals := make(map[uuid.UUID]int64, len(rows))
+	for _, row := range rows {
+		totals[row.PhaseID] = row.Total
+	}
+	return totals, nil
+}
+
+func (r *gormRepository) RecordProgress(ctx context.Context, snapshot ProgressSnapshot) error {
+	return database.Translate(r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "project_id"}, {Name: "recorded_on"}},
+		DoUpdates: clause.Assignments(map[string]any{"progress": snapshot.Progress, "updated_at": time.Now()}),
+	}).Create(&snapshot).Error)
+}
+
+func (r *gormRepository) ListProjectIDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.WithContext(ctx).Model(&Project{}).Order("code").Pluck("id", &ids).Error
+	return ids, database.Translate(err)
+}
+
+func (r *gormRepository) ListProgressSnapshots(ctx context.Context, projectID uuid.UUID) ([]ProgressSnapshot, error) {
+	var snapshots []ProgressSnapshot
+	err := r.db.WithContext(ctx).
+		Where("project_id = ?", projectID).
+		Order("recorded_on").
+		Find(&snapshots).Error
+	return snapshots, database.Translate(err)
 }
 
 func (r *gormRepository) FindBudgetItem(ctx context.Context, projectID, id uuid.UUID) (BudgetItem, error) {

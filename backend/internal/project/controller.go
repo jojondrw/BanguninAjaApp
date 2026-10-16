@@ -149,6 +149,16 @@ func (c *Controller) DeletePhase(ctx *gin.Context) {
 	httpresponse.RespondNoContent(ctx, c.service.DeletePhase(ctx.Request.Context(), projectID, phaseID))
 }
 
+func (c *Controller) ProgressCurve(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	curve, err := c.service.ProgressCurve(ctx.Request.Context(), projectID)
+	httpresponse.Respond(ctx, curve, err)
+}
+
 func (c *Controller) ListBudgetItems(ctx *gin.Context) {
 	projectID, err := httprequest.PathID(ctx, projectParam)
 	if err != nil {

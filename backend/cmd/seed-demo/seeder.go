@@ -58,6 +58,7 @@ type seeder struct {
 	lookup   lookup
 	services services
 	patcher  locationPatcher
+	history  progressRecorder
 	today    time.Time
 	owner    uuid.UUID
 	ids      map[string]uuid.UUID
@@ -75,6 +76,7 @@ type seedStep struct {
 func (s *seeder) run() error {
 	steps := []seedStep{
 		{"projects", s.seedProjects},
+		{"progress history", s.seedProgressHistory},
 		{"finance", s.seedFinance},
 		{"sales", s.seedSales},
 		{"inventory", s.seedInventory},

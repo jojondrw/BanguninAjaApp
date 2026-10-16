@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 )
 
 type slice struct {
@@ -129,6 +131,12 @@ func backfill(db *gorm.DB) error {
 		return err
 	}
 	slog.Info("billing payment history ready", slog.Int64("backfilled", payments))
+
+	projects, err := project.RefreshAllProgress(context.Background(), project.NewRepository(db), duedate.Today(time.Now()))
+	if err != nil {
+		return err
+	}
+	slog.Info("weighted project progress ready", slog.Int("projects", projects))
 	return nil
 }
 

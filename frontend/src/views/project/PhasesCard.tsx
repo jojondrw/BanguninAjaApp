@@ -4,6 +4,7 @@ import {
   useCreatePhase,
   useDeletePhase,
   usePhases,
+  useProgressCurve,
   useUpdatePhase,
 } from '../../controllers/useProjectWorkspace'
 import {
@@ -19,8 +20,10 @@ import {
   sortPhases,
   type PhaseEditValues,
   type PhaseFormValues,
+  type PhaseWeight,
   type Project,
   type ProjectPhase,
+  type ProgressWeighting,
 } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { dateRange } from '../../shared/format'
@@ -33,15 +36,25 @@ type UpdatePhase = ReturnType<typeof useUpdatePhase>
 
 export function PhasesCard({ project }: { project: Project }) {
   const phases = usePhases(project.id)
+  const curve = useProgressCurve(project.id)
   const updatePhase = useUpdatePhase(project.id)
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [progressId, setProgressId] = useState<string | null>(null)
   const isClosed = isProjectClosed(project)
+  const weighting = curve.data?.weighting ?? 'equal'
+  const weights = new Map((curve.data?.phases ?? []).map((weight) => [weight.id, weight]))
 
   const toggleEdit = (phaseId: string) => {
     updatePhase.reset()
     setIsAdding(false)
+    setProgressId(null)
     setEditingId((current) => (current === phaseId ? null : phaseId))
+  }
+
+  const toggleProgress = (phaseId: string) => {
+    setEditingId(null)
+    setProgressId((current) => (current === phaseId ? null : phaseId))
   }
 
   const toggleAdd = () => {
@@ -50,7 +63,7 @@ export function PhasesCard({ project }: { project: Project }) {
   }
 
   return (
-    <Card title="Tahap proyek" description="Progres proyek dihitung server dari rata-rata progres tahap">
+    <Card title="Tahap proyek" description={weighting === 'budget' ? 'Progres proyek berbobot nilai RAB tiap tahap' : 'Progres proyek masih rata-rata tahap karena belum ada item RAB yang dikaitkan ke tahap'}>
       {phases.isPending ? <Loading /> : null}
       {phases.isError ? <LoadFailed onRetry={() => phases.refetch()} /> : null}
       {phases.data ? (
@@ -64,8 +77,12 @@ export function PhasesCard({ project }: { project: Project }) {
                 projectId={project.id}
                 phase={phase}
                 isClosed={isClosed}
+                weight={weights.get(phase.id)}
+                weighting={weighting}
                 isEditing={editingId === phase.id}
                 onToggleEdit={() => toggleEdit(phase.id)}
+                isUpdatingProgress={progressId === phase.id}
+                onToggleProgress={() => toggleProgress(phase.id)}
                 update={updatePhase}
                 onEditDone={() => setEditingId(null)}
               />
@@ -99,12 +116,28 @@ export function PhasesCard({ project }: { project: Project }) {
   )
 }
 
-function PhaseRow({ projectId, phase, isClosed, isEditing, onToggleEdit, update, onEditDone }: {
+function PhaseRow({
+  projectId,
+  phase,
+  weight,
+  weighting,
+  isClosed,
+  isEditing,
+  onToggleEdit,
+  isUpdatingProgress,
+  onToggleProgress,
+  update,
+  onEditDone,
+}: {
   projectId: string
   phase: ProjectPhase
+  weight: PhaseWeight | undefined
+  weighting: ProgressWeighting
   isClosed: boolean
   isEditing: boolean
   onToggleEdit: () => void
+  isUpdatingProgress: boolean
+  onToggleProgress: () => void
   update: UpdatePhase
   onEditDone: () => void
 }) {
@@ -112,24 +145,32 @@ function PhaseRow({ projectId, phase, isClosed, isEditing, onToggleEdit, update,
   const saveProgress = useUpdatePhase(projectId)
 
   return (
-    <li className="py-4 first:pt-0 last:pb-0">
+    <li className="py-5 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-slate-900">
           {phase.sortOrder}. {phase.name}
         </p>
         <Chip tone={PHASE_STATUS_TONE[phase.status]}>{PHASE_STATUS_LABEL[phase.status]}</Chip>
       </div>
-      <p className="mt-0.5 mb-1.5 text-xs text-slate-500">{dateRange(phase.startDate, phase.targetEndDate)}</p>
+      <p className="mt-0.5 mb-2 text-xs text-slate-500">
+        {dateRange(phase.startDate, phase.targetEndDate)}
+        {weighting === 'budget' && weight ? <span> · {weightLabel(weight)}</span> : null}
+      </p>
       <ProgressMeter percent={phase.progress} label={`Progres ${phase.name}`} />
 
       {isClosed ? null : (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          {isEditing ? (
-            <span className="text-xs text-slate-500">Ubah progres lewat formulir di bawah.</span>
-          ) : (
-            <PhaseProgressForm key={`${phase.id}-${phase.progress}`} phase={phase} save={saveProgress} />
-          )}
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+          {saveProgress.isSuccess && !isUpdatingProgress ? (
+            <span role="status" className="mr-auto text-xs text-green-700">
+              Progres disimpan
+            </span>
+          ) : null}
           <div className="flex items-center gap-1">
+            <RowAction
+              label={isUpdatingProgress ? 'Batal' : 'Perbarui progres'}
+              isActive={isUpdatingProgress}
+              onClick={onToggleProgress}
+            />
             <RowAction label={isEditing ? 'Tutup' : 'Ubah'} isActive={isEditing} onClick={onToggleEdit} />
             <InlineConfirm
               label="Hapus"
@@ -141,6 +182,15 @@ function PhaseRow({ projectId, phase, isClosed, isEditing, onToggleEdit, update,
           </div>
         </div>
       )}
+
+      {isUpdatingProgress && !isClosed ? (
+        <PhaseProgressForm
+          key={`${phase.id}-${phase.progress}`}
+          phase={phase}
+          save={saveProgress}
+          onSaved={onToggleProgress}
+        />
+      ) : null}
 
       {saveProgress.isError ? (
         <div className="mt-2">
@@ -158,22 +208,28 @@ function PhaseRow({ projectId, phase, isClosed, isEditing, onToggleEdit, update,
   )
 }
 
+function weightLabel(weight: PhaseWeight): string {
+  if (weight.budget === 0) {
+    return 'bobot 0%, belum ada item RAB'
+  }
+  return `bobot ${weight.weightPercent.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
+}
+
 // Jalan cepat untuk laporan harian: cukup angka progres baru. Kolom lain
 // dikirim ulang apa adanya karena PUT tahap menimpa semua kolom.
-function PhaseProgressForm({ phase, save }: { phase: ProjectPhase; save: UpdatePhase }) {
+function PhaseProgressForm({ phase, save, onSaved }: { phase: ProjectPhase; save: UpdatePhase; onSaved: () => void }) {
   const [progress, setProgress] = useState(String(phase.progress))
   const inputId = `phase-quick-progress-${phase.id}`
-  const isSaved = save.isSuccess && save.data.progress === phase.progress && progress === String(phase.progress)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (isValidProgress(progress)) {
-      save.mutate({ phaseId: phase.id, values: { ...phaseEditValues(phase), progress } })
+      save.mutate({ phaseId: phase.id, values: { ...phaseEditValues(phase), progress } }, { onSuccess: onSaved })
     }
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+    <form onSubmit={submit} className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
       <label htmlFor={inputId} className="text-xs text-slate-600">
         Progres baru (%)
       </label>
@@ -186,17 +242,13 @@ function PhaseProgressForm({ phase, save }: { phase: ProjectPhase; save: UpdateP
         step={1}
         required
         value={progress}
+        autoFocus
         onChange={(event) => setProgress(event.target.value)}
         className={`${CONTROL_CLASS} h-9 w-20 px-2.5 tabular-nums`}
       />
-      <Button type="submit" variant="subtle" isPending={save.isPending} pendingLabel="Menyimpan">
+      <Button type="submit" isPending={save.isPending} pendingLabel="Menyimpan">
         Simpan progres
       </Button>
-      {isSaved ? (
-        <span role="status" className="text-xs text-green-700">
-          Progres disimpan
-        </span>
-      ) : null}
     </form>
   )
 }
