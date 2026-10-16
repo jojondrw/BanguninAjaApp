@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -25,6 +26,8 @@ var (
 
 var profileReadErrors = database.ErrorMap{NotFound: errProfileNotFound}
 
+const defaultNewsBudget = 2 * time.Second
+
 type Service interface {
 	Evaluate(ctx context.Context, userID uuid.UUID, request EvaluateRequest) (EvaluateResponse, error)
 }
@@ -34,6 +37,7 @@ type service struct {
 	scores            ScoreClient
 	regulationService regulation.Service
 	newsService       news.Service
+	newsBudget        time.Duration
 }
 
 func NewService(
@@ -47,6 +51,7 @@ func NewService(
 		scores:            scores,
 		regulationService: regulationService,
 		newsService:       newsService,
+		newsBudget:        defaultNewsBudget,
 	}
 }
 
@@ -60,6 +65,11 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 	if err := s.ensureProject(ctx, request.ProjectID); err != nil {
 		return EvaluateResponse{}, err
 	}
+
+	regulationData, _ := s.regulationService.GetByPoint(ctx, *request.Latitude, *request.Longitude)
+	newsCtx, stopNews := context.WithTimeout(ctx, s.newsBudget)
+	defer stopNews()
+	pendingNews := s.startNews(newsCtx, regulationData, "")
 
 	// 3. Call the internal scoring service for the predictive score (§1).
 	result, err := s.scores.Score(ctx, ScoreInput{
@@ -80,7 +90,9 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 		return EvaluateResponse{}, err
 	}
 
-	descriptive := s.describe(ctx, request, result.Region)
+	if pendingNews == nil {
+		pendingNews = s.startNews(newsCtx, regulationData, result.Region)
+	}
 
 	// 6. Assemble the public response.
 	// Predictive data remains completely separate from descriptive context.
@@ -91,7 +103,10 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 			DimensionScores: result.DimensionScores,
 			RiskFlags:       nonNilFlags(result.RiskFlags),
 		},
-		Descriptive: descriptive,
+		Descriptive: &Descriptive{
+			Regulasi: toRegulasi(regulationData),
+			News:     awaitNews(newsCtx, pendingNews),
+		},
 	}, nil
 }
 
@@ -159,15 +174,6 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 	return saved, nil
 }
 
-func (s *service) describe(ctx context.Context, request EvaluateRequest, scoringRegion string) *Descriptive {
-	regulationData, _ := s.regulationService.GetByPoint(ctx, *request.Latitude, *request.Longitude)
-
-	return &Descriptive{
-		Regulasi: toRegulasi(regulationData),
-		News:     s.fetchNews(ctx, regulationData, scoringRegion),
-	}
-}
-
 func toRegulasi(regulationData *regulation.Response) *Regulasi {
 	if regulationData == nil {
 		return nil
@@ -181,12 +187,33 @@ func toRegulasi(regulationData *regulation.Response) *Regulasi {
 	}
 }
 
-func (s *service) fetchNews(ctx context.Context, regulationData *regulation.Response, scoringRegion string) []News {
+func (s *service) startNews(ctx context.Context, regulationData *regulation.Response, scoringRegion string) <-chan []News {
 	query, ok := newsQueryFor(regulationData, scoringRegion)
 	if !ok {
+		return nil
+	}
+
+	found := make(chan []News, 1)
+	go func() {
+		found <- s.fetchNews(ctx, query)
+	}()
+	return found
+}
+
+func awaitNews(ctx context.Context, pending <-chan []News) []News {
+	if pending == nil {
 		return []News{}
 	}
 
+	select {
+	case items := <-pending:
+		return items
+	case <-ctx.Done():
+		return []News{}
+	}
+}
+
+func (s *service) fetchNews(ctx context.Context, query news.NewsQuery) []News {
 	items, _ := s.newsService.FetchNews(ctx, query)
 
 	result := make([]News, 0, len(items))
