@@ -114,6 +114,16 @@ type Repository interface {
 	CreateDailyReport(ctx context.Context, report *DailyReport) error
 	SaveDailyReport(ctx context.Context, report *DailyReport) error
 	DeleteDailyReport(ctx context.Context, projectID, id uuid.UUID) error
+	ListPaymentTerms(ctx context.Context, projectID uuid.UUID) ([]PaymentTermRow, error)
+	FindPaymentTerm(ctx context.Context, projectID, id uuid.UUID) (PaymentTerm, error)
+	CreatePaymentTerm(ctx context.Context, term *PaymentTerm) error
+	SavePaymentTerm(ctx context.Context, term *PaymentTerm) error
+	DeletePaymentTerm(ctx context.Context, projectID, id uuid.UUID) error
+	FindContract(ctx context.Context, projectID uuid.UUID) (ConstructionContract, error)
+	CreateContract(ctx context.Context, contract *ConstructionContract) error
+	SaveContract(ctx context.Context, contract *ConstructionContract) error
+	FindContractVendor(ctx context.Context, id uuid.UUID) (ContractVendor, error)
+	Payables() PayableLedger
 	FindBudgetItem(ctx context.Context, projectID, id uuid.UUID) (BudgetItem, error)
 	CreateBudgetItem(ctx context.Context, item *BudgetItem) error
 	SaveBudgetItem(ctx context.Context, item *BudgetItem) error
@@ -137,16 +147,17 @@ type Repository interface {
 }
 
 type gormRepository struct {
-	db *gorm.DB
+	db       *gorm.DB
+	payables PayableLedgerFactory
 }
 
-func NewRepository(db *gorm.DB) Repository {
-	return &gormRepository{db: db}
+func NewRepository(db *gorm.DB, payables PayableLedgerFactory) Repository {
+	return &gormRepository{db: db, payables: payables}
 }
 
 func (r *gormRepository) Transaction(ctx context.Context, work func(Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return work(&gormRepository{db: tx})
+		return work(&gormRepository{db: tx, payables: r.payables})
 	})
 }
 

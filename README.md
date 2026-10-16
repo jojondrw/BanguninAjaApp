@@ -76,6 +76,18 @@ absensi dan penggajian, aset, alat, serta lokasi tersimpan dan satu perbandingan
 Semua kode berawalan `DEMO-`, tanggal dihitung dari hari ini, dan aman diulang
 (data yang sudah ada dilewati).
 
+- Kontrak kontraktor dan termin ada di RSIA Cirebon, Griya Asri, dan Cluster
+  Lama Depok. Termin diajukan lewat service supaya hutangnya tercatat di
+  Tagihan seperti pemakaian biasa, lalu tanggal pengajuannya dimundurkan ke
+  hari progres mencapai syarat (dari riwayat progres). Hutang yang jatuh
+  temponya sudah lewat dibuat lunas.
+- Cluster Lama Depok sudah selesai, semua terminnya lunas, dan retensinya
+  sengaja belum dilepas supaya tombol Lepas retensi bisa diperagakan. Kontrak
+  dan terminnya ditulis langsung ke database karena proyek yang sudah selesai
+  tidak bisa diubah lewat service.
+- Laporan harian memakai pola cuaca tetap musim hujan (pagi cerah atau berawan,
+  hujan siang atau sore) supaya hasilnya sama setiap dibuat ulang.
+
 - Lokasi tersimpan dan permintaan pembelian dimiliki satu akun. Urutannya:
   `--owner email@anda` kalau diisi; kalau tidak, akun `demo@banguninaja.id`
   (dibuat otomatis bila `DEMO_USER_PASSWORD` diisi); kalau tidak juga, akun
@@ -188,11 +200,16 @@ Sudah jalan:
   Pengadaan, Inventaris, dan SDM
 - Laporan (arus kas, anggaran, proyek, umur piutang dan utang, stok,
   penggajian, penjualan) dengan pratinjau dan unduhan PDF, XLSX, dan CSV
-- CI di GitHub Actions untuk backend, frontend, dan layanan scoring
+- Progres berbobot RAB, kurva S, laporan harian lapangan, serta termin
+  kontraktor dengan retensi yang menjadi hutang di Tagihan
+- Hak akses per modul untuk 7 peran
+- CI di GitHub Actions untuk backend, frontend, layanan scoring, dan integration
+  test ke PostgreSQL + PostGIS
 
 Belum dikerjakan:
 
-- Simulasi pembayaran on-chain
-- Pembatasan akses berdasarkan peran
+- Hak akses per proyek (sekarang per modul)
+- Pekerjaan tambah-kurang (change order)
+- Penagihan termin ke pemberi kerja
 
 Rincian dan sisa pekerjaan lain ada di `PROJECT_HANDOFF.md`.

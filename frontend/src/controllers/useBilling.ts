@@ -17,7 +17,7 @@ import { billingApi } from '../models/billingApi'
 
 const ONE_MINUTE = 60_000
 const MAX_PAGE_SIZE = 100
-const BILLING_KEY = 'billing'
+export const BILLING_KEY = 'billing'
 
 const DATA_QUERY = {
   staleTime: ONE_MINUTE,

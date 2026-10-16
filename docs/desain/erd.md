@@ -6,11 +6,11 @@ jadi setiap garis di bawah ada di database sungguhan.
 
 | | Jumlah |
 |---|---|
-| Tabel aplikasi | 50 (ditambah `spatial_ref_sys` milik PostGIS) |
-| Foreign key | 79 |
+| Tabel aplikasi | 54 (ditambah `spatial_ref_sys` milik PostGIS) |
+| Foreign key | 88 |
 | Slice backend yang memiliki tabel | 14 |
 
-Satu diagram berisi 50 tabel tidak terbaca, jadi ERD dipecah per domain. Tabel
+Satu diagram berisi 54 tabel tidak terbaca, jadi ERD dipecah per domain. Tabel
 dari domain lain hanya ditampilkan namanya supaya garis relasinya tetap kelihatan.
 
 ## Cara membaca
@@ -100,7 +100,16 @@ erDiagram
     region |o--o{ project : "lokasi"
     project ||--o{ project_phase : "tahap"
     project ||--o{ budget_item : "RAB"
+    project_phase |o--o{ budget_item : "bobot tahap"
     unit_of_measure ||--o{ budget_item : "satuan"
+    project ||--o{ project_progress : "riwayat progres"
+    project ||--o{ daily_report : "laporan harian"
+    users |o--o{ daily_report : "dibuat oleh"
+    project ||--o| construction_contract : "kontrak kontraktor"
+    vendor ||--o{ construction_contract : "kontraktor"
+    project ||--o{ payment_term : "termin"
+    payable |o--o| payment_term : "hutang termin"
+    users |o--o{ payment_term : "diajukan oleh"
     project ||--o{ permit : "izin"
     project ||--o{ project_member : "anggota"
     project |o--o{ report : "laporan"
@@ -113,7 +122,7 @@ erDiagram
         uuid region_id FK
         varchar type "teks bebas, mis. Perumahan, Ruko"
         varchar status "planning, ongoing, on_hold, completed, cancelled"
-        int progress "rata-rata progres tahap"
+        int progress "rata-rata berbobot nilai RAB per tahap"
         date start_date
         date target_end_date
         bigint contract_value
@@ -131,12 +140,52 @@ erDiagram
     budget_item {
         uuid id PK
         uuid project_id FK
+        uuid phase_id FK "boleh kosong"
         varchar code
         varchar description
         numeric volume
         uuid unit_of_measure_id FK
         bigint unit_price
         bigint total "volume x harga satuan, dihitung server"
+    }
+    project_progress {
+        uuid id PK
+        uuid project_id FK
+        date recorded_on "unik per proyek"
+        int progress
+    }
+    daily_report {
+        uuid id PK
+        uuid project_id FK
+        date report_date "unik per proyek"
+        varchar weather_morning
+        varchar weather_afternoon
+        int workers
+        varchar equipment
+        text work_done
+        text issues
+        uuid created_by FK
+    }
+    construction_contract {
+        uuid id PK
+        uuid project_id FK "UK, satu per proyek"
+        uuid vendor_id FK
+        varchar number "nomor SPK"
+        bigint value
+        numeric retention_percent "0 sampai 10"
+    }
+    payment_term {
+        uuid id PK
+        uuid project_id FK
+        varchar kind "progress, retention"
+        int required_progress
+        numeric percent "persen nilai kontrak"
+        bigint gross_amount
+        bigint retention_amount
+        uuid payable_id FK "UK"
+        date claimed_on
+        int claimed_progress
+        uuid claimed_by FK
     }
     permit {
         uuid id PK

@@ -21,7 +21,7 @@ mengulang nama. Di sini semuanya dinormalkan.
 |---|---|
 | `master` | Region, UnitOfMeasure, Account |
 | `auth` | Role, User, RefreshToken |
-| `project` | Project, ProjectPhase, BudgetItem, Permit, ProjectMember |
+| `project` | Project, ProjectPhase, BudgetItem, ProgressSnapshot, DailyReport, ConstructionContract, PaymentTerm, Permit, ProjectMember |
 | `inventory` | Material, Warehouse, Stock, StockMovement |
 | `procurement` | Vendor, PurchaseRequest, PurchaseRequestItem, PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem |
 | `asset` | Asset, Equipment |
@@ -34,8 +34,8 @@ mengulang nama. Di sini semuanya dinormalkan.
 | `reporting` | Report |
 | `regulation` | Regulation |
 
-Totalnya 50 tabel, 79 foreign key, 76 check, 42 indeks unik selain kunci utama,
-dan 239 index (dihitung dari database pada 16 Oktober 2026). Gambar relasinya ada
+Totalnya 54 tabel, 88 foreign key, 85 check, 47 indeks unik selain kunci utama,
+dan 256 index (dihitung dari database pada 17 Oktober 2026). Gambar relasinya ada
 di [ERD](../../desain/erd.md).
 
 ## Yang ditambahkan karena livewire belum mencerminkan data asli
@@ -96,6 +96,21 @@ Ini beberapa yang sudah diuji dan benar-benar menolak data salah:
 | Stok tidak boleh minus | `chk_stock_quantity` |
 | Mutasi harus punya gudang asal atau tujuan | `chk_stock_movement_direction` |
 | Pembayaran tidak boleh melebihi tagihan | `chk_invoice_amount` |
+| Retensi kontrak kontraktor 0 sampai 10% | `chk_construction_contract_retention` |
+| Satu proyek hanya sekali melepas retensi | `uq_payment_term_retention` (indeks unik parsial `WHERE kind = 'retention'`) |
+| Satu hutang hanya untuk satu termin | `uq_payment_term_payable` |
+
+## Kontrak kontraktor dan termin
+
+| Keputusan | Alasan |
+|---|---|
+| `construction_contract` terpisah dari `project.contract_value` | `contract_value` adalah nilai proyek (nilai jual atau nilai kontrak dengan pemberi kerja) dan dibandingkan dengan RAB. Pembayaran ke kontraktor pelaksana punya nilai, pihak, dan retensi sendiri |
+| Satu kontrak per proyek (`uq_construction_contract_project`) | Termin dihitung sebagai persen dari satu nilai kontrak. Kontraktor kedua butuh kontrak dan termin sendiri, belum didukung |
+| Status termin tidak disimpan | `planned` dan `ready` dihitung dari progres berbobot, `claimed` dan `paid` dari hutang yang tertaut. Kolom status akan basi setiap progres atau pembayaran berubah |
+| `payment_term.payable_id` memakai `SET NULL` | Hutang yang belum dibayar boleh dihapus di Tagihan untuk membatalkan pengajuan. Terminnya otomatis kembali bisa diajukan |
+| `claimed_on`, `claimed_progress`, `claimed_by` | Jejak audit: kapan, pada progres berapa, dan oleh siapa termin disahkan |
+| Pelepasan retensi disimpan sebagai baris `kind = 'retention'` | Pelepasan punya hutang dan jejak audit sendiri seperti termin biasa, dan indeks unik parsial mencegah retensi dilepas dua kali |
+| `vendor_id` memakai `RESTRICT` | Vendor yang masih terikat kontrak tidak boleh hilang dari daftar |
 
 ## Menjalankan migrasi
 

@@ -62,15 +62,29 @@ const DANGER_CONFIRM =
   'rounded-lg bg-red-600 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-white hover:bg-red-700 ' +
   'disabled:cursor-not-allowed disabled:bg-red-600/60'
 
-// Hapus dua langkah di baris yang sama, bukan lewat confirm() yang memblokir
+const CONFIRM_TONE = {
+  danger: { ask: DANGER_ROW_ACTION, confirm: DANGER_CONFIRM },
+  primary: {
+    ask:
+      'rounded-md px-2 py-1 text-xs font-medium text-navy-700 transition-[background-color,transform] ' +
+      'hover:bg-navy-50 motion-safe:active:scale-95',
+    confirm:
+      'rounded-lg bg-navy-600 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-white hover:bg-navy-700 ' +
+      'disabled:cursor-not-allowed disabled:bg-navy-600/60',
+  },
+}
+
+// Tindakan dua langkah di baris yang sama, bukan lewat confirm() yang memblokir
 // halaman. Fokus pindah ke Batal supaya Enter yang tertekan dua kali tidak
-// langsung menghapus.
-export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, onConfirm }: {
+// langsung menjalankannya. Nada primary untuk tindakan penting yang tidak
+// menghapus, misalnya mengajukan termin.
+export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, onConfirm, tone = 'danger' }: {
   label: string
   confirmLabel: string
   pendingLabel: string
   isPending: boolean
   onConfirm: () => void
+  tone?: keyof typeof CONFIRM_TONE
 }) {
   const [isAsking, setIsAsking] = useState(false)
   const canWrite = useScopedCan('write')
@@ -81,7 +95,7 @@ export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, on
 
   if (!isAsking && !isPending) {
     return (
-      <button type="button" onClick={() => setIsAsking(true)} className={DANGER_ROW_ACTION}>
+      <button type="button" onClick={() => setIsAsking(true)} className={CONFIRM_TONE[tone].ask}>
         {label}
       </button>
     )
@@ -89,7 +103,13 @@ export function InlineConfirm({ label, confirmLabel, pendingLabel, isPending, on
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <button type="button" disabled={isPending} aria-busy={isPending} onClick={onConfirm} className={DANGER_CONFIRM}>
+      <button
+        type="button"
+        disabled={isPending}
+        aria-busy={isPending}
+        onClick={onConfirm}
+        className={CONFIRM_TONE[tone].confirm}
+      >
         {isPending ? pendingLabel : confirmLabel}
       </button>
       {isPending ? null : (

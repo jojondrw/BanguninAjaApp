@@ -106,7 +106,7 @@ func backfill(db *gorm.DB) error {
 	}
 	slog.Info("billing payment history ready", slog.Int64("backfilled", payments))
 
-	projects, err := project.RefreshAllProgress(context.Background(), project.NewRepository(db), duedate.Today(time.Now()))
+	projects, err := project.RefreshAllProgress(context.Background(), project.NewRepository(db, nil), duedate.Today(time.Now()))
 	if err != nil {
 		return err
 	}

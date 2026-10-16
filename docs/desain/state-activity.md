@@ -11,6 +11,7 @@ Sumber aturan transisi:
 |---|---|
 | Proyek | `projectTransitions` di `project/service.go` |
 | Tahap proyek | `phaseStatus` di `project/service.go` |
+| Termin kontraktor | `newPaymentScheduleResponse`, `claimBlocker`, `releasableRetention` di `project/payment_term.go` |
 | Permintaan dan pesanan pembelian | `requestTransitions`, `orderTransitions`, `statusAfterReceipt` di `procurement/service.go` |
 | Kontrak dan unit | `contractTransitions`, `unitStatusAfterContract` di `sales/service.go` |
 | Jatuh tempo tagihan dan cicilan | `duedate.Status` di `shared/duedate` |
@@ -38,8 +39,9 @@ stateDiagram-v2
 
 ### Tahap proyek
 
-Status tahap tidak dipilih pengguna. Status diturunkan dari progres yang diisi,
-dan progres proyek adalah rata-rata progres semua tahapnya.
+Status tahap tidak dipilih pengguna. Status diturunkan dari progres yang diisi.
+Progres proyek adalah rata-rata progres tahap yang dibobot nilai RAB tiap tahap,
+atau bobot sama kalau belum ada item RAB yang ditautkan ke tahap.
 
 ```mermaid
 stateDiagram-v2
@@ -49,6 +51,25 @@ stateDiagram-v2
     in_progress --> completed : progres 100
     in_progress --> not_started : progres 0
     completed --> in_progress : progres diturunkan
+```
+
+### Termin kontraktor
+
+Status termin tidak disimpan sebagai kolom. Status dihitung dari progres
+berbobot proyek dan dari hutang yang tertaut di modul Tagihan, jadi selalu
+sesuai keadaan terakhir.
+
+```mermaid
+stateDiagram-v2
+    [*] --> planned : termin disusun
+    planned --> ready : progres mencapai syarat dan termin sebelumnya sudah diajukan
+    ready --> planned : progres turun di bawah syarat
+    ready --> claimed : Manajer Proyek mengajukan, hutang dibuat
+    claimed --> paid : Keuangan melunasi hutang
+    claimed --> ready : hutang dihapus di Tagihan sebelum dibayar
+    planned --> [*] : dihapus
+    ready --> [*] : dihapus
+    paid --> [*]
 ```
 
 ### Permintaan pembelian dan pesanan pembelian
@@ -208,6 +229,42 @@ flowchart TD
     a4 --> a5 --> a6 --> s1 --> a7
     a7 -- Belum --> s2 --> a6
     a7 -- Sudah --> s3 --> k1 --> k2 --> k3
+```
+
+### Pembayaran kontraktor per termin sampai retensi
+
+Manajer Proyek mengesahkan progres dengan mengajukan termin, Keuangan yang
+membayar. Keduanya tidak bisa saling menggantikan karena hak aksesnya berbeda:
+pengajuan butuh hak tulis Proyek, pembayaran butuh hak tulis Tagihan.
+
+```mermaid
+flowchart TD
+    subgraph pm["Manajer Proyek"]
+        m1[Atur kontrak kontraktor: vendor, nilai, retensi]
+        m2[Susun termin: syarat progres dan persen nilai]
+        m3[Perbarui progres tahap dan laporan harian]
+        m4[Ajukan termin yang siap]
+        m5[Lepas retensi]
+    end
+    subgraph sys["Sistem"]
+        s1[Hitung progres berbobot RAB]
+        s2{Progres mencapai syarat dan termin sebelumnya sudah diajukan?}
+        s3[Buat hutang sebesar nilai termin dikurangi retensi]
+        s4[Kunci kontrak dari perubahan]
+        s5{Proyek selesai dan semua termin diajukan?}
+        s6[Buat hutang sebesar retensi yang ditahan]
+    end
+    subgraph keu["Keuangan"]
+        k1[Bayar hutang termin di Tagihan]
+        k2[Bayar hutang retensi]
+    end
+
+    m1 --> m2 --> m3 --> s1 --> s2
+    s2 -- Belum --> m3
+    s2 -- Sudah --> m4 --> s3 --> s4 --> k1
+    k1 --> s5
+    s5 -- Belum --> m3
+    s5 -- Sudah --> m5 --> s6 --> k2
 ```
 
 ### Penjualan unit sampai lunas

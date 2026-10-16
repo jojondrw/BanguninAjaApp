@@ -396,3 +396,83 @@ func (c *Controller) DeleteDailyReport(ctx *gin.Context) {
 	}
 	httpresponse.RespondNoContent(ctx, c.service.DeleteDailyReport(ctx.Request.Context(), projectID, reportID))
 }
+
+func (c *Controller) PaymentSchedule(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.PaymentSchedule(ctx.Request.Context(), projectID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) SaveContract(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request ContractRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.SaveContract(ctx.Request.Context(), projectID, request)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) CreatePaymentTerm(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request PaymentTermRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.CreatePaymentTerm(ctx.Request.Context(), projectID, request)
+	httpresponse.RespondCreated(ctx, schedule, err)
+}
+
+func (c *Controller) DeletePaymentTerm(ctx *gin.Context) {
+	projectID, termID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.DeletePaymentTerm(ctx.Request.Context(), projectID, termID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) ClaimPaymentTerm(ctx *gin.Context) {
+	projectID, termID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.ClaimPaymentTerm(ctx.Request.Context(), projectID, termID, actorID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) ReleaseRetention(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.ReleaseRetention(ctx.Request.Context(), projectID, actorID)
+	httpresponse.Respond(ctx, schedule, err)
+}

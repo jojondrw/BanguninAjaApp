@@ -1,6 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toDailyReportRequest, type DailyReportFormValues } from '../models/dailyReport'
+import {
+  toContractRequest,
+  toPaymentTermRequest,
+  type ContractFormValues,
+  type PaymentSchedule,
+  type PaymentTermFormValues,
+} from '../models/paymentTerm'
 import { financeApi, projectApi } from '../models/erpApi'
 import {
   lastMonthsRange,
@@ -31,6 +38,7 @@ import {
   DATA_QUERY,
   PROJECTS_KEY,
 } from './useErp'
+import { BILLING_KEY } from './useBilling'
 import { JOURNAL_KEY, LEDGER_KEY } from './useFinance'
 
 const MASTER_KEY = 'master'
@@ -326,3 +334,60 @@ export function useDeleteDailyReport(projectId: string) {
   })
 }
 
+
+export function usePaymentSchedule(projectId: string) {
+  return useQuery({
+    queryKey: detailKey(projectId, 'payment-schedule'),
+    queryFn: () => projectWorkspaceApi.paymentSchedule(projectId),
+    ...DATA_QUERY,
+  })
+}
+
+// Setiap perubahan termin mengembalikan jadwal lengkap, jadi cache langsung
+// diganti tanpa permintaan ulang. Pengajuan dan pelepasan retensi membuat hutang
+// baru, sehingga daftar di modul Tagihan ikut disegarkan.
+function useScheduleMutation<Input>(
+  projectId: string,
+  mutationFn: (input: Input) => Promise<PaymentSchedule>,
+  createsPayable = false,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn,
+    onSuccess: (schedule) => {
+      queryClient.setQueryData(detailKey(projectId, 'payment-schedule'), schedule)
+      if (createsPayable) {
+        void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] })
+      }
+    },
+  })
+}
+
+export function useSaveContract(projectId: string) {
+  return useScheduleMutation(projectId, (values: ContractFormValues) =>
+    projectWorkspaceApi.saveContract(projectId, toContractRequest(values)),
+  )
+}
+
+export function useCreatePaymentTerm(projectId: string) {
+  return useScheduleMutation(projectId, (values: PaymentTermFormValues) =>
+    projectWorkspaceApi.createPaymentTerm(projectId, toPaymentTermRequest(values)),
+  )
+}
+
+export function useDeletePaymentTerm(projectId: string) {
+  return useScheduleMutation(projectId, (termId: string) => projectWorkspaceApi.deletePaymentTerm(projectId, termId))
+}
+
+export function useClaimPaymentTerm(projectId: string) {
+  return useScheduleMutation(
+    projectId,
+    (termId: string) => projectWorkspaceApi.claimPaymentTerm(projectId, termId),
+    true,
+  )
+}
+
+export function useReleaseRetention(projectId: string) {
+  return useScheduleMutation<void>(projectId, () => projectWorkspaceApi.releaseRetention(projectId), true)
+}

@@ -12,12 +12,14 @@ import (
 )
 
 const (
-	vendorBuilding = "DEMO-V01"
-	vendorSteel    = "DEMO-V02"
-	vendorConcrete = "DEMO-V03"
-	vendorElectric = "DEMO-V04"
-	vendorFinish   = "DEMO-V05"
-	vendorPaint    = "DEMO-V06"
+	vendorBuilding  = "DEMO-V01"
+	vendorSteel     = "DEMO-V02"
+	vendorConcrete  = "DEMO-V03"
+	vendorElectric  = "DEMO-V04"
+	vendorFinish    = "DEMO-V05"
+	vendorPaint     = "DEMO-V06"
+	vendorStructure = "DEMO-V07"
+	vendorHousing   = "DEMO-V08"
 
 	orderCement   = "DEMO-PO-001"
 	orderConcrete = "DEMO-PO-002"
@@ -95,6 +97,8 @@ func demoVendors() []vendorSeed {
 		{vendorElectric, "CV Listrik Terang Abadi", "Mekanikal & elektrikal", "0231-220-918", "04.567.890.1-426.000", 14, "new", true},
 		{vendorFinish, "UD Keramik Mulia Cirebon", "Finishing", "0231-481-733", "05.678.901.2-426.000", 30, "good", true},
 		{vendorPaint, "PT Cat Warna Lestari", "Finishing", "021-5544-092", "06.789.012.3-411.000", 30, "poor", false},
+		{vendorStructure, "PT Graha Struktur Nusantara", "Subkontraktor struktur", "0231-884-120", "07.890.123.4-426.000", 30, "good", true},
+		{vendorHousing, "CV Karya Bangun Priangan", "Kontraktor perumahan", "022-7781-204", "08.901.234.5-424.000", 21, "good", true},
 	}
 }
 

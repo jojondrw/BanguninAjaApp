@@ -19,6 +19,16 @@ Empat celah paling penting, semuanya bisa ditambahkan tanpa menu baru:
 3. Belum ada termin pembayaran berdasarkan progres dan retensi
 4. Belum ada pekerjaan tambah-kurang (change order / adendum)
 
+### Kemajuan sejak penilaian ini
+
+| Celah | Keadaan |
+|---|---|
+| Ruang lega di seluruh halaman | Selesai (#60) |
+| Progres berbobot RAB dan kurva S | Selesai (#61) |
+| Laporan harian lapangan | Selesai (#65), tab Lapangan |
+| Termin dan retensi | Selesai (#71), kartu Termin kontraktor di tab Keuangan proyek |
+| Pekerjaan tambah-kurang | Belum |
+
 ## 1. Peta fitur
 
 `Ada` = sudah dipakai sehari-hari, `Dangkal` = ada tapi belum seperti praktik

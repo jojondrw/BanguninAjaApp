@@ -106,6 +106,7 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 		services: newServices(ctx, tx, cfg),
 		patcher:  gormLocationPatcher{db: tx},
 		history:  gormProgressRecorder{db: tx},
+		terms:    gormTermWriter{db: tx},
 		today:    todayInJakarta(time.Now()),
 		owner:    owner,
 		ids:      map[string]uuid.UUID{},
@@ -119,7 +120,7 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 
 func newServices(ctx context.Context, tx *gorm.DB, cfg config.Config) services {
 	return services{
-		projects:    project.NewService(project.NewRepository(tx)),
+		projects:    project.NewService(project.NewRepository(tx, project.NewBillingPayables)),
 		finance:     finance.NewService(finance.NewRepository(tx)),
 		sales:       sales.NewService(sales.NewRepository(tx)),
 		inventory:   inventory.NewService(inventory.NewRepository(tx)),

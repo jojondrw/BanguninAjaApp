@@ -23,8 +23,6 @@ type dayWeather struct {
 	issue     string
 }
 
-// Oktober sudah masuk musim hujan: pagi biasanya cerah atau berawan, hujan
-// turun siang atau sore. Pola tetap supaya data demo sama setiap dibuat ulang.
 var demoWeather = []dayWeather{
 	{"sunny", "cloudy", ""},
 	{"cloudy", "rain", "Hujan pukul 14.00, pekerjaan luar berhenti sekitar 2 jam"},
