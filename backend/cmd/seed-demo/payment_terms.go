@@ -11,6 +11,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 )
 
@@ -22,6 +23,15 @@ type termSeed struct {
 	claim    bool
 }
 
+type changeSeed struct {
+	description string
+	value       int64
+	days        int
+	decision    string
+	proposed    int
+	decided     int
+}
+
 type constructionSeed struct {
 	project   string
 	vendor    string
@@ -29,19 +39,25 @@ type constructionSeed struct {
 	value     int64
 	retention float64
 	terms     []termSeed
+	changes   []changeSeed
 }
 
 func demoConstructionContracts() []constructionSeed {
 	return []constructionSeed{
 		{projectHospital, vendorStructure, "DEMO-SPK-RSIA-01", 23_500_000_000, 5, []termSeed{
 			{0, 10, true}, {20, 20, true}, {40, 20, true}, {70, 25, false}, {100, 25, false},
+		}, []changeSeed{
+			{"Penambahan ruang NICU dan instalasi gas medis di lantai 3", 1_250_000_000, 30, "approved", -16, -9},
+			{"Pengurangan pekerjaan lansekap halaman depan karena area parkir diperluas", -350_000_000, 0, "", -3, 0},
 		}},
 		{projectGriyaAsri, vendorHousing, "DEMO-SPK-GAB-01", 22_750_000_000, 5, []termSeed{
 			{25, 25, true}, {50, 25, true}, {75, 25, false}, {100, 25, false},
+		}, []changeSeed{
+			{"Penggantian atap metal ke genteng keramik untuk blok B", 420_000_000, 0, "rejected", -30, -26},
 		}},
 		{projectCluster, vendorHousing, "DEMO-SPK-CLD-01", 6_850_000_000, 5, []termSeed{
 			{30, 30, true}, {60, 30, true}, {100, 40, true},
-		}},
+		}, nil},
 	}
 }
 
@@ -49,6 +65,7 @@ type termWriter interface {
 	createSchedule(ctx context.Context, contract *project.ConstructionContract, terms []project.PaymentTerm) error
 	reachedOn(ctx context.Context, projectID uuid.UUID, progress int) (time.Time, int, bool, error)
 	backdateClaim(ctx context.Context, termID uuid.UUID, claimedOn time.Time, progress int, due time.Time, status string) error
+	backdateChange(ctx context.Context, changeID uuid.UUID, proposedOn time.Time, decidedOn *time.Time) error
 }
 
 func (s *seeder) seedPaymentTerms() error {
@@ -83,19 +100,53 @@ func (s *seeder) seedConstructionContract(seed constructionSeed) error {
 		err := s.terms.createSchedule(s.ctx, &contract, terms)
 		return contract.ID, err
 	})
-	if err != nil || !created {
+	if err != nil {
 		return err
 	}
 
 	for i, term := range seed.terms {
-		if !term.claim {
+		if !created || !term.claim {
 			continue
 		}
 		if err := s.claimTerm(projectID, seed, terms[i].ID, i+1); err != nil {
 			return err
 		}
 	}
+	for _, change := range seed.changes {
+		if err := s.seedChange(projectID, change); err != nil {
+			return fmt.Errorf("change order of %s: %w", seed.number, err)
+		}
+	}
 	return nil
+}
+
+func (s *seeder) seedChange(projectID uuid.UUID, seed changeSeed) error {
+	keys := map[string]any{"project_id": projectID, "description": seed.description}
+	_, _, err := s.ensure("contract_change", keys, func() (uuid.UUID, error) {
+		return s.proposeChange(projectID, seed)
+	})
+	return err
+}
+
+func (s *seeder) proposeChange(projectID uuid.UUID, seed changeSeed) (uuid.UUID, error) {
+	schedule, err := s.services.projects.ProposeContractChange(s.ctx, projectID, s.owner, project.ContractChangeRequest{
+		Description: seed.description, ValueChange: seed.value, DaysChange: seed.days,
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	changeID := schedule.Changes[len(schedule.Changes)-1].ID
+
+	var decidedOn *time.Time
+	if seed.decision != "" {
+		_, err := s.services.projects.DecideContractChange(s.ctx, projectID, changeID, s.owner, access.RoleAdmin,
+			project.ContractChangeDecision{Status: seed.decision})
+		if err != nil {
+			return uuid.Nil, err
+		}
+		decidedOn = s.dayPointer(seed.decided)
+	}
+	return changeID, s.terms.backdateChange(s.ctx, changeID, s.day(seed.proposed), decidedOn)
 }
 
 func (s *seeder) claimTerm(projectID uuid.UUID, seed constructionSeed, termID uuid.UUID, position int) error {
@@ -176,6 +227,19 @@ func (w gormTermWriter) reachedOn(ctx context.Context, projectID uuid.UUID, prog
 		return time.Time{}, 0, false, nil
 	}
 	return snapshots[0].RecordedOn, snapshots[0].Progress, true, nil
+}
+
+func (w gormTermWriter) backdateChange(ctx context.Context, changeID uuid.UUID, proposedOn time.Time, decidedOn *time.Time) error {
+	updates := map[string]any{"created_at": proposedOn, "updated_at": proposedOn}
+	if decidedOn != nil {
+		updates["decided_on"] = *decidedOn
+		updates["updated_at"] = *decidedOn
+	}
+	err := w.db.WithContext(ctx).Model(&project.ContractChange{}).Where("id = ?", changeID).Updates(updates).Error
+	if err != nil {
+		return fmt.Errorf("backdate change order: %w", err)
+	}
+	return nil
 }
 
 func (w gormTermWriter) backdateClaim(ctx context.Context, termID uuid.UUID, claimedOn time.Time, progress int, due time.Time, status string) error {

@@ -74,6 +74,9 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	projects.DELETE("/:id/payment-terms/:childId", m.controller.DeletePaymentTerm)
 	projects.POST("/:id/payment-terms/:childId/claim", m.controller.ClaimPaymentTerm)
 	projects.POST("/:id/retention-release", m.controller.ReleaseRetention)
+	projects.POST("/:id/contract-changes", m.controller.ProposeContractChange)
+	projects.PATCH("/:id/contract-changes/:childId", m.controller.DecideContractChange)
+	projects.DELETE("/:id/contract-changes/:childId", m.controller.DeleteContractChange)
 
 	projects.GET("/:id/permits", m.controller.ListPermits)
 	projects.POST("/:id/permits", m.controller.CreatePermit)

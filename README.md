@@ -85,6 +85,10 @@ Semua kode berawalan `DEMO-`, tanggal dihitung dari hari ini, dan aman diulang
   sengaja belum dilepas supaya tombol Lepas retensi bisa diperagakan. Kontrak
   dan terminnya ditulis langsung ke database karena proyek yang sudah selesai
   tidak bisa diubah lewat service.
+- RSIA punya satu adendum disetujui (setelah termin ketiga diajukan, jadi termin
+  lama tetap memakai nilai awal) dan satu usulan yang menunggu Admin. Griya Asri
+  punya satu adendum ditolak. Adendum dicek per proyek dan uraian, jadi database
+  yang sudah punya kontrak demo tetap mendapatkannya.
 - Laporan harian memakai pola cuaca tetap musim hujan (pagi cerah atau berawan,
   hujan siang atau sore) supaya hasilnya sama setiap dibuat ulang.
 
@@ -200,8 +204,9 @@ Sudah jalan:
   Pengadaan, Inventaris, dan SDM
 - Laporan (arus kas, anggaran, proyek, umur piutang dan utang, stok,
   penggajian, penjualan) dengan pratinjau dan unduhan PDF, XLSX, dan CSV
-- Progres berbobot RAB, kurva S, laporan harian lapangan, serta termin
-  kontraktor dengan retensi yang menjadi hutang di Tagihan
+- Progres berbobot RAB, kurva S, laporan harian lapangan, termin kontraktor
+  dengan retensi yang menjadi hutang di Tagihan, dan adendum (pekerjaan
+  tambah-kurang) yang disetujui Admin
 - Hak akses per modul untuk 7 peran
 - CI di GitHub Actions untuk backend, frontend, layanan scoring, dan integration
   test ke PostgreSQL + PostGIS
@@ -209,7 +214,6 @@ Sudah jalan:
 Belum dikerjakan:
 
 - Hak akses per proyek (sekarang per modul)
-- Pekerjaan tambah-kurang (change order)
 - Penagihan termin ke pemberi kerja
 
 Rincian dan sisa pekerjaan lain ada di `PROJECT_HANDOFF.md`.

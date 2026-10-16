@@ -15,17 +15,17 @@ di [rencana pengujian](README.md).
 | System | 5 skenario, 27 langkah | 27 | 0 | 3,2 detik |
 | Acceptance | 14 skenario | 12 | 0 | 8 lewat UI, 4 lewat API; 2 belum dijalankan (pesanan pembelian, pembayaran on-chain). Persetujuan pengguna di [acceptance.md](acceptance.md) |
 
-### Pembaruan setelah termin dan retensi
+### Pembaruan setelah termin, retensi, dan adendum
 
 Diukur ulang pada branch PR #71 (termin dan retensi), yang sudah memuat PR #67 sampai
 #70. Angka di bagian lain laporan ini tetap angka pengukuran pertama.
 
 | Level | Jumlah | Lulus | Gagal | Catatan |
 |---|---|---|---|---|
-| Unit, backend Go | 492 test (+62 subtest) | 492 | 0 | Coverage pernyataan 47,7%. Paket `project` 64 test, coverage 61,9% |
-| Unit, frontend | 151 test di 24 berkas | 151 | 0 | Ditambah 8 test kartu dan model termin |
-| Integration (PostgreSQL + PostGIS) | 8 | 8 | 0 | Ditambah pengajuan termin menjadi hutang sungguhan, dan retensi yang hanya bisa dilepas sekali |
-| Acceptance | 16 skenario | 14 | 0 | Ditambah AT-15 (lewat UI) dan AT-16 (lewat test render dan aturan akses); AT-10 dan AT-13 masih belum dijalankan |
+| Unit, backend Go | 500 test (+62 subtest) | 500 | 0 | Coverage pernyataan 47,8%. Paket `project` 72 test, coverage 62,1% |
+| Unit, frontend | 156 test di 24 berkas | 156 | 0 | Ditambah 13 test kartu dan model termin serta adendum |
+| Integration (PostgreSQL + PostGIS) | 9 | 9 | 0 | Ditambah pengajuan termin menjadi hutang sungguhan, retensi yang hanya bisa dilepas sekali, dan adendum yang mengubah nilai pengajuan berikutnya |
+| Acceptance | 17 skenario | 15 | 0 | Ditambah AT-15 dan AT-17 (lewat UI) serta AT-16 (lewat test render dan aturan akses); AT-10 dan AT-13 masih belum dijalankan |
 
 Coverage `billing` turun tipis dari 73,4% ke 72,8% karena `payable_ledger.go`
 diuji lewat integration test, bukan unit test paket itu sendiri.

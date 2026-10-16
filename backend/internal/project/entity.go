@@ -95,7 +95,7 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &Permit{}, &ProjectMember{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &ContractChange{}, &Permit{}, &ProjectMember{}}
 }
 
 func Indexes() []string {
@@ -121,6 +121,9 @@ func Constraints() []string {
 		database.ForeignKey("payment_term", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("payment_term", "payable_id", "payable", database.DeleteSetNull),
 		database.ForeignKey("payment_term", "claimed_by", "users", database.DeleteSetNull),
+		database.ForeignKey("contract_change", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("contract_change", "proposed_by", "users", database.DeleteSetNull),
+		database.ForeignKey("contract_change", "decided_by", "users", database.DeleteSetNull),
 		database.ForeignKey("permit", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
 		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
@@ -142,9 +145,14 @@ func Constraints() []string {
 		database.Check("payment_term", "required_progress", "required_progress BETWEEN 0 AND 100"),
 		database.Check("payment_term", "percent", "percent BETWEEN 0 AND 100"),
 		database.Check("payment_term", "amount", "gross_amount >= 0 AND retention_amount BETWEEN 0 AND gross_amount"),
+		database.Check("contract_change", "status", "status IN ('proposed','approved','rejected')"),
+		database.Check("contract_change", "not_empty", "value_change <> 0 OR days_change <> 0"),
+		database.Check("contract_change", "days", "days_change >= 0"),
+		database.Check("contract_change", "decided", "status = 'proposed' OR decided_on IS NOT NULL"),
 		database.Unique("budget_item", "project_code", "project_id, code"),
 		database.Unique("project_progress", "project_day", "project_id, recorded_on"),
 		database.Unique("daily_report", "project_day", "project_id, report_date"),
+		database.Unique("contract_change", "project_sequence", "project_id, sequence"),
 		database.Unique("project_member", "user_project", "user_id, project_id"),
 	}
 }

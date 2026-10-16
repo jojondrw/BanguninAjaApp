@@ -29,7 +29,83 @@ export interface ConstructionContract {
   paymentTermDays: number
   number: string
   value: number
+  currentValue: number
+  approvedChange: number
+  extensionDays: number
   retentionPercent: number
+}
+
+export type ContractChangeStatus = 'proposed' | 'approved' | 'rejected'
+
+export const CHANGE_STATUS_LABEL: Record<ContractChangeStatus, string> = {
+  proposed: 'Diusulkan',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+}
+
+export const CHANGE_STATUS_TONE: Record<ContractChangeStatus, string> = {
+  proposed: 'bg-amber-100 text-amber-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-slate-100 text-slate-700',
+}
+
+// Batas mengikuti tag binding ContractChangeRequest di backend.
+export const CHANGE_DESCRIPTION_MAX_LENGTH = 300
+export const CHANGE_DAYS_MAX = 3650
+
+export interface ContractChange {
+  id: string
+  label: string
+  description: string
+  valueChange: number
+  daysChange: number
+  status: ContractChangeStatus
+  proposerName: string | null
+  deciderName: string | null
+  decidedOn: string | null
+  createdAt: string
+}
+
+export type ChangeKind = 'add' | 'deduct'
+
+export interface ContractChangeFormValues {
+  kind: ChangeKind
+  amount: string
+  days: string
+  description: string
+}
+
+export interface ContractChangeRequest {
+  description: string
+  valueChange: number
+  daysChange: number
+}
+
+export const EMPTY_CHANGE_FORM: ContractChangeFormValues = { kind: 'add', amount: '', days: '', description: '' }
+
+// Pekerjaan kurang dikirim sebagai nilai negatif; pengguna cukup memilih jenis
+// dan mengisi angka positif supaya tidak salah tanda.
+export function toContractChangeRequest(values: ContractChangeFormValues): ContractChangeRequest {
+  const amount = values.amount === '' ? 0 : Math.abs(Number(values.amount))
+  return {
+    description: values.description.trim(),
+    valueChange: values.kind === 'deduct' ? -amount : amount,
+    daysChange: values.days === '' ? 0 : Number(values.days),
+  }
+}
+
+export function signedRupiahShort(amount: number, format: (value: number) => string): string {
+  return amount > 0 ? `+${format(amount)}` : format(amount)
+}
+
+// Siapa dan kapan, dibaca dari kiri ke kanan seperti jejak persetujuan.
+export function changeTrail(change: ContractChange, dateText: (iso: string) => string): string {
+  const proposed = `diusulkan ${change.proposerName ?? 'pengguna terhapus'}, ${dateText(change.createdAt)}`
+  if (change.status === 'proposed' || !change.decidedOn) {
+    return proposed
+  }
+  const verb = change.status === 'approved' ? 'disetujui' : 'ditolak'
+  return `${proposed}; ${verb} ${change.deciderName ?? 'pengguna terhapus'}, ${dateText(change.decidedOn)}`
 }
 
 export interface PaymentTerm {
@@ -52,6 +128,7 @@ export interface PaymentSchedule {
   contract: ConstructionContract | null
   progress: number
   terms: PaymentTerm[]
+  changes: ContractChange[]
   plannedPercent: number
   claimedAmount: number
   paidAmount: number

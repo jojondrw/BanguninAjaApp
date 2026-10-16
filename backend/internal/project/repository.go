@@ -124,6 +124,11 @@ type Repository interface {
 	SaveContract(ctx context.Context, contract *ConstructionContract) error
 	FindContractVendor(ctx context.Context, id uuid.UUID) (ContractVendor, error)
 	Payables() PayableLedger
+	ListContractChanges(ctx context.Context, projectID uuid.UUID) ([]ContractChangeRow, error)
+	FindContractChange(ctx context.Context, projectID, id uuid.UUID) (ContractChange, error)
+	CreateContractChange(ctx context.Context, change *ContractChange) error
+	SaveContractChange(ctx context.Context, change *ContractChange) error
+	DeleteContractChange(ctx context.Context, projectID, id uuid.UUID) error
 	FindBudgetItem(ctx context.Context, projectID, id uuid.UUID) (BudgetItem, error)
 	CreateBudgetItem(ctx context.Context, item *BudgetItem) error
 	SaveBudgetItem(ctx context.Context, item *BudgetItem) error

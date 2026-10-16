@@ -21,7 +21,7 @@ mengulang nama. Di sini semuanya dinormalkan.
 |---|---|
 | `master` | Region, UnitOfMeasure, Account |
 | `auth` | Role, User, RefreshToken |
-| `project` | Project, ProjectPhase, BudgetItem, ProgressSnapshot, DailyReport, ConstructionContract, PaymentTerm, Permit, ProjectMember |
+| `project` | Project, ProjectPhase, BudgetItem, ProgressSnapshot, DailyReport, ConstructionContract, PaymentTerm, ContractChange, Permit, ProjectMember |
 | `inventory` | Material, Warehouse, Stock, StockMovement |
 | `procurement` | Vendor, PurchaseRequest, PurchaseRequestItem, PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem |
 | `asset` | Asset, Equipment |
@@ -34,8 +34,8 @@ mengulang nama. Di sini semuanya dinormalkan.
 | `reporting` | Report |
 | `regulation` | Regulation |
 
-Totalnya 54 tabel, 88 foreign key, 85 check, 47 indeks unik selain kunci utama,
-dan 256 index (dihitung dari database pada 17 Oktober 2026). Gambar relasinya ada
+Totalnya 55 tabel, 91 foreign key, 89 check, 48 indeks unik selain kunci utama,
+dan 261 index (dihitung dari database pada 17 Oktober 2026). Gambar relasinya ada
 di [ERD](../../desain/erd.md).
 
 ## Yang ditambahkan karena livewire belum mencerminkan data asli
@@ -111,6 +111,9 @@ Ini beberapa yang sudah diuji dan benar-benar menolak data salah:
 | `claimed_on`, `claimed_progress`, `claimed_by` | Jejak audit: kapan, pada progres berapa, dan oleh siapa termin disahkan |
 | Pelepasan retensi disimpan sebagai baris `kind = 'retention'` | Pelepasan punya hutang dan jejak audit sendiri seperti termin biasa, dan indeks unik parsial mencegah retensi dilepas dua kali |
 | `vendor_id` memakai `RESTRICT` | Vendor yang masih terikat kontrak tidak boleh hilang dari daftar |
+| Nilai kontrak tidak pernah ditimpa oleh adendum | `construction_contract.value` tetap nilai awal. Nilai berjalan dihitung dari nilai awal ditambah `contract_change` yang disetujui, jadi riwayat perubahan tidak hilang |
+| `contract_change.days_change` tidak boleh negatif (`chk_contract_change_days`) | Adendum dipakai untuk perpanjangan waktu; percepatan biasanya disepakati lewat jadwal, bukan adendum |
+| `chk_contract_change_decided` | Adendum yang sudah disetujui atau ditolak wajib punya tanggal keputusan |
 
 ## Menjalankan migrasi
 

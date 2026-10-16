@@ -42,6 +42,7 @@ var (
 	errTermClaimed            = apperror.Conflict("payment_term_claimed", "Termin ini sudah diajukan sehingga tidak bisa diubah atau dihapus")
 	errTermOutOfOrder         = apperror.Unprocessable("payment_term_out_of_order", "Ajukan dulu termin sebelumnya")
 	errTermProjectCancelled   = apperror.Conflict("payment_term_project_cancelled", "Proyek sudah dibatalkan sehingga termin tidak bisa diajukan")
+	errTermNothingToClaim     = apperror.Unprocessable("payment_term_nothing_to_claim", "Nilai termin ini sudah habis tertagih oleh termin sebelumnya")
 	errRetentionNotDue        = apperror.Unprocessable("retention_not_due", "Retensi baru bisa dilepas setelah proyek selesai dan diserahterimakan")
 	errRetentionTermsOpen     = apperror.Unprocessable("retention_terms_open", "Masih ada termin progres yang belum diajukan")
 	errRetentionEmpty         = apperror.Unprocessable("retention_empty", "Belum ada retensi yang ditahan")
@@ -134,7 +135,15 @@ type ContractResponse struct {
 	PaymentTermDays  int       `json:"paymentTermDays"`
 	Number           string    `json:"number"`
 	Value            int64     `json:"value"`
+	CurrentValue     int64     `json:"currentValue"`
+	ApprovedChange   int64     `json:"approvedChange"`
+	ExtensionDays    int       `json:"extensionDays"`
 	RetentionPercent float64   `json:"retentionPercent"`
+}
+
+type termAmount struct {
+	gross     int64
+	retention int64
 }
 
 type PaymentTermResponse struct {
@@ -154,16 +163,17 @@ type PaymentTermResponse struct {
 }
 
 type PaymentScheduleResponse struct {
-	Contract            *ContractResponse     `json:"contract"`
-	Progress            int                   `json:"progress"`
-	Terms               []PaymentTermResponse `json:"terms"`
-	PlannedPercent      float64               `json:"plannedPercent"`
-	ClaimedAmount       int64                 `json:"claimedAmount"`
-	PaidAmount          int64                 `json:"paidAmount"`
-	RetentionHeld       int64                 `json:"retentionHeld"`
-	RetentionReleased   bool                  `json:"retentionReleased"`
-	ContractLocked      bool                  `json:"contractLocked"`
-	CanReleaseRetention bool                  `json:"canReleaseRetention"`
+	Contract            *ContractResponse        `json:"contract"`
+	Progress            int                      `json:"progress"`
+	Terms               []PaymentTermResponse    `json:"terms"`
+	Changes             []ContractChangeResponse `json:"changes"`
+	PlannedPercent      float64                  `json:"plannedPercent"`
+	ClaimedAmount       int64                    `json:"claimedAmount"`
+	PaidAmount          int64                    `json:"paidAmount"`
+	RetentionHeld       int64                    `json:"retentionHeld"`
+	RetentionReleased   bool                     `json:"retentionReleased"`
+	ContractLocked      bool                     `json:"contractLocked"`
+	CanReleaseRetention bool                     `json:"canReleaseRetention"`
 }
 
 func (s *service) PaymentSchedule(ctx context.Context, projectID uuid.UUID) (PaymentScheduleResponse, error) {
@@ -291,19 +301,27 @@ func (s *service) ClaimPaymentTerm(ctx context.Context, projectID, termID, actor
 		if err := claimBlocker(terms, term, project.Progress); err != nil {
 			return err
 		}
+		changes, err := repository.ListContractChanges(ctx, projectID)
+		if err != nil {
+			return apperror.Internal(err)
+		}
 
-		gross, retention := termAmounts(contract.Value, term.Percent, contract.RetentionPercent)
+		current := contract.Value + sumApproved(changes).value
+		amount := plannedAmounts(terms, current, contract.RetentionPercent)[term.ID]
+		if amount.gross-amount.retention <= 0 {
+			return errTermNothingToClaim
+		}
 		payableID, err := recordPayable(ctx, repository, contract, PayableEntry{
 			ProjectID: projectID,
 			Reference: fmt.Sprintf("Termin %d %s", termPosition(terms, term.ID), project.Code),
-			Amount:    gross - retention,
+			Amount:    amount.gross - amount.retention,
 		}, today)
 		if err != nil {
 			return err
 		}
 
-		term.GrossAmount = gross
-		term.RetentionAmount = retention
+		term.GrossAmount = amount.gross
+		term.RetentionAmount = amount.retention
 		markClaimed(&term, payableID, project.Progress, actorID, today)
 		return termErrors.Resolve(repository.SavePaymentTerm(ctx, &term))
 	})
@@ -379,10 +397,14 @@ func paymentSchedule(ctx context.Context, repository Repository, project Project
 		return PaymentScheduleResponse{}, apperror.Internal(err)
 	}
 	sortTerms(terms)
+	changes, err := repository.ListContractChanges(ctx, project.ID)
+	if err != nil {
+		return PaymentScheduleResponse{}, apperror.Internal(err)
+	}
 
 	contract, err := repository.FindContract(ctx, project.ID)
 	if errors.Is(err, database.ErrNotFound) {
-		return newPaymentScheduleResponse(project, nil, terms), nil
+		return newPaymentScheduleResponse(project, nil, terms, changes), nil
 	}
 	if err != nil {
 		return PaymentScheduleResponse{}, apperror.Internal(err)
@@ -391,14 +413,18 @@ func paymentSchedule(ctx context.Context, repository Repository, project Project
 	if err != nil {
 		return PaymentScheduleResponse{}, apperror.Internal(err)
 	}
+	approved := sumApproved(changes)
 	return newPaymentScheduleResponse(project, &ContractResponse{
 		VendorID:         contract.VendorID,
 		VendorName:       vendor.Name,
 		PaymentTermDays:  vendor.PaymentTermDays,
 		Number:           contract.Number,
 		Value:            contract.Value,
+		CurrentValue:     contract.Value + approved.value,
+		ApprovedChange:   approved.value,
+		ExtensionDays:    approved.days,
 		RetentionPercent: contract.RetentionPercent,
-	}, terms), nil
+	}, terms, changes), nil
 }
 
 func recordPayable(ctx context.Context, repository Repository, contract ConstructionContract, entry PayableEntry, today time.Time) (uuid.UUID, error) {
@@ -418,11 +444,16 @@ func markClaimed(term *PaymentTerm, payableID uuid.UUID, progress int, actorID u
 	term.ClaimedBy = &actorID
 }
 
-func newPaymentScheduleResponse(project Project, contract *ContractResponse, terms []PaymentTermRow) PaymentScheduleResponse {
+func newPaymentScheduleResponse(project Project, contract *ContractResponse, terms []PaymentTermRow, changes []ContractChangeRow) PaymentScheduleResponse {
 	response := PaymentScheduleResponse{
 		Contract: contract,
 		Progress: project.Progress,
 		Terms:    []PaymentTermResponse{},
+		Changes:  newContractChangeResponses(changes),
+	}
+	amounts := map[uuid.UUID]termAmount{}
+	if contract != nil {
+		amounts = plannedAmounts(terms, contract.CurrentValue, contract.RetentionPercent)
 	}
 	var plannedUnits int64
 	openTerms := false
@@ -440,7 +471,7 @@ func newPaymentScheduleResponse(project Project, contract *ContractResponse, ter
 
 		position++
 		plannedUnits += percentUnits(term.Percent)
-		item := progressTermResponse(term, position, contract)
+		item := progressTermResponse(term, position, amounts[term.ID])
 		if term.PayableID == nil {
 			if !openTerms && contract != nil && project.Status != statusCancelled && project.Progress >= term.RequiredProgress {
 				item.State = termReady
@@ -461,7 +492,7 @@ func newPaymentScheduleResponse(project Project, contract *ContractResponse, ter
 	return response
 }
 
-func progressTermResponse(term PaymentTermRow, position int, contract *ContractResponse) PaymentTermResponse {
+func progressTermResponse(term PaymentTermRow, position int, planned termAmount) PaymentTermResponse {
 	item := PaymentTermResponse{
 		ID:               term.ID,
 		Label:            fmt.Sprintf("Termin %d", position),
@@ -480,10 +511,7 @@ func progressTermResponse(term PaymentTermRow, position int, contract *ContractR
 		item.PaidAmount = 0
 		item.ClaimedOn = nil
 		item.ClaimedProgress = nil
-		item.GrossAmount, item.RetentionAmount = 0, 0
-		if contract != nil {
-			item.GrossAmount, item.RetentionAmount = termAmounts(contract.Value, term.Percent, contract.RetentionPercent)
-		}
+		item.GrossAmount, item.RetentionAmount = planned.gross, planned.retention
 	} else {
 		item.State = payableState(term)
 	}
@@ -569,10 +597,27 @@ func releasableRetention(terms []PaymentTermRow) (int64, *uuid.UUID, error) {
 	return held, previous, nil
 }
 
-func termAmounts(contractValue int64, percent, retentionPercent float64) (int64, int64) {
-	gross := int64(math.Round(float64(contractValue) * percent / 100))
-	retention := int64(math.Round(float64(gross) * retentionPercent / 100))
-	return gross, retention
+func plannedAmounts(sorted []PaymentTermRow, contractValue int64, retentionPercent float64) map[uuid.UUID]termAmount {
+	amounts := map[uuid.UUID]termAmount{}
+	var cumulativeUnits, billed int64
+	for _, term := range sorted {
+		if term.Kind != termProgress {
+			continue
+		}
+		cumulativeUnits += percentUnits(term.Percent)
+		if term.PayableID != nil {
+			billed += term.GrossAmount
+			continue
+		}
+		gross := max(0, shareOf(contractValue, cumulativeUnits)-billed)
+		billed += gross
+		amounts[term.ID] = termAmount{gross: gross, retention: shareOf(gross, percentUnits(retentionPercent))}
+	}
+	return amounts
+}
+
+func shareOf(amount, units int64) int64 {
+	return (amount*units + wholePercent/2) / wholePercent
 }
 
 func termPosition(sorted []PaymentTermRow, id uuid.UUID) int {

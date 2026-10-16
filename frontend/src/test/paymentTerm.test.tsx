@@ -5,14 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSessionStore } from '../controllers/sessionStore'
 import type { Permissions, User } from '../models/auth'
 import {
+  changeTrail,
   nextTermForm,
   remainingPercent,
   termNote,
+  toContractChangeRequest,
   toContractRequest,
+  type ContractChange,
   type PaymentSchedule,
   type PaymentTerm,
 } from '../models/paymentTerm'
 import type { Project } from '../models/project'
+import { ContractChangesCard } from '../views/project/ContractChangesCard'
 import { PaymentTermsCard } from '../views/project/PaymentTermsCard'
 import { renderWithProviders } from './render'
 
@@ -23,6 +27,9 @@ const termHooks = vi.hoisted(() => ({
   useDeletePaymentTerm: vi.fn(),
   useClaimPaymentTerm: vi.fn(),
   useReleaseRetention: vi.fn(),
+  useProposeContractChange: vi.fn(),
+  useDecideContractChange: vi.fn(),
+  useDeleteContractChange: vi.fn(),
 }))
 
 vi.mock('../controllers/useProjectWorkspace', () => termHooks)
@@ -43,7 +50,8 @@ function term(overrides: Partial<PaymentTerm>): PaymentTerm {
 const SCHEDULE: PaymentSchedule = {
   contract: {
     vendorId: 'v-1', vendorName: 'PT Graha Struktur Nusantara', paymentTermDays: 30,
-    number: 'SPK-UJI-01', value: 23_500_000_000, retentionPercent: 5,
+    number: 'SPK-UJI-01', value: 23_500_000_000, currentValue: 23_500_000_000, approvedChange: 0, extensionDays: 0,
+    retentionPercent: 5,
   },
   progress: 46,
   terms: [
@@ -54,6 +62,7 @@ const SCHEDULE: PaymentSchedule = {
     }),
     term({ id: 't-3', label: 'Termin 3', requiredProgress: 70, percent: 25 }),
   ],
+  changes: [],
   plannedPercent: 55,
   claimedAmount: 2_350_000_000,
   paidAmount: 2_232_500_000,
@@ -67,10 +76,10 @@ function mutation() {
   return { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, isSuccess: false, variables: undefined }
 }
 
-function signIn(permissions: Permissions) {
+function signIn(permissions: Permissions, role = { code: 'manajer_proyek', name: 'Manajer Proyek' }) {
   const user: User = {
     id: 'u-1', name: 'Rina Wulandari', email: 'rina@contoh.id', active: true,
-    role: { code: 'manajer_proyek', name: 'Manajer Proyek' }, permissions, createdAt: '2026-01-01T00:00:00Z',
+    role, permissions, createdAt: '2026-01-01T00:00:00Z',
   }
   useSessionStore.setState({ accessToken: null, user })
 }
@@ -90,6 +99,9 @@ describe('PaymentTermsCard', () => {
     termHooks.useDeletePaymentTerm.mockReturnValue(mutation())
     termHooks.useClaimPaymentTerm.mockReturnValue(claim)
     termHooks.useReleaseRetention.mockReturnValue(mutation())
+    termHooks.useProposeContractChange.mockReturnValue(mutation())
+    termHooks.useDecideContractChange.mockReturnValue(mutation())
+    termHooks.useDeleteContractChange.mockReturnValue(mutation())
   })
 
   afterEach(() => {
@@ -159,5 +171,73 @@ describe('model termin', () => {
     expect(termNote(SCHEDULE.terms[2], 46, format)).toBe('progres sekarang 46%')
     expect(termNote(term({ requiredProgress: 40 }), 46, format)).toBe('setelah termin sebelumnya')
     expect(termNote(SCHEDULE.terms[1], 46, format)).toBe('')
+  })
+})
+
+const PROPOSED: ContractChange = {
+  id: 'c-2', label: 'Adendum 2', description: 'Pengurangan pekerjaan lansekap', valueChange: -350_000_000, daysChange: 0,
+  status: 'proposed', proposerName: 'Rina Wulandari', deciderName: null, decidedOn: null, createdAt: '2026-10-14T03:00:00Z',
+}
+
+describe('ContractChangesCard', () => {
+  let decide: ReturnType<typeof mutation>
+
+  beforeEach(() => {
+    decide = mutation()
+    showSchedule({ ...SCHEDULE, changes: [PROPOSED] })
+    termHooks.useProposeContractChange.mockReturnValue(mutation())
+    termHooks.useDecideContractChange.mockReturnValue(decide)
+    termHooks.useDeleteContractChange.mockReturnValue(mutation())
+  })
+
+  afterEach(() => {
+    useSessionStore.setState({ accessToken: null, user: null })
+  })
+
+  it('membiarkan Admin menyetujui usulan lewat konfirmasi', async () => {
+    signIn({ projects: 'write' }, { code: 'admin', name: 'Admin' })
+    renderWithProviders(<ContractChangesCard project={PROJECT} />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'Setujui' }))
+    await user.click(screen.getByRole('button', { name: 'Ya, setujui adendum 2' }))
+
+    expect(decide.mutate).toHaveBeenCalledWith({ changeId: 'c-2', status: 'approved' })
+  })
+
+  it('tidak memberi Manajer Proyek tombol persetujuan', () => {
+    signIn({ projects: 'write' })
+    renderWithProviders(<ContractChangesCard project={PROJECT} />)
+
+    expect(screen.queryByRole('button', { name: 'Setujui' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hapus' })).toBeInTheDocument()
+    expect(screen.getByText('Usulan adendum menunggu persetujuan Admin.')).toBeInTheDocument()
+  })
+
+  it('tidak tampil sebelum kontrak kontraktor diatur', () => {
+    signIn({ projects: 'write' })
+    showSchedule({ ...SCHEDULE, contract: null })
+    renderWithProviders(<ContractChangesCard project={PROJECT} />)
+
+    expect(screen.queryByText('Pekerjaan tambah-kurang')).not.toBeInTheDocument()
+  })
+})
+
+describe('model adendum', () => {
+  it('mengirim pekerjaan kurang sebagai nilai negatif dari angka positif', () => {
+    expect(toContractChangeRequest({ kind: 'deduct', amount: '350000000', days: '', description: ' Lansekap ' })).toEqual({
+      description: 'Lansekap', valueChange: -350_000_000, daysChange: 0,
+    })
+    expect(toContractChangeRequest({ kind: 'add', amount: '', days: '30', description: 'Waktu saja' })).toEqual({
+      description: 'Waktu saja', valueChange: 0, daysChange: 30,
+    })
+  })
+
+  it('menulis jejak siapa mengusulkan dan siapa memutuskan', () => {
+    const format = (iso: string) => iso.slice(0, 10)
+    expect(changeTrail(PROPOSED, format)).toBe('diusulkan Rina Wulandari, 2026-10-14')
+    expect(changeTrail({ ...PROPOSED, status: 'approved', deciderName: 'Budi', decidedOn: '2026-10-15' }, format)).toBe(
+      'diusulkan Rina Wulandari, 2026-10-14; disetujui Budi, 2026-10-15',
+    )
   })
 })
