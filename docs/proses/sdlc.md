@@ -42,6 +42,19 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | Deployment | 2 Oktober | Docker Compose untuk pengembangan, demo online lewat Vercel dan Cloudflare tunnel | [deployment](../desain/deployment.md) |
 | Pemeliharaan | 2 Oktober | Perbaikan lewat branch `fix/*`, misalnya #70: bug pencarian zona yang ditemukan integration test di CI | Pull request berawalan `fix` |
 
+### Alat yang mendukung tiap tahapan
+
+| Tahapan | Alat | Cara alat itu membantu |
+|---|---|---|
+| Perencanaan | Git dan GitHub, Markdown, Google Drive tim "AOL SWE" | Daftar tugas T1 sampai T19, pembagian kerja, dan target tanggal ditulis di `PROJECT_HANDOFF.md` sehingga ikut terversi. Dataset besar yang tidak masuk Git dibagikan lewat Drive |
+| Analisis kebutuhan | Markdown di folder `docs/requirements`, Mermaid | Setiap aturan bisnis dan alasannya tersimpan di samping kode dan ikut ditinjau di PR yang sama |
+| Desain | Mermaid (diagram sebagai kode), PostgreSQL `pg_constraint` | 37 diagram UML dan ERD ditulis sebagai teks, jadi bisa di-diff dan diperbarui bersama kodenya. ERD diturunkan dari foreign key yang benar-benar ada di database |
+| Implementasi | Go, Gin, GORM; React, Vite, TypeScript, Tailwind; Python FastAPI; Docker Compose dengan air | Docker Compose menyamakan lingkungan semua anggota; air membangun ulang backend setiap berkas disimpan |
+| Pengujian | `go test`, Vitest dan Testing Library, pytest, test integration ke PostGIS sungguhan, skrip system test, browser untuk acceptance | Empat level pengujian berjalan dengan alat yang sesuai bahasanya. Hasilnya dicatat di [laporan pengujian](../pengujian/laporan-hasil.md) |
+| Keamanan | `govulncheck`, `npm audit`, OWASP Top 10 sebagai daftar periksa | Kerentanan dependensi diperiksa otomatis di setiap PR sejak #74 |
+| Deployment | Dockerfile produksi, Vercel, Cloudflare Tunnel | Frontend di Vercel, API demo dari laptop lewat tunnel tanpa membuka port |
+| Manajemen proyek dan kolaborasi | GitHub pull request, GitHub Actions, Gantt Mermaid | Setiap tugas terlihat sebagai PR beserta status CI-nya. Belum ada papan tugas seperti GitHub Projects atau Trello; untuk sisa proyek, papan seperti itu sebaiknya dibuat tim supaya pembagian tugas terlihat di satu tempat |
+
 ## 3. Inkremen
 
 | Inkremen | Tanggal | Isi | PR |
