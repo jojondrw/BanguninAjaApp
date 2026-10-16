@@ -134,7 +134,7 @@ export function ProjectWorkspacePage() {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         {panel ? (
           <div id={PANEL_ID} key={`${data.id}-${panel}`}>
             {panel === 'status' ? <ProjectStatusCard project={data} onClose={closePanel} /> : null}
@@ -166,7 +166,7 @@ export function ProjectWorkspacePage() {
 
 function ProjectFacts({ project }: { project: Project }) {
   return (
-    <section aria-label="Data proyek" className="rounded-2xl bg-white px-5 py-4 shadow-hairline">
+    <section aria-label="Data proyek" className="rounded-2xl bg-white px-5 py-4 shadow-hairline sm:px-6 sm:py-5">
       <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-5">
         <Fact label="Status">
           <StatusChip project={project} />

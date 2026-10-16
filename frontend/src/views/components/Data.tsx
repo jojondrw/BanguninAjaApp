@@ -11,21 +11,21 @@ export function Card({ title, description, action, children }: {
 }) {
   return (
     <section className="min-w-0 rounded-2xl bg-white shadow-hairline">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-4 pb-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4">
         <div className="min-w-0 flex-1 basis-44">
           <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
           {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
         </div>
         {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
       </div>
-      <div className="px-5 pb-5">{children}</div>
+      <div className="px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>
     </section>
   )
 }
 
 export function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="min-w-0 bg-white px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="min-w-0 bg-white px-4 py-3.5 sm:px-6 sm:py-5">
       <p className="text-[13px] font-medium text-slate-500">{label}</p>
       <p className="mt-1.5 text-[22px] leading-7 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums sm:text-[26px] sm:leading-8">
         {value}
@@ -99,7 +99,7 @@ export function Table<T>({ rows, columns, emptyMessage }: {
   }
 
   return (
-    <div className="relative -mx-5 overflow-x-auto">
+    <div className="relative -mx-5 overflow-x-auto sm:-mx-6">
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-y border-slate-100 bg-slate-50/70">
@@ -107,7 +107,7 @@ export function Table<T>({ rows, columns, emptyMessage }: {
               <th
                 key={column.header}
                 scope="col"
-                className={`px-3 py-2 text-xs font-medium whitespace-nowrap text-slate-500 first:pl-5 last:pr-5 ${
+                className={`px-3 py-2 text-xs font-medium whitespace-nowrap text-slate-500 first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6 ${
                   column.align === 'right' ? 'text-right' : 'text-left'
                 }`}
               >
@@ -122,7 +122,7 @@ export function Table<T>({ rows, columns, emptyMessage }: {
               {columns.map((column) => (
                 <td
                   key={column.header}
-                  className={`px-3 py-3 text-slate-700 first:pl-5 last:pr-5 max-md:whitespace-nowrap ${
+                  className={`px-3 py-3.5 text-slate-700 first:pl-5 last:pr-5 max-md:whitespace-nowrap sm:first:pl-6 sm:last:pr-6 ${
                     column.align === 'right' ? 'text-right whitespace-nowrap tabular-nums' : 'text-left'
                   }`}
                 >

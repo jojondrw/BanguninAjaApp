@@ -113,7 +113,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div id={SITE_EVALUATION_ID} className="scroll-mt-6">
         <Card
           title="Evaluasi lokasi"
@@ -333,7 +333,7 @@ function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
         />
       </KpiRow>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2">
         <Card
           title="Skor kelayakan"
           description="Skor 0 sampai 100 dari lima dimensi data GIS, dibobot per profil bangunan."

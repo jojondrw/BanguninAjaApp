@@ -25,7 +25,7 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
   const rabTotal = budgetItems.data?.grandTotal ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <KpiRow>
         <Kpi
           label="Progres proyek"
@@ -49,7 +49,7 @@ export function ProjectSummaryTab({ project }: { project: Project }) {
         />
       </KpiRow>
 
-      <div className="grid gap-6 2xl:grid-cols-2">
+      <div className="grid gap-8 2xl:grid-cols-2">
         <PhasesCard project={project} />
         <PermitsCard project={project} />
       </div>

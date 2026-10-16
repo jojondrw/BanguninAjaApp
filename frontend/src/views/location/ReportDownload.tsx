@@ -43,7 +43,7 @@ export function SiteReportPanel({ savedLocationId }: { savedLocationId: string }
   const download = useDownloadSiteReport()
 
   return (
-    <section className="space-y-3 rounded-2xl bg-white px-5 py-4 shadow-hairline">
+    <section className="space-y-3 rounded-2xl bg-white px-5 py-4 shadow-hairline sm:px-6 sm:py-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold text-slate-900">Laporan analisis lokasi</h2>

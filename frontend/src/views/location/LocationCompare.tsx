@@ -71,8 +71,8 @@ export function LocationCompare({ onEvaluate }: { onEvaluate: () => void }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-3">
+    <div className="space-y-8">
+      <div className="grid gap-8 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">
           <LocationPicker
             projectId={projectId}

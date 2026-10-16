@@ -69,7 +69,7 @@ export function SalesPage() {
     <AppShell title="Penjualan" description="Unit properti, prospek, pelanggan, kontrak, dan jadwal cicilannya">
       <SalesKpis />
 
-      <div className="mt-6 mb-4">
+      <div className="mt-8 mb-6">
         <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian penjualan" />
       </div>
 

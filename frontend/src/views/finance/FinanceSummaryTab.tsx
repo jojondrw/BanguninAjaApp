@@ -11,7 +11,7 @@ export function FinanceSummaryTab() {
   const transactions = useCashTransactions(8)
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       <Card title="Anggaran per proyek" description="Realisasi dihitung server dari transaksi kas">
         {budgets.isPending ? <Loading /> : null}
         {budgets.isError ? <LoadFailed onRetry={() => budgets.refetch()} /> : null}
@@ -41,7 +41,7 @@ export function FinanceSummaryTab() {
         ) : null}
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-8 xl:grid-cols-2">
         <Card title="Arus kas per bulan">
           {cashFlow.isPending ? <Loading /> : null}
           {cashFlow.isError ? <LoadFailed onRetry={() => cashFlow.refetch()} /> : null}

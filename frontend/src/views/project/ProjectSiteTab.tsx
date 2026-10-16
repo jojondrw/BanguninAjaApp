@@ -39,7 +39,7 @@ export function ProjectSiteTab({ project }: { project: Project }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <KpiRow>
         <Kpi
           label="Lokasi dievaluasi"

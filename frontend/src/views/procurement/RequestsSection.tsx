@@ -415,7 +415,7 @@ export function RequestsSection({ onCreateOrder }: {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {isFormOpen ? (
         <PurchaseRequestFormCard
           editing={null}

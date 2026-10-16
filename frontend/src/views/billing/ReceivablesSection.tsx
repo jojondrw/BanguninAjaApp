@@ -60,7 +60,7 @@ export function ReceivablesSection({ today, draftInvoice }: {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card
         title="Daftar piutang"
         description="Uang yang masih harus diterima dari pelanggan, diurutkan dari jatuh tempo paling awal"
