@@ -69,7 +69,7 @@ gantt
 | **4** | **Dokumentasi dan mutu** | | |
 | 4.1 | Requirements | Berjalan terus | [requirements](../requirements) |
 | 4.2 | Desain UML dan ERD | Selesai | #55 |
-| 4.3 | Pengujian unit, integration, system, acceptance | Selesai, 2 skenario acceptance belum dijalankan | #57, #66, #67 |
+| 4.3 | Pengujian unit, integration, system, acceptance | Selesai, 1 skenario acceptance (AT-13, butuh dompet Sepolia) belum dijalankan | #57, #66, #67 |
 | 4.4 | Risiko, keamanan, etika | Selesai | #69 |
 | 4.5 | Proses SDLC dan jadwal | Dokumen ini | |
 | **5** | **Presentasi akhir** | Belum | |
@@ -89,7 +89,7 @@ pengumpulan data di luar repositori tidak tercatat di sini.
 | Ian (`AnthonyBudiarto`) | Site intelligence: peta dan evaluasi lokasi | 0 | 5 | Regulasi, berita, evaluasi lokasi, halaman Analisis Lokasi |
 | Erick | Frontend ERP | 0 | 0 | Belum ada commit atas namanya |
 
-Untuk sisa pekerjaan (presentasi, skenario acceptance AT-10 dan AT-13, hak akses
+Untuk sisa pekerjaan (presentasi, skenario acceptance AT-13, hak akses
 per proyek), setiap anggota sebaiknya memegang tugasnya lewat branch dan PR
 sendiri, dan setiap PR ditinjau minimal satu anggota lain.
 
