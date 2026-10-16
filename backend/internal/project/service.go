@@ -84,6 +84,10 @@ type Service interface {
 	UpdateBudgetItem(ctx context.Context, projectID, itemID uuid.UUID, request BudgetItemRequest) (BudgetItemResponse, error)
 	DeleteBudgetItem(ctx context.Context, projectID, itemID uuid.UUID) error
 	ProgressCurve(ctx context.Context, projectID uuid.UUID) (ProgressCurveResponse, error)
+	ListDailyReports(ctx context.Context, projectID uuid.UUID, query DailyReportQuery) (DailyReportPage, error)
+	CreateDailyReport(ctx context.Context, projectID, actorID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
+	UpdateDailyReport(ctx context.Context, projectID, reportID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
+	DeleteDailyReport(ctx context.Context, projectID, reportID uuid.UUID) error
 
 	ListPermits(ctx context.Context, projectID uuid.UUID) ([]PermitResponse, error)
 	CreatePermit(ctx context.Context, projectID uuid.UUID, request PermitRequest) (PermitResponse, error)

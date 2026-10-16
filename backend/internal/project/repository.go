@@ -108,6 +108,12 @@ type Repository interface {
 	RecordProgress(ctx context.Context, snapshot ProgressSnapshot) error
 	ListProjectIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListProgressSnapshots(ctx context.Context, projectID uuid.UUID) ([]ProgressSnapshot, error)
+	ListDailyReports(ctx context.Context, filter DailyReportFilter) ([]DailyReport, int64, error)
+	CountRecentDailyReports(ctx context.Context, projectID uuid.UUID, since time.Time) (int64, int64, error)
+	FindDailyReport(ctx context.Context, projectID, id uuid.UUID) (DailyReport, error)
+	CreateDailyReport(ctx context.Context, report *DailyReport) error
+	SaveDailyReport(ctx context.Context, report *DailyReport) error
+	DeleteDailyReport(ctx context.Context, projectID, id uuid.UUID) error
 	FindBudgetItem(ctx context.Context, projectID, id uuid.UUID) (BudgetItem, error)
 	CreateBudgetItem(ctx context.Context, item *BudgetItem) error
 	SaveBudgetItem(ctx context.Context, item *BudgetItem) error
