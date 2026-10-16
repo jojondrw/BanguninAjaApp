@@ -27,6 +27,7 @@ import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from '../co
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
+import { ContractChangesCard } from './ContractChangesCard'
 import { PaymentTermsCard } from './PaymentTermsCard'
 
 const NO_BUDGETS: Budget[] = []
@@ -95,6 +96,8 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
       </div>
 
       <PaymentTermsCard project={project} />
+
+      <ContractChangesCard project={project} />
 
       <TransactionsCard project={project} />
     </div>

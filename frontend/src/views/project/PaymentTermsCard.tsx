@@ -18,6 +18,7 @@ import {
   nextTermForm,
   remainingPercent,
   RETENTION_MAX_PERCENT,
+  signedRupiahShort,
   TERM_STATE_LABEL,
   TERM_STATE_TONE,
   termNote,
@@ -89,7 +90,8 @@ function scheduleDescription(schedule: PaymentSchedule | undefined): string | un
   if (!schedule.contract) {
     return 'Pembayaran ke kontraktor mengikuti progres berbobot proyek'
   }
-  return `${schedule.contract.vendorName}, SPK ${schedule.contract.number}`
+  const { vendorName, number, retentionPercent } = schedule.contract
+  return `${vendorName}, SPK ${number}, retensi ${formatPercent(retentionPercent)}`
 }
 
 function ScheduleBody({ project, schedule, contract, canWrite }: {
@@ -156,10 +158,10 @@ function ScheduleBody({ project, schedule, contract, canWrite }: {
   return (
     <div className="space-y-6">
       <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Fact label="Nilai kontrak" note={`retensi ${formatPercent(contract.retentionPercent)}`}>
-          {rupiahShort(contract.value)}
+        <Fact label="Nilai kontrak" note={contractValueNote(contract)}>
+          {rupiahShort(contract.currentValue)}
         </Fact>
-        <Fact label="Sudah diajukan" note={`${shareOf(schedule.claimedAmount, contract.value)} dari kontrak`}>
+        <Fact label="Sudah diajukan" note={`${shareOf(schedule.claimedAmount, contract.currentValue)} dari kontrak`}>
           {rupiahShort(schedule.claimedAmount)}
         </Fact>
         <Fact label="Sudah dibayar" note="lewat modul Tagihan">
@@ -294,6 +296,13 @@ function releaseHint(project: Project, schedule: PaymentSchedule): string {
     return `Retensi ${rupiahShort(schedule.retentionHeld)} dilepas setelah proyek selesai dan diserahterimakan.`
   }
   return 'Ajukan semua termin progres dulu sebelum melepas retensi.'
+}
+
+function contractValueNote(contract: ConstructionContract): string {
+  if (contract.approvedChange === 0) {
+    return 'belum ada adendum'
+  }
+  return `awal ${rupiahShort(contract.value)}, adendum ${signedRupiahShort(contract.approvedChange, rupiahShort)}`
 }
 
 function retentionNote(schedule: PaymentSchedule): string {

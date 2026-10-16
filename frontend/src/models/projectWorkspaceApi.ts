@@ -1,7 +1,13 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type { DailyReport, DailyReportPage, DailyReportRequest } from './dailyReport'
-import type { ContractRequest, PaymentSchedule, PaymentTermRequest } from './paymentTerm'
+import type {
+  ContractChangeRequest,
+  ContractChangeStatus,
+  ContractRequest,
+  PaymentSchedule,
+  PaymentTermRequest,
+} from './paymentTerm'
 import type {
   BudgetItem,
   BudgetItemFilter,
@@ -64,6 +70,15 @@ export const projectWorkspaceApi = {
 
   releaseRetention: (projectId: string) =>
     request<PaymentSchedule>(`/projects/${projectId}/retention-release`, { method: 'POST' }),
+
+  proposeContractChange: (projectId: string, body: ContractChangeRequest) =>
+    request<PaymentSchedule>(`/projects/${projectId}/contract-changes`, { method: 'POST', body }),
+
+  decideContractChange: (projectId: string, changeId: string, status: Exclude<ContractChangeStatus, 'proposed'>) =>
+    request<PaymentSchedule>(`/projects/${projectId}/contract-changes/${changeId}`, { method: 'PATCH', body: { status } }),
+
+  deleteContractChange: (projectId: string, changeId: string) =>
+    request<PaymentSchedule>(`/projects/${projectId}/contract-changes/${changeId}`, { method: 'DELETE' }),
 
   createDailyReport: (projectId: string, body: DailyReportRequest) =>
     request<DailyReport>(`/projects/${projectId}/daily-reports`, { method: 'POST', body }),

@@ -2,8 +2,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { toDailyReportRequest, type DailyReportFormValues } from '../models/dailyReport'
 import {
+  toContractChangeRequest,
   toContractRequest,
   toPaymentTermRequest,
+  type ContractChangeFormValues,
+  type ContractChangeStatus,
   type ContractFormValues,
   type PaymentSchedule,
   type PaymentTermFormValues,
@@ -390,4 +393,24 @@ export function useClaimPaymentTerm(projectId: string) {
 
 export function useReleaseRetention(projectId: string) {
   return useScheduleMutation<void>(projectId, () => projectWorkspaceApi.releaseRetention(projectId), true)
+}
+
+export function useProposeContractChange(projectId: string) {
+  return useScheduleMutation(projectId, (values: ContractChangeFormValues) =>
+    projectWorkspaceApi.proposeContractChange(projectId, toContractChangeRequest(values)),
+  )
+}
+
+export function useDecideContractChange(projectId: string) {
+  return useScheduleMutation(
+    projectId,
+    ({ changeId, status }: { changeId: string; status: Exclude<ContractChangeStatus, 'proposed'> }) =>
+      projectWorkspaceApi.decideContractChange(projectId, changeId, status),
+  )
+}
+
+export function useDeleteContractChange(projectId: string) {
+  return useScheduleMutation(projectId, (changeId: string) =>
+    projectWorkspaceApi.deleteContractChange(projectId, changeId),
+  )
 }
