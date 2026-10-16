@@ -29,7 +29,7 @@ disetujui.
 | AT-07 | Manajer Proyek | Mengevaluasi titik lokasi dan mengunduh laporan PDF | Lulus (API) | System test ST-04: skor 77, PDF 9 kB | |
 | AT-08 | Manajer Proyek | Diberi peringatan saat skor berasal dari cadangan | Lulus (API) | Layanan penilaian dimatikan: `is_simulated` dan `scoreSimulated` bernilai true; test render label | |
 | AT-09 | Penjualan | Tidak bisa menghapus unit yang terikat kontrak | Lulus (UI) | Unit Terjual dan Dipesan tanpa tombol Hapus | |
-| AT-10 | Pengadaan | Membuat dan mengirim pesanan pembelian | Belum | Baru tombol Buat pesanan yang diperiksa | |
+| AT-10 | Pengadaan | Membuat dan mengirim pesanan pembelian | Lulus (UI) | Akun uji berperan Pengadaan: pesanan 20 sak semen x Rp 72.000 = Rp 1.440.000, harga dan satuan terisi dari material, status Dikirim ke vendor dan isi terkunci; menu hanya modul yang boleh dibuka peran ini. Data uji dihapus | |
 | AT-11 | Keuangan | Membaca transaksi terbaru dan arus kas | Lulus (UI) | Jumlah bertanda dan berwarna, tanggal satu baris | |
 | AT-12 | Admin | Tidak bisa menonaktifkan akun sendiri dari halaman Pengguna | Lulus (UI) | Baris (Anda) tanpa Nonaktifkan | |
 | AT-13 | Pembeli | Membayar tagihan lewat tautan on-chain | Belum | | |
@@ -91,6 +91,14 @@ disetujui.
 - **Given** unit berstatus Terjual atau Dipesan
 - **When** staf Penjualan membuka daftar unit
 - **Then** unit itu tidak punya tombol Ubah atau Hapus, sedangkan unit Tersedia dan Ditahan punya
+
+### AT-10 Membuat dan mengirim pesanan pembelian
+
+- **Given** pengguna berperan Pengadaan dan ada vendor aktif serta proyek berjalan
+- **When** ia membuka Pengadaan, menekan Buat pesanan, memilih vendor, proyek, dan material, lalu mengisi jumlah
+- **Then** satuan dan harga satuan terisi dari data material, dan nilai pesanan dihitung otomatis
+- **When** ia menyimpan, lalu menekan Kirim ke vendor di rincian pesanan
+- **Then** status menjadi Dikirim ke vendor, isi pesanan tidak bisa diubah lagi, dan yang tersisa hanya Terima barang atau Batalkan pesanan
 
 ### AT-12 Akun sendiri di halaman Pengguna
 
