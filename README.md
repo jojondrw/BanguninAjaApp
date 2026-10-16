@@ -176,8 +176,9 @@ kerentanan dependensi Go (`govulncheck`) dan npm (dependensi produksi).
 ## Dokumentasi
 
 Desain sistem (UML, ERD, deployment) ada di `docs/desain`, rencana dan hasil
-pengujian di `docs/pengujian`. Alasan di balik tiap keputusan ada di
-`docs/requirements`.
+pengujian di `docs/pengujian`, analisis domain dan risiko di `docs/analisis`, serta
+model SDLC, Gantt rencana dan realisasi, WBS, dan pembagian kerja di
+`docs/proses`. Alasan di balik tiap keputusan ada di `docs/requirements`.
 
 | Berkas | Isi |
 |---|---|
