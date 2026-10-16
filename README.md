@@ -158,8 +158,9 @@ Di CI, keempatnya berjalan otomatis di setiap pull request.
 
 ## Dokumentasi
 
-Desain sistem (UML, ERD, deployment) ada di `docs/desain`. Alasan di balik
-tiap keputusan ada di `docs/requirements`.
+Desain sistem (UML, ERD, deployment) ada di `docs/desain`, rencana dan hasil
+pengujian di `docs/pengujian`. Alasan di balik tiap keputusan ada di
+`docs/requirements`.
 
 | Berkas | Isi |
 |---|---|
