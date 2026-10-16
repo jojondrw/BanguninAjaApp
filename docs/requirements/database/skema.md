@@ -27,13 +27,16 @@ mengulang nama. Di sini semuanya dinormalkan.
 | `asset` | Asset, Equipment |
 | `sales` | Customer, Unit, Lead, Contract, Installment |
 | `finance` | Budget, CashTransaction, JournalEntry, JournalLine |
-| `billing` | Invoice, Receivable, Payable |
+| `billing` | Invoice, Receivable, Payable, Payment, OnchainRequest |
 | `hr` | Employee, Attendance, Payroll |
 | `scoring` | Dimension, BuildingProfile, Weight |
 | `location` | SavedLocation, DimensionScore, Comparison, ComparisonItem |
 | `reporting` | Report |
+| `regulation` | Regulation |
 
-Totalnya 47 tabel, 65 foreign key, 67 check, 13 unique, dan 216 index.
+Totalnya 50 tabel, 79 foreign key, 76 check, 42 indeks unik selain kunci utama,
+dan 239 index (dihitung dari database pada 16 Oktober 2026). Gambar relasinya ada
+di [ERD](../../desain/erd.md).
 
 ## Yang ditambahkan karena livewire belum mencerminkan data asli
 
