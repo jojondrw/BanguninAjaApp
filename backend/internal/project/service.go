@@ -88,6 +88,12 @@ type Service interface {
 	CreateDailyReport(ctx context.Context, projectID, actorID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
 	UpdateDailyReport(ctx context.Context, projectID, reportID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
 	DeleteDailyReport(ctx context.Context, projectID, reportID uuid.UUID) error
+	PaymentSchedule(ctx context.Context, projectID uuid.UUID) (PaymentScheduleResponse, error)
+	SaveContract(ctx context.Context, projectID uuid.UUID, request ContractRequest) (PaymentScheduleResponse, error)
+	CreatePaymentTerm(ctx context.Context, projectID uuid.UUID, request PaymentTermRequest) (PaymentScheduleResponse, error)
+	DeletePaymentTerm(ctx context.Context, projectID, termID uuid.UUID) (PaymentScheduleResponse, error)
+	ClaimPaymentTerm(ctx context.Context, projectID, termID, actorID uuid.UUID) (PaymentScheduleResponse, error)
+	ReleaseRetention(ctx context.Context, projectID, actorID uuid.UUID) (PaymentScheduleResponse, error)
 
 	ListPermits(ctx context.Context, projectID uuid.UUID) ([]PermitResponse, error)
 	CreatePermit(ctx context.Context, projectID uuid.UUID, request PermitRequest) (PermitResponse, error)

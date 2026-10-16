@@ -44,7 +44,7 @@ func TestListMembersJoinsUserAndRoleInOneQuery(t *testing.T) {
 		Rows:    [][]driver.Value{memberRowValues(memberID, projectID, "Site manager")},
 	})
 
-	rows, err := NewRepository(db).ListMembers(context.Background(), projectID)
+	rows, err := NewRepository(db, nil).ListMembers(context.Background(), projectID)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -74,7 +74,7 @@ func TestListMembersJoinsUserAndRoleInOneQuery(t *testing.T) {
 func TestFindMemberRowReportsMissingMember(t *testing.T) {
 	db, _ := databasetest.Open(t, databasetest.Result{Columns: memberRowColumns})
 
-	_, err := NewRepository(db).FindMemberRow(context.Background(), uuid.New(), uuid.New())
+	_, err := NewRepository(db, nil).FindMemberRow(context.Background(), uuid.New(), uuid.New())
 
 	if !errors.Is(err, database.ErrNotFound) {
 		t.Fatalf("got %v, want ErrNotFound", err)
@@ -92,7 +92,7 @@ func TestListMemberCandidatesSkipsInactiveUsersAndCurrentMembers(t *testing.T) {
 		},
 	)
 
-	candidates, total, err := NewRepository(db).ListMemberCandidates(context.Background(), MemberCandidateFilter{
+	candidates, total, err := NewRepository(db, nil).ListMemberCandidates(context.Background(), MemberCandidateFilter{
 		ProjectID: projectID,
 		Search:    "bud",
 		Limit:     20,
@@ -132,7 +132,7 @@ func TestListProjectsMineFiltersOnMembership(t *testing.T) {
 		databasetest.Result{Columns: []string{"id"}},
 	)
 
-	if _, _, err := NewRepository(db).ListProjects(context.Background(), ProjectFilter{MemberID: &viewerID, Limit: 20}); err != nil {
+	if _, _, err := NewRepository(db, nil).ListProjects(context.Background(), ProjectFilter{MemberID: &viewerID, Limit: 20}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestListProjectsWithoutMineIgnoresMembership(t *testing.T) {
 		databasetest.Result{Columns: []string{"id"}},
 	)
 
-	if _, _, err := NewRepository(db).ListProjects(context.Background(), ProjectFilter{Limit: 20}); err != nil {
+	if _, _, err := NewRepository(db, nil).ListProjects(context.Background(), ProjectFilter{Limit: 20}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -170,7 +170,7 @@ func TestUpdateMemberWritesOnlyRoleAndPosition(t *testing.T) {
 	member := ProjectMember{ProjectID: uuid.New(), RoleID: uuid.New()}
 	member.ID = uuid.New()
 
-	if err := NewRepository(db).UpdateMember(context.Background(), &member); err != nil {
+	if err := NewRepository(db, nil).UpdateMember(context.Background(), &member); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -195,7 +195,7 @@ func TestUpdateMemberReportsMissingMember(t *testing.T) {
 	member := ProjectMember{ProjectID: uuid.New(), RoleID: uuid.New()}
 	member.ID = uuid.New()
 
-	if err := NewRepository(db).UpdateMember(context.Background(), &member); !errors.Is(err, database.ErrNotFound) {
+	if err := NewRepository(db, nil).UpdateMember(context.Background(), &member); !errors.Is(err, database.ErrNotFound) {
 		t.Fatalf("got %v, want ErrNotFound", err)
 	}
 }
@@ -207,7 +207,7 @@ func TestFindMemberUserReadsActiveFlagAndAccountRole(t *testing.T) {
 		databasetest.Result{Columns: []string{"id", "active", "role_id"}, Rows: [][]driver.Value{{userID.String(), false, roleID.String()}}},
 		databasetest.Result{Columns: []string{"id", "active", "role_id"}},
 	)
-	repository := NewRepository(db)
+	repository := NewRepository(db, nil)
 
 	user, err := repository.FindMemberUser(context.Background(), userID)
 	if err != nil {
@@ -229,7 +229,7 @@ func TestFindRoleIDLooksUpByCode(t *testing.T) {
 		databasetest.Result{Columns: []string{"id"}, Rows: [][]driver.Value{{roleID.String()}}},
 		databasetest.Result{Columns: []string{"id"}},
 	)
-	repository := NewRepository(db)
+	repository := NewRepository(db, nil)
 
 	found, err := repository.FindRoleID(context.Background(), "keuangan")
 	if err != nil || found != roleID {

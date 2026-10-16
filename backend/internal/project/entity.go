@@ -95,13 +95,14 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &Permit{}, &ProjectMember{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &Permit{}, &ProjectMember{}}
 }
 
 func Indexes() []string {
 	return []string{
 		`CREATE INDEX IF NOT EXISTS idx_project_name_trgm ON project USING gin (name gin_trgm_ops)`,
 		`CREATE INDEX IF NOT EXISTS idx_project_code_pattern ON project (code text_pattern_ops)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_term_retention ON payment_term (project_id) WHERE kind = 'retention'`,
 	}
 }
 
@@ -115,6 +116,11 @@ func Constraints() []string {
 		database.ForeignKey("project_progress", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("daily_report", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("daily_report", "created_by", "users", database.DeleteSetNull),
+		database.ForeignKey("construction_contract", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("construction_contract", "vendor_id", "vendor", database.DeleteRestrict),
+		database.ForeignKey("payment_term", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("payment_term", "payable_id", "payable", database.DeleteSetNull),
+		database.ForeignKey("payment_term", "claimed_by", "users", database.DeleteSetNull),
 		database.ForeignKey("permit", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
 		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
@@ -130,6 +136,12 @@ func Constraints() []string {
 		database.Check("project_progress", "progress", "progress BETWEEN 0 AND 100"),
 		database.Check("daily_report", "weather", "weather_morning IN ('sunny','cloudy','drizzle','rain','heavy_rain') AND weather_afternoon IN ('sunny','cloudy','drizzle','rain','heavy_rain')"),
 		database.Check("daily_report", "workers", "workers >= 0"),
+		database.Check("construction_contract", "value", "value > 0"),
+		database.Check("construction_contract", "retention", "retention_percent BETWEEN 0 AND 10"),
+		database.Check("payment_term", "kind", "kind IN ('progress','retention')"),
+		database.Check("payment_term", "required_progress", "required_progress BETWEEN 0 AND 100"),
+		database.Check("payment_term", "percent", "percent BETWEEN 0 AND 100"),
+		database.Check("payment_term", "amount", "gross_amount >= 0 AND retention_amount BETWEEN 0 AND gross_amount"),
 		database.Unique("budget_item", "project_code", "project_id, code"),
 		database.Unique("project_progress", "project_day", "project_id, recorded_on"),
 		database.Unique("daily_report", "project_day", "project_id, report_date"),

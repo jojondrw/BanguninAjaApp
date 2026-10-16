@@ -11,12 +11,15 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/master"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/migration"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/procurement"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/regulation"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/geo"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 )
@@ -65,7 +68,7 @@ func TestMigrationsCanRunAgainOnAnUpToDateDatabase(t *testing.T) {
 
 func TestWeightedProgressIsStoredAndDeletingAPhaseUnlinksItsBudgetItems(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
 	created := newProject(t, projects)
 	unit := newUnit(t)
 
@@ -119,7 +122,7 @@ func TestWeightedProgressIsStoredAndDeletingAPhaseUnlinksItsBudgetItems(t *testi
 
 func TestDailyReportForADayThatAlreadyHasOneIsRejectedByTheDatabase(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
 	created := newProject(t, projects)
 	workers := 25
 	day := time.Now().AddDate(0, 0, -1)
@@ -143,7 +146,7 @@ func TestDailyReportForADayThatAlreadyHasOneIsRejectedByTheDatabase(t *testing.T
 
 func TestDeletingAProjectRemovesItsDailyReportsAndProgressHistory(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
 	created := newProject(t, projects)
 	workers := 10
 	day := time.Now().AddDate(0, 0, -2)
@@ -243,5 +246,84 @@ func TestReusingARefreshTokenEndsEverySessionOfThatUser(t *testing.T) {
 	}
 	if count(t, "SELECT COUNT(*) FROM refresh_tokens r JOIN users u ON u.id = r.user_id WHERE u.email = ? AND r.revoked_at IS NULL", email) != 0 {
 		t.Fatal("some refresh tokens of the user are still active")
+	}
+}
+
+func newContractor(t *testing.T) uuid.UUID {
+	t.Helper()
+	vendor := procurement.Vendor{Code: uniqueCode("K"), Name: "Kontraktor uji", Category: "Kontraktor", PaymentTermDays: 30, Active: true}
+	if err := db.Create(&vendor).Error; err != nil {
+		t.Fatalf("create vendor: %v", err)
+	}
+	return vendor.ID
+}
+
+func TestClaimedTermBecomesAPayableAndDeletingThePayableReopensTheTerm(t *testing.T) {
+	ctx := context.Background()
+	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	created := newProject(t, projects)
+	contractor := newContractor(t)
+	retention := 5.0
+
+	if _, err := projects.SaveContract(ctx, created.ID, project.ContractRequest{
+		VendorID: contractor, Number: "SPK-UJI-01", Value: 2_000_000_000, RetentionPercent: &retention,
+	}); err != nil {
+		t.Fatalf("save contract: %v", err)
+	}
+	required := 40
+	schedule, err := projects.CreatePaymentTerm(ctx, created.ID, project.PaymentTermRequest{RequiredProgress: &required, Percent: 30})
+	if err != nil {
+		t.Fatalf("create term: %v", err)
+	}
+	termID := schedule.Terms[0].ID
+
+	if _, err := projects.ClaimPaymentTerm(ctx, created.ID, termID, newUser(t)); appCode(err) != "payment_term_progress_not_reached" {
+		t.Fatalf("claim at 0%% progress: err = %v", err)
+	}
+
+	if err := db.Exec("UPDATE project SET progress = 45 WHERE id = ?", created.ID).Error; err != nil {
+		t.Fatalf("set progress: %v", err)
+	}
+	schedule, err = projects.ClaimPaymentTerm(ctx, created.ID, termID, newUser(t))
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	payableID := schedule.Terms[0].PayableID
+	if payableID == nil {
+		t.Fatal("claim did not link a payable")
+	}
+
+	stored := count(t, "SELECT COUNT(*) FROM payable p JOIN payment_term t ON t.payable_id = p.id "+
+		"WHERE p.id = ? AND p.amount = 570000000 AND p.vendor_id = ? AND p.project_id = ? "+
+		"AND p.reference = ? AND p.status = 'not_due' AND p.due_date = t.claimed_on + 30",
+		*payableID, contractor, created.ID, "Termin 1 "+created.Code)
+	if stored != 1 {
+		t.Fatal("payable is not 30% of the contract minus 5% retention, due 30 vendor days after the claim")
+	}
+
+	if err := billing.NewService(billing.NewRepository(db)).DeletePayable(ctx, *payableID); err != nil {
+		t.Fatalf("delete payable: %v", err)
+	}
+	schedule, err = projects.PaymentSchedule(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("schedule: %v", err)
+	}
+	if schedule.Terms[0].State != "ready" || schedule.Terms[0].PayableID != nil || schedule.ContractLocked {
+		t.Fatalf("term after deleting its payable = %+v, want ready again", schedule.Terms[0])
+	}
+}
+
+func TestAProjectCanReleaseItsRetentionOnlyOnce(t *testing.T) {
+	projects := project.NewService(project.NewRepository(db, nil))
+	created := newProject(t, projects)
+
+	first := project.PaymentTerm{ProjectID: created.ID, Kind: "retention", RequiredProgress: 100}
+	if err := db.Create(&first).Error; err != nil {
+		t.Fatalf("first release: %v", err)
+	}
+	second := project.PaymentTerm{ProjectID: created.ID, Kind: "retention", RequiredProgress: 100}
+	err := database.Translate(db.Create(&second).Error)
+	if !errors.Is(err, database.ErrDuplicate) {
+		t.Fatalf("second release err = %v, want a duplicate rejected by uq_payment_term_retention", err)
 	}
 }
