@@ -337,3 +337,62 @@ func nestedIDs(ctx *gin.Context) (uuid.UUID, uuid.UUID, error) {
 	}
 	return projectID, childID, nil
 }
+
+func (c *Controller) ListDailyReports(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var query DailyReportQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	page, err := c.service.ListDailyReports(ctx.Request.Context(), projectID, query)
+	httpresponse.Respond(ctx, page, err)
+}
+
+func (c *Controller) CreateDailyReport(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request DailyReportRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	report, err := c.service.CreateDailyReport(ctx.Request.Context(), projectID, actorID, request)
+	httpresponse.RespondCreated(ctx, report, err)
+}
+
+func (c *Controller) UpdateDailyReport(ctx *gin.Context) {
+	projectID, reportID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request DailyReportRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	report, err := c.service.UpdateDailyReport(ctx.Request.Context(), projectID, reportID, request)
+	httpresponse.Respond(ctx, report, err)
+}
+
+func (c *Controller) DeleteDailyReport(ctx *gin.Context) {
+	projectID, reportID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	httpresponse.RespondNoContent(ctx, c.service.DeleteDailyReport(ctx.Request.Context(), projectID, reportID))
+}

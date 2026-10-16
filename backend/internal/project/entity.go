@@ -95,7 +95,7 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &Permit{}, &ProjectMember{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &Permit{}, &ProjectMember{}}
 }
 
 func Indexes() []string {
@@ -113,6 +113,8 @@ func Constraints() []string {
 		database.ForeignKey("budget_item", "unit_of_measure_id", "unit_of_measure", database.DeleteRestrict),
 		database.ForeignKey("budget_item", "phase_id", "project_phase", database.DeleteSetNull),
 		database.ForeignKey("project_progress", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("daily_report", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("daily_report", "created_by", "users", database.DeleteSetNull),
 		database.ForeignKey("permit", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("project_member", "user_id", "users", database.DeleteCascade),
 		database.ForeignKey("project_member", "project_id", "project", database.DeleteCascade),
@@ -126,8 +128,11 @@ func Constraints() []string {
 		database.Check("budget_item", "unit_price", "unit_price >= 0"),
 		database.Check("permit", "status", "status IN ('submitted','issued','expired','rejected')"),
 		database.Check("project_progress", "progress", "progress BETWEEN 0 AND 100"),
+		database.Check("daily_report", "weather", "weather_morning IN ('sunny','cloudy','drizzle','rain','heavy_rain') AND weather_afternoon IN ('sunny','cloudy','drizzle','rain','heavy_rain')"),
+		database.Check("daily_report", "workers", "workers >= 0"),
 		database.Unique("budget_item", "project_code", "project_id, code"),
 		database.Unique("project_progress", "project_day", "project_id, recorded_on"),
+		database.Unique("daily_report", "project_day", "project_id, report_date"),
 		database.Unique("project_member", "user_project", "user_id, project_id"),
 	}
 }

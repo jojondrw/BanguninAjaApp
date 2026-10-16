@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { toDailyReportRequest, type DailyReportFormValues } from '../models/dailyReport'
 import { financeApi, projectApi } from '../models/erpApi'
 import {
   lastMonthsRange,
@@ -286,3 +287,42 @@ export function useRegionSearch(term: string) {
     ...DATA_QUERY,
   })
 }
+
+export function useDailyReports(projectId: string, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: [...detailKey(projectId, 'daily-reports'), page, pageSize],
+    queryFn: () => projectWorkspaceApi.dailyReports(projectId, page, pageSize),
+    placeholderData: keepPreviousData,
+    ...DATA_QUERY,
+  })
+}
+
+export function useCreateDailyReport(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (values: DailyReportFormValues) =>
+      projectWorkspaceApi.createDailyReport(projectId, toDailyReportRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'daily-reports') }),
+  })
+}
+
+export function useUpdateDailyReport(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ reportId, values }: { reportId: string; values: DailyReportFormValues }) =>
+      projectWorkspaceApi.updateDailyReport(projectId, reportId, toDailyReportRequest(values)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'daily-reports') }),
+  })
+}
+
+export function useDeleteDailyReport(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (reportId: string) => projectWorkspaceApi.deleteDailyReport(projectId, reportId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'daily-reports') }),
+  })
+}
+
