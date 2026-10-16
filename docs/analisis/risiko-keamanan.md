@@ -63,6 +63,25 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 | A09 Security Logging and Monitoring Failures | Sebagian | Log terstruktur (`slog`); pembayaran mencatat `created_by`; laporan harian mencatat penulis | Belum ada jejak audit untuk perubahan peran dan status pengguna; belum ada peringatan otomatis |
 | A10 Server-Side Request Forgery | Terkendali | Permintaan keluar hanya ke alamat dari konfigurasi (layanan penilaian, node RPC, Google News); proxy tile memvalidasi nama layer dengan regex dan koordinat sebagai angka | |
 
+### Pemetaan ke OWASP Top 10:2025
+
+Analisis di atas memakai edisi 2021. Edisi 2025 menata ulang urutannya,
+melebur SSRF ke dalam A01, memperluas komponen rentan menjadi rantai pasok
+perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
+
+| Kategori 2025 | Padanan 2021 | Status | Catatan |
+|---|---|---|---|
+| A01:2025 Broken Access Control | A01, ditambah A10 SSRF | Sebagian | Sama dengan A01 di atas; SSRF terkendali |
+| A02:2025 Security Misconfiguration | A05 | Diperbaiki | |
+| A03:2025 Software Supply Chain Failures | A06, diperluas | Sebagian | `go.sum` dan `package-lock.json` mengunci versi dan checksum; `govulncheck` dan `npm audit` di CI (#74). Belum ada SBOM dan branch `main` belum diproteksi |
+| A04:2025 Cryptographic Failures | A02 | Sebagian | |
+| A05:2025 Injection | A03 | Terkendali | |
+| A06:2025 Insecure Design | A04 | Terkendali | Aturan bisnis keuangan dijaga di service dan constraint database, misalnya termin yang tidak bisa diajukan sebelum progresnya tercapai |
+| A07:2025 Authentication Failures | A07 | Diperbaiki | |
+| A08:2025 Software or Data Integrity Failures | A08 | Sebagian | |
+| A09:2025 Security Logging and Alerting Failures | A09 | Sebagian | |
+| A10:2025 Mishandling of Exceptional Conditions | Baru | Terkendali | Galat ditranslasi ke kode dan pesan aman tanpa detail internal (`apperror`, `database.Translate`). Perubahan berlapis berjalan dalam transaksi, jadi galat di tengah jalan membatalkan semuanya. Layanan luar yang gagal (penilaian, berita) tidak menggagalkan evaluasi lokasi, dan hasil cadangannya ditandai simulasi. Frontend punya error boundary |
+
 ### Rencana tindak lanjut keamanan
 
 | Prioritas | Tindakan | Menutup |
