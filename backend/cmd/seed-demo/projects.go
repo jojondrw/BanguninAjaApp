@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 )
 
 const (
@@ -26,6 +30,7 @@ type budgetItemSeed struct {
 	volume      float64
 	unit        string
 	unitPrice   int64
+	phase       int
 }
 
 type permitSeed struct {
@@ -69,12 +74,12 @@ func demoProjects() []projectSeed {
 				{"Fasilitas umum & taman", 4, 9, 0},
 			},
 			items: []budgetItemSeed{
-				{"1.1", "Pembersihan & pematangan lahan", 42_000, "m2", 45_000},
-				{"2.1", "Pekerjaan jalan paving block", 6_800, "m2", 185_000},
-				{"2.2", "Saluran drainase beton U-ditch", 1_450, "m", 650_000},
-				{"3.1", "Pembangunan rumah tipe 36/72", 48, "unit", 245_000_000},
-				{"3.2", "Pembangunan rumah tipe 45/90", 36, "unit", 315_000_000},
-				{"4.1", "Instalasi listrik & air bersih kawasan", 1, "ls", 1_350_000_000},
+				{"1.1", "Pembersihan & pematangan lahan", 42_000, "m2", 45_000, 0},
+				{"2.1", "Pekerjaan jalan paving block", 6_800, "m2", 185_000, 1},
+				{"2.2", "Saluran drainase beton U-ditch", 1_450, "m", 650_000, 1},
+				{"3.1", "Pembangunan rumah tipe 36/72", 48, "unit", 245_000_000, 2},
+				{"3.2", "Pembangunan rumah tipe 45/90", 36, "unit", 315_000_000, 3},
+				{"4.1", "Instalasi listrik & air bersih kawasan", 1, "ls", 1_350_000_000, 4},
 			},
 			permits: []permitSeed{
 				{"PKKPR", "PKKPR-3273-0412-2025", -340, 3, "issued"},
@@ -93,9 +98,9 @@ func demoProjects() []projectSeed {
 				{"Finishing & serah terima", 10, 16, 0},
 			},
 			items: []budgetItemSeed{
-				{"1.1", "Pekerjaan persiapan & pagar proyek", 1, "ls", 285_000_000},
-				{"2.1", "Struktur beton ruko 3 lantai", 1_850, "m3", 4_250_000},
-				{"3.1", "Fasad & pekerjaan arsitektur", 2_400, "m2", 1_150_000},
+				{"1.1", "Pekerjaan persiapan & pagar proyek", 1, "ls", 285_000_000, 2},
+				{"2.1", "Struktur beton ruko 3 lantai", 1_850, "m3", 4_250_000, 2},
+				{"3.1", "Fasad & pekerjaan arsitektur", 2_400, "m2", 1_150_000, 3},
 			},
 			permits: []permitSeed{
 				{"PKKPR", "PKKPR-7371-PENGAJUAN-031", -40, 0, "submitted"},
@@ -113,11 +118,11 @@ func demoProjects() []projectSeed {
 				{"Arsitektur & interior", 3, 8, 0},
 			},
 			items: []budgetItemSeed{
-				{"1.1", "Pondasi bore pile diameter 60 cm", 2_160, "m", 1_450_000},
-				{"2.1", "Beton struktur K-350", 4_800, "m3", 1_380_000},
-				{"2.2", "Pembesian struktur", 620, "ton", 16_500_000},
-				{"3.1", "Instalasi gas medis", 1, "ls", 3_850_000_000},
-				{"3.2", "Instalasi listrik & genset", 1, "ls", 5_200_000_000},
+				{"1.1", "Pondasi bore pile diameter 60 cm", 2_160, "m", 1_450_000, 1},
+				{"2.1", "Beton struktur K-350", 4_800, "m3", 1_380_000, 2},
+				{"2.2", "Pembesian struktur", 620, "ton", 16_500_000, 2},
+				{"3.1", "Instalasi gas medis", 1, "ls", 3_850_000_000, 3},
+				{"3.2", "Instalasi listrik & genset", 1, "ls", 5_200_000_000, 3},
 			},
 			permits: []permitSeed{
 				{"Persetujuan Bangunan Gedung (PBG)", "PBG-327401-0051-2025", -280, 5, "issued"},
@@ -134,8 +139,8 @@ func demoProjects() []projectSeed {
 				{"Serah terima & perbaikan", -6, -3, 100},
 			},
 			items: []budgetItemSeed{
-				{"1.1", "Pematangan lahan", 9_600, "m2", 55_000},
-				{"2.1", "Pembangunan rumah tipe 45/84", 24, "unit", 335_000_000},
+				{"1.1", "Pematangan lahan", 9_600, "m2", 55_000, 0},
+				{"2.1", "Pembangunan rumah tipe 45/84", 24, "unit", 335_000_000, 1},
 			},
 			permits: []permitSeed{
 				{"Persetujuan Bangunan Gedung (PBG)", "PBG-327601-0233-2024", -760, 5, "issued"},
@@ -187,7 +192,7 @@ func (s *seeder) seedProjectDetails(id uuid.UUID, seed projectSeed) error {
 		}
 	}
 	for _, item := range seed.items {
-		if err := s.seedBudgetItem(id, item); err != nil {
+		if err := s.seedBudgetItem(id, item, seed.phases); err != nil {
 			return err
 		}
 	}
@@ -210,18 +215,50 @@ func (s *seeder) seedPhase(projectID uuid.UUID, seed phaseSeed, order int) error
 	return err
 }
 
-func (s *seeder) seedBudgetItem(projectID uuid.UUID, seed budgetItemSeed) error {
+func (s *seeder) seedBudgetItem(projectID uuid.UUID, seed budgetItemSeed, phases []phaseSeed) error {
 	unitID, err := s.reference("unit_of_measure", seed.unit)
 	if err != nil {
 		return err
 	}
-	_, _, err = s.ensure("budget_item", map[string]any{"project_id": projectID, "code": seed.code}, func() (uuid.UUID, error) {
-		response, err := s.services.projects.CreateBudgetItem(s.ctx, projectID, project.BudgetItemRequest{
-			Code: seed.code, Description: seed.description, Volume: seed.volume,
-			UnitOfMeasureID: unitID, UnitPrice: seed.unitPrice,
-		})
+	phaseID, err := s.phaseID(projectID, phases[seed.phase].name)
+	if err != nil {
+		return err
+	}
+	request := project.BudgetItemRequest{
+		PhaseID: &phaseID, Code: seed.code, Description: seed.description, Volume: seed.volume,
+		UnitOfMeasureID: unitID, UnitPrice: seed.unitPrice,
+	}
+	itemID, created, err := s.ensure("budget_item", map[string]any{"project_id": projectID, "code": seed.code}, func() (uuid.UUID, error) {
+		response, err := s.services.projects.CreateBudgetItem(s.ctx, projectID, request)
 		return response.ID, err
 	})
+	if err != nil || created {
+		return err
+	}
+	return s.linkBudgetPhase(projectID, itemID, request)
+}
+
+func (s *seeder) phaseID(projectID uuid.UUID, name string) (uuid.UUID, error) {
+	id, found, err := s.lookup.find(s.ctx, "project_phase", map[string]any{"project_id": projectID, "name": name})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if !found {
+		return uuid.Nil, fmt.Errorf("phase %q of project %s not found", name, projectID)
+	}
+	return id, nil
+}
+
+func (s *seeder) linkBudgetPhase(projectID, itemID uuid.UUID, request project.BudgetItemRequest) error {
+	_, unlinked, err := s.lookup.find(s.ctx, "budget_item", map[string]any{"id": itemID, "phase_id": nil})
+	if err != nil || !unlinked {
+		return err
+	}
+	_, err = s.services.projects.UpdateBudgetItem(s.ctx, projectID, itemID, request)
+	var appError *apperror.Error
+	if errors.As(err, &appError) && appError.Code == "project_closed" {
+		return nil
+	}
 	return err
 }
 
