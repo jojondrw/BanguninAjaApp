@@ -92,6 +92,7 @@ func TestChangePasswordRejectsWrongOrUnchangedPassword(t *testing.T) {
 	}{
 		{ChangePasswordRequest{CurrentPassword: "salah-12345", NewPassword: "sandi-baru-456"}, "wrong_current_password"},
 		{ChangePasswordRequest{CurrentPassword: currentPassword, NewPassword: currentPassword}, "same_password"},
+		{ChangePasswordRequest{CurrentPassword: currentPassword, NewPassword: strings.Repeat("é", 40)}, "password_too_long"},
 	}
 	for _, tc := range cases {
 		repository := newMemoryRepository()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -269,6 +270,20 @@ func TestRegisterFailsLoudlyWhenRolesAreNotSeeded(t *testing.T) {
 	_, err := service.Register(context.Background(), RegisterRequest{Name: "UJI", Email: "uji@uji.test", Password: "rahasia123"})
 
 	assertAppError(t, err, http.StatusInternalServerError, "internal_error")
+}
+
+func TestRegisterRejectsPasswordsLongerThanBcryptCanRead(t *testing.T) {
+	repository := newMemoryRepository()
+	service, _ := newTestService(repository)
+
+	_, err := service.Register(context.Background(), RegisterRequest{
+		Name: "UJI", Email: "uji@uji.test", Password: strings.Repeat("é", 72),
+	})
+
+	assertAppError(t, err, http.StatusUnprocessableEntity, "password_too_long")
+	if len(repository.users) != 0 {
+		t.Fatalf("a user was created with a password bcrypt cannot hash")
+	}
 }
 
 func TestProfileReturnsRoleAndPermissions(t *testing.T) {

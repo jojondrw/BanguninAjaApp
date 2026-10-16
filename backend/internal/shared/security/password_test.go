@@ -73,3 +73,15 @@ func TestHashPasswordRejectsPasswordsLongerThanSeventyTwoBytes(t *testing.T) {
 		t.Fatal("72 accented characters (144 bytes) were hashed")
 	}
 }
+
+func TestPasswordTooLongCountsBytesNotCharacters(t *testing.T) {
+	if PasswordTooLong(strings.Repeat("a", MaxPasswordBytes)) {
+		t.Fatal("a 72 byte password was reported as too long")
+	}
+	if !PasswordTooLong(strings.Repeat("a", MaxPasswordBytes+1)) {
+		t.Fatal("a 73 byte password was accepted")
+	}
+	if !PasswordTooLong(strings.Repeat("é", 40)) {
+		t.Fatal("40 accented characters are 80 bytes and must be too long")
+	}
+}

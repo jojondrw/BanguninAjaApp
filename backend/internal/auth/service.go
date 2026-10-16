@@ -30,6 +30,7 @@ var (
 	errNameLength        = apperror.Unprocessable("invalid_name", "Nama harus 2 sampai 100 karakter")
 	errWrongPassword     = apperror.Unprocessable("wrong_current_password", "Kata sandi saat ini salah")
 	errSamePassword      = apperror.Unprocessable("same_password", "Kata sandi baru harus berbeda dari kata sandi saat ini")
+	errPasswordTooLong   = apperror.Unprocessable("password_too_long", "Kata sandi terlalu panjang. Batasnya 72 byte, dan huruf beraksen atau emoji dihitung lebih dari satu byte")
 )
 
 const (
@@ -67,6 +68,9 @@ func NewService(repository Repository, tokens *token.Manager, subjects subjectCa
 }
 
 func (s *service) Register(ctx context.Context, request RegisterRequest) (UserResponse, error) {
+	if security.PasswordTooLong(request.Password) {
+		return UserResponse{}, errPasswordTooLong
+	}
 	email := normalizeEmail(request.Email)
 
 	taken, err := s.repository.EmailExists(ctx, email)
@@ -208,6 +212,9 @@ func (s *service) ChangePassword(ctx context.Context, userID uuid.UUID, currentR
 	}
 	if request.NewPassword == request.CurrentPassword {
 		return errSamePassword
+	}
+	if security.PasswordTooLong(request.NewPassword) {
+		return errPasswordTooLong
 	}
 
 	passwordHash, err := security.HashPassword(request.NewPassword)
