@@ -49,7 +49,7 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | 0. Fondasi | 17 sampai 27 September | Auth dengan access dan refresh token, skema database, Docker, lapisan service dan controller semua slice, regulasi, berita, evaluasi lokasi, kerangka peta | #1 sampai #3 dan commit langsung |
 | 1. MVP lengkap | 2 sampai 3 Oktober | Penilaian lokasi dari data GIS sungguhan, lapisan peta, ruang kerja proyek, semua layar ERP, modul yang saling terhubung (G1 sampai G6), CI | #4 sampai #43 |
 | 2. Siap dipakai banyak peran | 15 Oktober | Hak akses 7 peran, laporan PDF, XLSX, dan CSV, data demo, tim proyek, data master, pembayaran on-chain, tinjauan desain | #44 sampai #53 |
-| 3. Kualitas dan kedalaman domain | 16 sampai 17 Oktober | Dokumen UML, test keamanan dan integration, performa evaluasi lokasi, ruang lega, progres berbobot, laporan harian, termin dan retensi, adendum, perbaikan keamanan | #54 sampai #72 |
+| 3. Kualitas dan kedalaman domain | 16 sampai 17 Oktober | Dokumen UML, test keamanan dan integration, performa evaluasi lokasi, ruang lega, progres berbobot, laporan harian, termin dan retensi, adendum, perbaikan keamanan dan kerentanan dependensi | #54 sampai #74 |
 
 ## 4. Praktik yang dijalankan di setiap perubahan
 
@@ -58,7 +58,7 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | Satu tugas, satu branch | Nama branch mengikuti jenis perubahan: `feat/`, `fix/`, `docs/`, `test/`, `perf/`, `style/`, `refactor/`, `ci/` |
 | Pesan commit konvensional | `jenis(cakupan): ringkasan`, misalnya `fix(regulation): pilih zona terdekat`. Badan commit menjelaskan alasan, bukan mengulang isi diff |
 | Pull request untuk setiap perubahan ke `main` | 72 PR sampai 17 Oktober. Deskripsi PR memuat apa yang berubah, cara mengecek, dan keterbatasan |
-| Continuous integration | GitHub Actions sejak #23 (2 Oktober), sekarang empat job: backend Go, integration test ke PostgreSQL dan PostGIS (sejak #66), frontend React, layanan penilaian Python. PR digabung setelah semua job hijau. Aturan ini masih kesepakatan, belum dipaksa oleh branch protection |
+| Continuous integration | GitHub Actions sejak #23 (2 Oktober), sekarang lima job: backend Go, integration test ke PostgreSQL dan PostGIS (sejak #66), pemeriksaan kerentanan dependensi dengan `govulncheck` (sejak #74), frontend React dengan audit npm, layanan penilaian Python. PR digabung setelah semua job hijau. Aturan ini masih kesepakatan, belum dipaksa oleh branch protection |
 | Merge commit | PR digabung dengan merge commit, jadi riwayat menunjukkan batas setiap PR |
 | Definisi selesai | Test lulus di CI, dokumen requirements atau desain ikut diperbarui, perubahan UI diperiksa di browser termasuk lebar ponsel, data uji berawalan `UJI-` dihapus setelah pemeriksaan |
 

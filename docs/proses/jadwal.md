@@ -65,7 +65,7 @@ gantt
 | **3** | **Platform** | | |
 | 3.1 | Auth, sesi, dan hak akses 7 peran | Selesai | #1, #44, #51, #62, #68 |
 | 3.2 | Data master | Selesai | #5, #49 |
-| 3.3 | Docker, CI, demo online | Selesai | Fondasi, #23, #66 |
+| 3.3 | Docker, CI, demo online, pemeriksaan kerentanan | Selesai | Fondasi, #23, #66, #74 |
 | **4** | **Dokumentasi dan mutu** | | |
 | 4.1 | Requirements | Berjalan terus | [requirements](../requirements) |
 | 4.2 | Desain UML dan ERD | Selesai | #55 |
