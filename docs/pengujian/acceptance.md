@@ -34,6 +34,8 @@ disetujui.
 | AT-12 | Admin | Tidak bisa menonaktifkan akun sendiri dari halaman Pengguna | Lulus (UI) | Baris (Anda) tanpa Nonaktifkan | |
 | AT-13 | Pembeli | Membayar tagihan lewat tautan on-chain | Belum | | |
 | AT-14 | Semua | Memakai aplikasi di ponsel | Lulus (UI) | 390 px: sepuluh halaman dan tab Lapangan tanpa geser ke samping | |
+| AT-15 | Manajer Proyek | Mengajukan termin kontraktor yang progresnya tercapai | Lulus (UI) | Proyek uji: konfirmasi dua langkah, hutang Rp 190 jt (20% dari Rp 1 M dikurangi retensi 5%) tercatat, jatuh tempo 30 hari, kontrak terkunci; 375 px tanpa geser halaman | |
+| AT-16 | Keuangan | Melihat termin tanpa bisa mengajukannya | Lulus (API) | Test render: tanpa tombol Ajukan dan Tambah termin, ada tautan ke Tagihan; endpoint pengajuan butuh hak tulis Proyek | |
 
 ## Rincian skenario
 
@@ -101,3 +103,11 @@ disetujui.
 - **When** Pembeli membuka tautan `/bayar/:token` dan membayar dengan dompet di jaringan Sepolia
 - **Then** halaman menunggu konfirmasi jaringan, lalu menampilkan Lunas dengan tautan Etherscan
 - **And** invoice di modul Tagihan berstatus lunas dengan pembayaran metode onchain
+
+### AT-15 Mengajukan termin kontraktor
+
+- **Given** proyek punya kontrak kontraktor dengan retensi 5% dan termin yang syarat progresnya sudah tercapai
+- **When** Manajer Proyek membuka tab Keuangan proyek dan menekan Ajukan pada termin berstatus Siap diajukan
+- **Then** muncul konfirmasi yang menyebut nilai yang akan dibayarkan setelah retensi, dan fokus pindah ke Batal
+- **When** ia menekan Ya, ajukan
+- **Then** termin berstatus Diajukan dengan tanggal dan progres saat diajukan, hutang ke kontraktor tercatat di Tagihan dengan jatuh tempo sesuai termin bayar vendor, dan tombol Ubah kontrak hilang karena kontrak terkunci

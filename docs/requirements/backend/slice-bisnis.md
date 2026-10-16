@@ -78,6 +78,15 @@ Semua di bawah `/api/projects`.
 | PUT, DELETE | `/:id/phases/:childId` | |
 | GET, POST | `/:id/budget-items` | Berhalaman, ditambah `grandTotal` untuk seluruh RAB proyek |
 | PUT, DELETE | `/:id/budget-items/:childId` | |
+| GET | `/:id/progress-curve` | Kurva S rencana dan realisasi per minggu |
+| GET, POST | `/:id/daily-reports` | Laporan harian lapangan, berhalaman, terbaru di atas |
+| PUT, DELETE | `/:id/daily-reports/:childId` | |
+| GET | `/:id/payment-schedule` | Kontrak kontraktor, semua termin dengan statusnya, dan ringkasan pembayaran |
+| PUT | `/:id/construction-contract` | Buat atau ubah kontrak kontraktor. Body `{ "vendorId", "number", "value", "retentionPercent" }` |
+| POST | `/:id/payment-terms` | Body `{ "requiredProgress", "percent" }` |
+| DELETE | `/:id/payment-terms/:childId` | Hanya termin yang belum diajukan |
+| POST | `/:id/payment-terms/:childId/claim` | Ajukan termin, membuat hutang di Tagihan |
+| POST | `/:id/retention-release` | Lepas retensi yang ditahan, membuat hutang di Tagihan |
 | GET, POST | `/:id/permits` | |
 | PUT, DELETE | `/:id/permits/:childId` | |
 | GET, POST | `/:id/members` | Tim proyek, urut nama. Body tambah `{ "userId", "position"?, "role"? }` |
@@ -98,11 +107,14 @@ status sekarang tidak dianggap salah dan tidak mengubah apa pun.
 
 ### Progres diturunkan dari tahapan
 
-`skema.md` mencatat progres proyek nantinya diturunkan dari tahapan. Sekarang
-sudah begitu: setiap tahap ditambah, diubah, atau dihapus, progres proyek
-dihitung ulang sebagai rata-rata progres semua tahap lalu dibulatkan. Proses ini
-berjalan dalam satu transaksi dan baris proyek dikunci dengan `FOR UPDATE`,
-supaya dua perubahan tahap yang bersamaan tidak saling menimpa hasil hitungan.
+Setiap tahap atau item RAB ditambah, diubah, atau dihapus, progres proyek
+dihitung ulang sebagai rata-rata progres tahap yang **dibobot nilai RAB** tiap
+tahap: bobot tahap = total item RAB yang ditautkan ke tahap itu dibagi total
+RAB yang tertaut. Kalau belum ada item RAB yang ditautkan, semua tahap berbobot
+sama. Hasilnya dibulatkan dan disimpan juga sebagai riwayat harian
+(`project_progress`) untuk kurva S. Proses ini berjalan dalam satu transaksi dan
+baris proyek dikunci dengan `FOR UPDATE`, supaya dua perubahan yang bersamaan
+tidak saling menimpa hasil hitungan.
 
 Status tahap juga diturunkan dari progresnya: 0 berarti `not_started`, 100
 berarti `completed`, selain itu `in_progress`. Jadi status tahap tidak dikirim
@@ -116,6 +128,45 @@ dari frontend.
 | `total` item RAB selalu dihitung dari volume dikali harga satuan, dibulatkan ke rupiah penuh. Volume dibulatkan dua desimal mengikuti `numeric(14,2)` | |
 | Total RAB proyek tidak disimpan, dihitung dengan `SUM` saat daftar diminta | |
 | Izin berstatus `issued` wajib punya tanggal terbit | `permit_issued_date_required` |
+
+### Termin kontraktor dan retensi
+
+Developer membayar kontraktor pelaksana bertahap sesuai progres dan menahan
+retensi sampai serah terima. Satu proyek punya satu kontrak kontraktor, dan
+setiap termin berisi syarat progres berbobot serta persen nilai kontrak.
+
+Mengajukan termin berarti mengesahkan progres. Dalam satu transaksi, sistem
+membuat hutang di modul Tagihan sebesar nilai termin dikurangi retensi, dengan
+jatuh tempo hari ini ditambah termin bayar vendor (`payment_term_days`). Hutang
+dibuat lewat `billing.PayableLedger`, dipanggil melalui interface `PayableLedger`
+yang dideklarasikan di slice `project` dan dirakit di `module.go`, sama seperti
+pengadaan memakai ledger stok inventaris.
+
+Pemisahan tugas: endpoint termin ikut modul akses `projects`, jadi yang
+mengajukan adalah Manajer Proyek atau Admin. Membayar hutangnya tetap di modul
+Tagihan yang butuh hak tulis `billing`, yaitu Keuangan atau Admin.
+
+| Aturan | Kode error |
+|---|---|
+| Termin dan kontrak hanya disusun selama proyek belum `completed` atau `cancelled` | `project_closed` (409) |
+| Termin butuh kontrak kontraktor | `construction_contract_not_found` (404) |
+| Kontraktor harus vendor yang ada dan aktif | `vendor_not_found`, `vendor_inactive` (422) |
+| Setelah ada termin diajukan, kontraktor, nilai, dan retensi tidak bisa diubah. Nomor SPK tetap boleh | `construction_contract_locked` (409) |
+| Jumlah persen semua termin paling banyak 100 | `payment_term_percent_exceeded` (422) |
+| Syarat progres termin baru tidak boleh di bawah termin yang sudah diajukan | `payment_term_before_claimed` (422) |
+| Termin diajukan kalau progres berbobot sudah mencapai syarat | `payment_term_progress_not_reached` (422) |
+| Termin diajukan berurutan: syarat progres terkecil dulu | `payment_term_out_of_order` (422) |
+| Termin yang sudah diajukan tidak bisa diajukan ulang atau dihapus | `payment_term_claimed` (409) |
+| Proyek `cancelled` tidak bisa mengajukan termin. Proyek `on_hold` dan `completed` masih bisa, karena progresnya sudah tercapai | `payment_term_project_cancelled` (409) |
+| Retensi dilepas setelah proyek `completed` | `retention_not_due` (422) |
+| Semua termin progres harus sudah diajukan sebelum retensi dilepas | `retention_terms_open` (422) |
+| Retensi hanya dilepas sekali, dijaga juga oleh indeks unik parsial | `retention_released` (409) |
+
+Nilai termin = nilai kontrak x persen, retensi = nilai termin x persen retensi,
+keduanya dibulatkan ke rupiah penuh. Nilai termin yang belum diajukan selalu
+dihitung dari nilai kontrak sekarang; yang sudah diajukan memakai angka saat
+diajukan. Kalau hutang termin yang belum dibayar dihapus di Tagihan, `payable_id`
+menjadi NULL dan termin itu kembali bisa diajukan.
 
 ### Tim proyek
 
@@ -821,6 +872,9 @@ Setiap bagian dibatasi 10.000 baris.
 
 ## Yang belum dikerjakan
 
-1. Belum ada pembatasan akses berdasarkan peran. Tabel `role` dan
-   `project_member` sudah ada, tapi semua user yang punya access token saat ini
-   bisa memakai semua endpoint.
+1. Hak akses masih per modul, belum per proyek. Keanggotaan tim
+   (`project_member`) belum membatasi proyek mana yang bisa dilihat atau diubah.
+2. Penagihan termin ke pemberi kerja (arah piutang) belum ada. Termin yang ada
+   sekarang adalah pembayaran ke kontraktor pelaksana.
+3. Pembayaran hutang di Tagihan belum otomatis tercatat sebagai kas keluar di
+   modul Keuangan.

@@ -15,6 +15,21 @@ di [rencana pengujian](README.md).
 | System | 5 skenario, 27 langkah | 27 | 0 | 3,2 detik |
 | Acceptance | 14 skenario | 12 | 0 | 8 lewat UI, 4 lewat API; 2 belum dijalankan (pesanan pembelian, pembayaran on-chain). Persetujuan pengguna di [acceptance.md](acceptance.md) |
 
+### Pembaruan setelah termin dan retensi
+
+Diukur ulang pada branch `feat/termin-retensi`, yang sudah memuat PR #67 sampai
+#70. Angka di bagian lain laporan ini tetap angka pengukuran pertama.
+
+| Level | Jumlah | Lulus | Gagal | Catatan |
+|---|---|---|---|---|
+| Unit, backend Go | 492 test (+62 subtest) | 492 | 0 | Coverage pernyataan 47,7%. Paket `project` 64 test, coverage 61,9% |
+| Unit, frontend | 151 test di 24 berkas | 151 | 0 | Ditambah 8 test kartu dan model termin |
+| Integration (PostgreSQL + PostGIS) | 8 | 8 | 0 | Ditambah pengajuan termin menjadi hutang sungguhan, dan retensi yang hanya bisa dilepas sekali |
+| Acceptance | 16 skenario | 14 | 0 | Ditambah AT-15 (lewat UI) dan AT-16 (lewat test render dan aturan akses); AT-10 dan AT-13 masih belum dijalankan |
+
+Coverage `billing` turun tipis dari 73,4% ke 72,8% karena `payable_ledger.go`
+diuji lewat integration test, bukan unit test paket itu sendiri.
+
 ## Unit test backend per paket
 
 Diurutkan dari jumlah test terbanyak. Coverage adalah persentase pernyataan Go
