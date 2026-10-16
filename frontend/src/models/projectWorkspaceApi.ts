@@ -1,5 +1,6 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
+import type { DailyReport, DailyReportPage, DailyReportRequest } from './dailyReport'
 import type {
   BudgetItem,
   BudgetItemFilter,
@@ -42,6 +43,18 @@ export const projectWorkspaceApi = {
     request<void>(`/projects/${projectId}/permits/${permitId}`, { method: 'DELETE' }),
 
   progressCurve: (projectId: string) => request<ProgressCurve>(`/projects/${projectId}/progress-curve`),
+
+  dailyReports: (projectId: string, page: number, pageSize: number) =>
+    request<DailyReportPage>(`/projects/${projectId}/daily-reports${toQueryString({ page, pageSize })}`),
+
+  createDailyReport: (projectId: string, body: DailyReportRequest) =>
+    request<DailyReport>(`/projects/${projectId}/daily-reports`, { method: 'POST', body }),
+
+  updateDailyReport: (projectId: string, reportId: string, body: DailyReportRequest) =>
+    request<DailyReport>(`/projects/${projectId}/daily-reports/${reportId}`, { method: 'PUT', body }),
+
+  deleteDailyReport: (projectId: string, reportId: string) =>
+    request<void>(`/projects/${projectId}/daily-reports/${reportId}`, { method: 'DELETE' }),
 
   budgetItems: (projectId: string, filter: BudgetItemFilter = {}) =>
     request<BudgetItemPage>(`/projects/${projectId}/budget-items${toQueryString({ ...filter })}`),
