@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/clock"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
@@ -26,6 +27,9 @@ func main() {
 }
 
 func run() error {
+	if _, err := clock.UseAppZone(); err != nil {
+		return err
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err

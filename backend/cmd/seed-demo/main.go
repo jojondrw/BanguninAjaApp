@@ -25,6 +25,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/clock"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
@@ -60,6 +61,9 @@ func parseOptions(args []string) (options, error) {
 }
 
 func run() error {
+	if _, err := clock.UseAppZone(); err != nil {
+		return err
+	}
 	opts, err := parseOptions(os.Args[1:])
 	if err != nil {
 		return err

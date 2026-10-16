@@ -22,6 +22,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/clock"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
@@ -63,6 +64,9 @@ func main() {
 }
 
 func run() error {
+	if _, err := clock.UseAppZone(); err != nil {
+		return err
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return err
