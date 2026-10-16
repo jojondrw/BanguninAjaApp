@@ -37,7 +37,7 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
   const summary = summarizeBudgets(budgets.data?.items ?? NO_BUDGETS)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <KpiRow>
         <Kpi
           label="Anggaran"
@@ -65,7 +65,7 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
         />
       </KpiRow>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
         <Card
           title="Pengeluaran per bulan"
           description={`Kas keluar proyek ${CASH_FLOW_MONTHS} bulan terakhir, dikelompokkan oleh server`}

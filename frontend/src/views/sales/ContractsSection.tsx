@@ -46,7 +46,7 @@ export function ContractsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card title="Daftar kontrak" description="Buka Rincian untuk mengubah status, jadwal cicilan, dan pembayarannya.">
         <Toolbar>
           <ToolbarInput

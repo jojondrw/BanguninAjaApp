@@ -191,19 +191,21 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
               ))}
             </nav>
 
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4 lg:px-8 lg:py-5">
-              <div className="min-w-0">
-                <h1 className="truncate text-[22px] leading-7 font-semibold tracking-[-0.022em] text-slate-900">
-                  {title}
-                </h1>
-                {description ? <p className="mt-1 text-[13px] text-slate-500">{description}</p> : null}
+            <div className="px-5 py-4 lg:px-10 lg:py-6">
+              <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0">
+                  <h1 className="truncate text-[22px] leading-7 font-semibold tracking-[-0.022em] text-slate-900">
+                    {title}
+                  </h1>
+                  {description ? <p className="mt-1 text-[13px] text-slate-500">{description}</p> : null}
+                </div>
+                {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
               </div>
-              {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
             </div>
           </header>
 
-          <main id="konten" tabIndex={-1} className="flex-1 px-5 pt-2 pb-10 focus:outline-none lg:px-8">
-            <div className="mx-auto max-w-[1440px] motion-safe:animate-enter">{children}</div>
+          <main id="konten" tabIndex={-1} className="flex-1 px-5 pt-2 pb-16 focus:outline-none lg:px-10">
+            <div className="mx-auto max-w-[1280px] motion-safe:animate-enter">{children}</div>
           </main>
         </div>
       </div>

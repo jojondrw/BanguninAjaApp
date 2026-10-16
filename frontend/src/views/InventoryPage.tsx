@@ -62,13 +62,13 @@ export function InventoryPage() {
         />
       </KpiRow>
 
-      <div className="mt-6 mb-4">
+      <div className="mt-8 mb-6">
         <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian inventaris" />
       </div>
 
       {tab === 'stock' ? (
-        <div className="grid gap-6">
-          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="grid gap-8">
+          <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <StockCard />
             <LowStockCard />
           </div>
@@ -77,14 +77,14 @@ export function InventoryPage() {
       ) : null}
 
       {tab === 'catalog' ? (
-        <div className="grid gap-6">
+        <div className="grid gap-8">
           <MaterialsCard />
           <WarehousesCard />
         </div>
       ) : null}
 
       {tab === 'assets' ? (
-        <div className="grid gap-6">
+        <div className="grid gap-8">
           <AssetsCard />
           <EquipmentCard today={today} />
         </div>

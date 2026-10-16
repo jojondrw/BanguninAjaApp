@@ -50,7 +50,7 @@ export function HrPage() {
         />
       </KpiRow>
 
-      <div className="mt-6 grid gap-6">
+      <div className="mt-8 grid gap-8">
         <EmployeesSection today={today} />
         <AttendanceSection today={today} />
         <PayrollSection period={period} onPeriodChange={setPeriod} />

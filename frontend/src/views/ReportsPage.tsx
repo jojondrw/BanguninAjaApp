@@ -17,7 +17,7 @@ export function ReportsPage() {
           <Empty message="Setiap laporan memakai data satu modul, misalnya Keuangan, Tagihan, atau SDM. Peran Anda belum bisa membuka modul mana pun yang dipakai laporan. Minta admin mengubah peran Anda di halaman Pengguna." />
         </Card>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-8">
           {/* Dipasang ulang kalau hak akses berubah, supaya pilihan jenis tidak tertinggal. */}
           <ReportBuilder key={types.map((type) => type.value).join()} types={types} />
           <ReportHistory types={types} />

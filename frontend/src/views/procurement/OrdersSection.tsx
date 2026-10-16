@@ -214,7 +214,7 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
   const receiptRows = receipts.data?.items ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card
         title={`Rincian pesanan ${detail.number}`}
         description={`${vendorName} untuk ${projectName}, ${shortDate(detail.date)}`}
@@ -342,7 +342,7 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {isFormOpen ? (
         <PurchaseOrderFormCard
           editingId={null}

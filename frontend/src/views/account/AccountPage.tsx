@@ -18,7 +18,7 @@ export function AccountPage() {
 
   return (
     <AppShell title="Akun saya" description="Nama tampilan dan kata sandi akun Anda">
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-8 lg:grid-cols-2">
         {user ? <ProfileCard user={user} /> : null}
         <PasswordCard />
       </div>

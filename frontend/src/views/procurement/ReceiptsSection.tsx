@@ -62,7 +62,7 @@ export function ReceiptsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {isReceiving ? (
         <Card
           title="Terima barang"

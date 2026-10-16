@@ -240,7 +240,7 @@ export function VendorsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {form ? (
         <VendorFormCard
           key={form.vendor?.id ?? 'new'}

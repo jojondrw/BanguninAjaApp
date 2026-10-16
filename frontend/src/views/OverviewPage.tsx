@@ -76,7 +76,7 @@ export function OverviewPage() {
         )}
       </KpiRow>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card
           title="Arus kas 12 bulan"
           description="Kas masuk di atas garis nol, kas keluar di bawahnya"
@@ -99,7 +99,7 @@ export function OverviewPage() {
         </Card>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-8">
         <Card
           title="Proyek"
           description="Status, target, dan progres tiap proyek"

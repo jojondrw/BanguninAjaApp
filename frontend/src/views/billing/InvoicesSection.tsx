@@ -76,7 +76,7 @@ export function InvoicesSection({ today, onRecordReceivable }: {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Card
         title="Daftar faktur"
         description="Tagihan bernomor ke pelanggan atau vendor, diurutkan dari jatuh tempo paling awal"

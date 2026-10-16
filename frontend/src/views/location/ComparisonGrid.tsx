@@ -11,9 +11,9 @@ const LABEL_COLUMN_REM = 11
 const LOCATION_COLUMN_REM = 13
 
 const LABEL_CELL =
-  'sticky left-0 z-10 w-40 border-b border-slate-100 bg-white py-3 pr-3 pl-5 text-left align-top font-medium ' +
+  'sticky left-0 z-10 w-40 border-b border-slate-100 bg-white py-3 pr-3 pl-5 text-left sm:pl-6 align-top font-medium ' +
   'text-slate-700 sm:w-44'
-const VALUE_CELL = 'border-b border-slate-100 px-3 py-3 align-top text-slate-700 last:pr-5'
+const VALUE_CELL = 'border-b border-slate-100 px-3 py-3 align-top text-slate-700 last:pr-5 sm:last:pr-6'
 
 export interface LocationNames {
   project: (id: string | null) => string
@@ -57,7 +57,7 @@ function GroupRow({ label, span }: { label: string; span: number }) {
       <th
         scope="colgroup"
         colSpan={span}
-        className="border-b border-slate-100 bg-slate-50/70 py-2 pr-5 pl-5 text-left text-xs font-medium text-slate-500"
+        className="border-b border-slate-100 bg-slate-50/70 py-2 pr-5 pl-5 text-left sm:pr-6 sm:pl-6 text-xs font-medium text-slate-500"
       >
         {label}
       </th>
@@ -76,7 +76,7 @@ export function ComparisonGrid({ locations, table, names, onRemove, downloadingI
   const minWidth = `${LABEL_COLUMN_REM + locations.length * LOCATION_COLUMN_REM}rem`
 
   return (
-    <div className="relative -mx-5 overflow-x-auto">
+    <div className="relative -mx-5 overflow-x-auto sm:-mx-6">
       <table className="w-full border-separate border-spacing-0 text-[13px]" style={{ minWidth }}>
         <caption className="sr-only">
           Perbandingan {locations.length} lokasi. Skor 0 sampai 100, makin tinggi makin baik.
@@ -90,7 +90,7 @@ export function ComparisonGrid({ locations, table, names, onRemove, downloadingI
               <th
                 key={location.id}
                 scope="col"
-                className="border-y border-slate-100 bg-slate-50 px-3 py-2.5 text-left align-top last:pr-5"
+                className="border-y border-slate-100 bg-slate-50 px-3 py-2.5 text-left align-top last:pr-5 sm:last:pr-6"
               >
                 <span className="flex items-start justify-between gap-2">
                   <span className="text-[13px] font-semibold text-slate-900">{table.labels[index]}</span>

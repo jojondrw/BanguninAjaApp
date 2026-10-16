@@ -75,7 +75,7 @@ export function ProcurementPage() {
     >
       <ProcurementKpis />
 
-      <div className="mt-6 mb-4">
+      <div className="mt-8 mb-6">
         <SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian pengadaan" />
       </div>
 
