@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -237,5 +238,64 @@ func TestEvaluateWithStubLeavesRiskFlagsUnknown(t *testing.T) {
 	}
 	if repository.saved.Location.RiskFlags != nil {
 		t.Fatalf("stub score must not claim known risk flags, got %v", *repository.saved.Location.RiskFlags)
+	}
+}
+
+type blockingNews struct {
+	started chan struct{}
+}
+
+func (n *blockingNews) FetchNews(ctx context.Context, _ news.NewsQuery) ([]news.NewsResponse, error) {
+	close(n.started)
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+type scoreAfterNewsStarts struct {
+	newsStarted <-chan struct{}
+}
+
+func (c scoreAfterNewsStarts) Score(ctx context.Context, input ScoreInput) (ScoreResult, error) {
+	select {
+	case <-c.newsStarted:
+		return stubScoreClient{}.Score(ctx, input)
+	case <-time.After(time.Second):
+		return ScoreResult{}, errors.New("news was not requested while the score was being computed")
+	}
+}
+
+func TestEvaluateFetchesNewsWhileScoringAndStopsWaitingAtTheBudget(t *testing.T) {
+	repository := &fakeRepository{}
+	newsService := &blockingNews{started: make(chan struct{})}
+	evaluator := NewService(
+		repository,
+		scoreAfterNewsStarts{newsStarted: newsService.started},
+		fakeRegulation{response: &regulation.Response{District: "Coblong"}},
+		newsService,
+	).(*service)
+	evaluator.newsBudget = 50 * time.Millisecond
+
+	started := time.Now()
+	response, err := evaluator.Evaluate(context.Background(), uuid.New(), evaluateRequest(nil))
+	elapsed := time.Since(started)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repository.saved == nil {
+		t.Fatal("the location was not saved while news was slow")
+	}
+	if response.Descriptive == nil || len(response.Descriptive.News) != 0 {
+		t.Fatalf("news = %+v, want an empty list after the budget ran out", response.Descriptive)
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Fatalf("evaluate took %v, so it waited for news past the %v budget", elapsed, evaluator.newsBudget)
+	}
+}
+
+func TestNewServiceGivesNewsTwoSeconds(t *testing.T) {
+	evaluator := newTestService(&fakeRepository{}).(*service)
+	if evaluator.newsBudget != 2*time.Second {
+		t.Fatalf("news budget = %v, want 2s", evaluator.newsBudget)
 	}
 }
