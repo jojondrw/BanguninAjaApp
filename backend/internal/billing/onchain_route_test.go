@@ -15,6 +15,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/databasetest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/ratelimit"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 )
 
@@ -158,9 +159,9 @@ func TestPublicConfirmAnswersAcceptedWhileWaiting(t *testing.T) {
 }
 
 func TestWindowLimiterStartsAFreshWindow(t *testing.T) {
-	limiter := newWindowLimiter(2, time.Minute)
+	limiter := ratelimit.NewWindow(2, time.Minute)
 	current := onchainNow
-	limiter.now = func() time.Time { return current }
+	limiter.SetClock(func() time.Time { return current })
 
 	if !limiter.Allow("a") || !limiter.Allow("a") || limiter.Allow("a") {
 		t.Fatal("the third call inside the window must be refused")

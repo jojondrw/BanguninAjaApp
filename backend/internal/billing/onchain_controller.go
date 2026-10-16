@@ -8,10 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/ratelimit"
 )
+
+var errTooManyAttempts = apperror.New(http.StatusTooManyRequests, "too_many_requests", "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi")
 
 const (
 	tokenParam = "token"
@@ -23,15 +27,15 @@ const (
 
 type OnchainController struct {
 	service  OnchainService
-	views    *windowLimiter
-	confirms *windowLimiter
+	views    *ratelimit.Window
+	confirms *ratelimit.Window
 }
 
 func NewOnchainController(service OnchainService) *OnchainController {
 	return &OnchainController{
 		service:  service,
-		views:    newWindowLimiter(publicViewLimit, publicLimitWindow),
-		confirms: newWindowLimiter(publicConfirmLimit, publicLimitWindow),
+		views:    ratelimit.NewWindow(publicViewLimit, publicLimitWindow),
+		confirms: ratelimit.NewWindow(publicConfirmLimit, publicLimitWindow),
 	}
 }
 
@@ -96,7 +100,7 @@ func (c *OnchainController) ConfirmPayment(ctx *gin.Context) {
 	httpresponse.OK(ctx, outcome)
 }
 
-func (c *OnchainController) publicToken(ctx *gin.Context, limiter *windowLimiter) (string, bool) {
+func (c *OnchainController) publicToken(ctx *gin.Context, limiter *ratelimit.Window) (string, bool) {
 	token := ctx.Param(tokenParam)
 	if !IsPaymentToken(token) {
 		_ = ctx.Error(errOnchainNotFound)
