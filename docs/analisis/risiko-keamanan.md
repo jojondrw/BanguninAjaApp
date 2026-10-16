@@ -43,7 +43,7 @@ proyek.
 | R9 | Bundle GIS hanya lewat Google Drive tim; atribusi OSM di peta | Isi repo publik sebelum push | Hapus berkas dari riwayat Git dan ganti dengan petunjuk unduh |
 | R10 | Akses data pelanggan hanya untuk peran Penjualan (tulis) serta Keuangan dan Pengamat (baca); HTTPS di demo | Log akses dan daftar pengguna aktif | Nonaktifkan akun terkait (sesi langsung dicabut), ganti `JWT_ACCESS_SECRET`, beri tahu pihak terdampak |
 | R11 | Aturan perhitungan di service dengan unit test; integration test untuk yang bergantung pada database | CI di setiap PR; system test sebelum demo | Perbaiki, tambah test yang mereproduksi, hitung ulang data lewat backfill migrasi |
-| R12 | CI empat job di setiap PR | Status CI sebelum merge | Pemilik repo mengaktifkan branch protection: wajib PR dan wajib keempat job lulus |
+| R12 | CI lima job di setiap PR | Status CI sebelum merge | Pemilik repo mengaktifkan branch protection: wajib PR dan wajib kelima job lulus |
 
 ## 2. Analisis keamanan (OWASP Top 10 2021)
 
@@ -57,9 +57,9 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 | A03 Injection | Terkendali | Query lewat GORM dengan parameter; tidak ada SQL yang disusun dari input pengguna; React meng-escape keluaran | |
 | A04 Insecure Design | Terkendali | Peta transisi status di service; pembayaran on-chain: hash unik, baris dikunci, chain id dan batas waktu diperiksa; data simulasi ditandai (#64) | |
 | A05 Security Misconfiguration | Diperbaiki | CORS dari daftar asal di env; galat ke klien tanpa detail internal; header keamanan API (#68) | Header frontend (CSP) di Vercel belum diatur; trusted proxies belum diatur |
-| A06 Vulnerable and Outdated Components | Sebagian | `npm audit` dependensi produksi: 0 kerentanan | 1 kerentanan *high* di `source-map-js` (alat build dan test, tidak ikut ke produksi); `govulncheck` belum dijalankan di CI |
+| A06 Vulnerable and Outdated Components | Sebagian | Job CI `Security (govulncheck)` gagal kalau ada kerentanan Go yang terjangkau kode; `npm audit --omit=dev --audit-level=high` jalan di job frontend. Pemeriksaan pertama menemukan 10 kerentanan terjangkau (standard library Go 1.27.1, `golang.org/x/net`, `quic-go`), semua ditutup dengan Go 1.27.2 dan upgrade modul | 1 kerentanan *high* di `source-map-js` (alat build dan test, tidak ikut ke produksi). Image Docker yang sudah terlanjur dibangun perlu dibangun ulang |
 | A07 Identification and Authentication Failures | Diperbaiki | Batas 10 percobaan login per email per 15 menit (#68); panjang kata sandi 8 sampai 72 byte (#62); rotasi refresh token dengan deteksi pemakaian ulang (diuji integration test); akun nonaktif ditolak di request berikutnya | Batas per email bisa dipakai orang lain untuk mengunci satu akun selama 15 menit |
-| A08 Software and Data Integrity Failures | Sebagian | CI empat job di setiap PR, termasuk integration test PostGIS | Branch `main` belum diproteksi, jadi merge tanpa CI hijau masih mungkin |
+| A08 Software and Data Integrity Failures | Sebagian | CI lima job di setiap PR, termasuk integration test PostGIS dan pemeriksaan kerentanan | Branch `main` belum diproteksi, jadi merge tanpa CI hijau masih mungkin |
 | A09 Security Logging and Monitoring Failures | Sebagian | Log terstruktur (`slog`); pembayaran mencatat `created_by`; laporan harian mencatat penulis | Belum ada jejak audit untuk perubahan peran dan status pengguna; belum ada peringatan otomatis |
 | A10 Server-Side Request Forgery | Terkendali | Permintaan keluar hanya ke alamat dari konfigurasi (layanan penilaian, node RPC, Google News); proxy tile memvalidasi nama layer dengan regex dan koordinat sebagai angka | |
 
@@ -70,7 +70,6 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 | Tinggi | Nyalakan `COOKIE_SECURE=true` di lingkungan demo dan produksi | A02 |
 | Tinggi | Aktifkan branch protection di `main` (pemilik repo) | A08 |
 | Sedang | Tegakkan peran per proyek: daftar dan detail proyek hanya untuk anggota, kecuali Admin dan Pengamat | A01 |
-| Sedang | Tambah `govulncheck` dan `npm audit --omit=dev` ke CI | A06 |
 | Sedang | Tabel audit untuk perubahan peran, status pengguna, dan pembayaran | A09 |
 | Rendah | Enkripsi kolom NIK, atau simpan hanya empat digit terakhir untuk tampilan | A02 |
 | Rendah | Header CSP untuk frontend di Vercel; trusted proxies di backend | A05 |

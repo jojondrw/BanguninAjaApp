@@ -60,6 +60,21 @@ jobs:
       - run: go vet -tags integration ./internal/integration/
       - run: go test -tags integration -count=1 -v ./internal/integration/
 
+  security:
+    name: Security (govulncheck)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Known vulnerabilities reachable from our code
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   frontend:
     name: Frontend (React)
     runs-on: ubuntu-latest
@@ -74,6 +89,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run build
       - name: Frontend tests

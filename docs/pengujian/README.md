@@ -43,7 +43,7 @@ Integration test menolak berjalan kalau nama database tidak berakhiran
 
 **Siap digabung (exit criteria per PR)**
 
-- Keempat job CI hijau: Backend (Go), Integration (PostGIS), Frontend (React), Scoring (Python)
+- Kelima job CI hijau: Backend (Go), Integration (PostGIS), Security (govulncheck), Frontend (React, termasuk audit dependensi produksi), Scoring (Python)
 - `go vet`, `oxlint`, dan `tsc` tanpa peringatan
 - Perubahan perilaku punya test baru yang gagal sebelum perubahan
 - Perubahan tampilan diperiksa di browser pada lebar desktop dan ponsel

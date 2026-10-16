@@ -170,7 +170,8 @@ docker compose exec database createdb -U $POSTGRES_USER bangunin_aja_test
 docker compose exec -e POSTGRES_DB=bangunin_aja_test backend go test -tags integration -v ./internal/integration/
 ```
 
-Di CI, keempatnya berjalan otomatis di setiap pull request.
+Di CI, keempatnya berjalan otomatis di setiap pull request, ditambah pemeriksaan
+kerentanan dependensi Go (`govulncheck`) dan npm (dependensi produksi).
 
 ## Dokumentasi
 
