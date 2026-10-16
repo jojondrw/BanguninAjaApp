@@ -77,6 +77,7 @@ func (s *seeder) run() error {
 	steps := []seedStep{
 		{"projects", s.seedProjects},
 		{"progress history", s.seedProgressHistory},
+		{"daily reports", s.seedDailyReports},
 		{"finance", s.seedFinance},
 		{"sales", s.seedSales},
 		{"inventory", s.seedInventory},
