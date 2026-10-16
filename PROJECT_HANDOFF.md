@@ -1,6 +1,6 @@
 # PROJECT HANDOFF — BanguninAja
 
-**Last updated:** 2026-10-03 (G1–G5) · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
+**Last updated:** 2026-10-17 (P1 construction features, security, docs) · **Canonical copy:** this file, in `BanguninAjaApp`. The copy in the `BanguninAja` data repo is outdated — ignore it.
 
 > Written to be handed to a teammate **and their own AI agent**. It states decisions and current state; the repo plus this doc should be enough for an agent to derive concrete tasks.
 
@@ -8,26 +8,30 @@
 
 ## TL;DR
 
-- **Site intelligence is real end to end.** `POST /api/site/evaluate` scores a point from actual GIS data through the Python service in `scoring/`. The data is a 267 MB bundle (not the 18 GB raw data), so the service can be hosted.
-- **Every ERP module has a screen**: projects (workspace with phases, permits, RAB, status), finance (budgets, cash, journal, ledger), billing (invoices, receivables, payables), sales (units, leads, customers, contracts, installments), procurement (requests, POs, goods receipts, vendors), inventory, HR.
-- **GIS extras**: compare 2–4 candidate sites side by side; map layers for hazard (multi, flood, earthquake, landslide), population density, and ZNT land price, rendered from the same bundle.
-- **UI** refreshed in an Apple-like style (SF Pro / Inter, segmented controls, command palette Ctrl/⌘ K). See `docs/requirements/frontend/aturan-ui.md`.
-- **CI** runs Go, React, and Python checks on every PR.
-- Left: on-chain payment simulation (Derick's), plus the backend gaps in §5.
+- **Site intelligence is real end to end.** `POST /api/site/evaluate` scores a point from actual GIS data through the Python service in `scoring/`. The data is a 267 MB bundle, 239 MB zipped (not the 18 GB raw data), so the service can be hosted.
+- **Every ERP module has a screen and the modules are linked** (G1–G6 in §5): projects, finance, billing, sales, procurement, inventory, HR, reports.
+- **Since 2026-10-15:** role-based access for 7 roles on every module (#44, #51), report export to PDF/XLSX/CSV (#45), realistic demo data via `cmd/seed-demo` (#47), project teams (#48), master data page (#49), location PDF report (#50), on-chain payment simulation on Sepolia (#52).
+- **Construction depth** (P1 list in `docs/analisis/kelengkapan-domain.md`, all done): progress weighted by RAB value plus an S-curve (#61), daily field reports (#65), a contractor contract per project with progress-based payment terms and retention that become payables in billing (#71), and change orders approved by Admin with cumulative term amounts (#72).
+- **Quality gates:** 5 CI jobs on every PR — Go unit tests, integration tests against real PostgreSQL + PostGIS (#66), `govulncheck` (#74), frontend lint/build/tests plus `npm audit` of production dependencies, and the Python scoring tests.
+- **Docs for the AoL criteria:** UML and ERD (`docs/desain`), test plan and results at four levels (`docs/pengujian`), risks, OWASP and ethics (`docs/analisis/risiko-keamanan.md`), SDLC model, Gantt plan vs actual and WBS (`docs/proses`, PR #73), SE trends and professional ethics (`docs/analisis/tren-rpl.md`, PR #75).
+- **Left:** the final presentation, contributions from every member through their own PRs, and the items in §5.
 
 ---
 
-## 1. Current State (`main`, 2026-10-03)
+## 1. Current State (`main`, 2026-10-17)
 
 ### Backend (Go / Gin / GORM / PostGIS)
 | Area | Status |
 |---|---|
-| Auth, 13 business slices, `regulation`, `news` | ✅ |
-| `site` → `POST /api/site/evaluate` | ✅ predictive + descriptive; stores score, dimension scores, flood/earthquake index, ZNT price and the real risk flags (`saved_location.risk_flags`, jsonb) |
+| Auth, 7-role access matrix checked on every request, last-admin guard | ✅ #44, #51; password length and login rate limit #62, #68 |
+| 16 slices (`asset`, `auth`, `billing`, `finance`, `hr`, `inventory`, `location`, `master`, `news`, `procurement`, `project`, `regulation`, `reporting`, `sales`, `scoring`, `site`) | ✅ vertical slices, see `docs/requirements/backend/arsitektur.md` |
+| `site` → `POST /api/site/evaluate` | ✅ predictive + descriptive; news fetched in parallel with a 2 s budget and a 15-minute cache (#58); fallback scores flagged `is_simulated` (#64) |
 | `site` → `GET /api/site/tiles/:layer/:z/:x/:y` | ✅ auth-protected proxy to the scoring service's map tiles |
-| `cmd/seed`, `cmd/migrate`, `cmd/import-rdtr` | ✅ |
-| Row locking on update/delete (billing, project) | ✅ fixed lost-update races found this round |
-| On-chain payment simulation | ❌ not started (Derick) |
+| `project` → weighted progress, progress history, S-curve, daily reports | ✅ #61, #65 |
+| `project` → contractor contract, payment terms, retention, change orders | ✅ #71, #72. Rules and error codes: `docs/requirements/backend/slice-bisnis.md` |
+| `billing` → on-chain payment requests on Sepolia | ✅ #52 |
+| `cmd/migrate`, `cmd/seed`, `cmd/seed-demo` (`--reset-demo`), `cmd/import-rdtr` | ✅ |
+| Integration tests (`-tags integration`, DB name must end in `_test`) | ✅ 9 tests, also in CI |
 
 ### Scoring service (`scoring/`, Python / FastAPI)
 - `POST /score` → overall score, 5 dimension scores, risk flags, region, and `facts` (flood index, earthquake index, ZNT price).
@@ -37,15 +41,20 @@
 ### Frontend (React / Vite / Tailwind / MapLibre)
 | Route | Page |
 |---|---|
-| `/` | Overview: KPIs, 12-month cash-flow chart, "Perlu perhatian" (overdue installments, pending requests, low stock, unpaid payroll), projects |
-| `/proyek`, `/proyek/:id` | Projects list + workspace (status transitions, edit/delete, phases, permits, RAB, site analysis, finance tabs) |
-| `/lokasi` | Evaluasi (map + layers + score + regulation + news) and Bandingkan (compare 2–4 saved sites, saved comparisons) |
+| `/` | Overview: KPIs, 12-month cash-flow chart, "Perlu perhatian", projects |
+| `/proyek`, `/proyek/:id` | Projects list + workspace with tabs Ringkasan (phases, RAB, permits, S-curve), Lapangan (daily reports), Tim, Analisis Lokasi, Keuangan (budget, cash, contractor terms, change orders) |
+| `/lokasi` | Evaluasi (map + layers + score + regulation + news) and Bandingkan (2–4 saved sites), PDF export |
 | `/keuangan` | Ringkasan, Anggaran, Kas, Jurnal, Buku besar |
-| `/tagihan` | Faktur, Piutang, Utang with payment recording |
+| `/tagihan` | Faktur, Piutang, Utang with payment history and on-chain payment requests |
 | `/penjualan` | Unit, Prospek, Pelanggan, Kontrak (+ installment payments) |
 | `/pengadaan` | Pesanan pembelian, Penerimaan barang, Vendor, Permintaan pembelian |
-| `/inventaris` | Stok dan mutasi, Material dan gudang, Aset dan alat (full CRUD) |
-| `/sdm` | Employees, attendance, payroll (edit/delete, SQL payroll summary) |
+| `/inventaris` | Stok dan mutasi, Material dan gudang, Aset dan alat |
+| `/sdm` | Employees, attendance, payroll |
+| `/laporan` | Reports with preview and PDF/XLSX/CSV export |
+| `/data-master` | Chart of accounts, regions, units of measure |
+| `/pengguna` | Users and roles (Admin only) |
+| `/akun` | Own profile and password |
+| `/bayar/:token` | Public on-chain payment page for buyers |
 
 Pages are lazy-loaded per route; a route-level error boundary keeps one broken page from blanking the app.
 
@@ -100,6 +109,21 @@ docker compose --profile scoring up -d scoring          # SCORE_SERVICE_URL=http
 cd frontend && npm install && npm run dev
 ```
 
+After every pull of `main`:
+
+```bash
+docker compose exec backend go run ./cmd/migrate
+docker compose exec -e DEMO_USER_PASSWORD=<demo password> backend go run ./cmd/seed-demo
+docker compose build backend    # once, since #74 pins Go 1.27.2 in the images
+```
+
+Integration tests need a database whose name ends in `_test`:
+
+```bash
+docker compose exec database createdb -U $POSTGRES_USER bangunin_aja_test
+docker compose exec -e POSTGRES_DB=bangunin_aja_test backend go test -tags integration ./internal/integration/
+```
+
 Gotchas seen on Derick's laptop:
 - A Windows PostgreSQL service on 5432 collides with the compose database — stop it or remap the port.
 - Some networks cut Go's TLS 1.3 handshake (`go mod download` → `EOF`). Workaround: a local module mirror (`GOPROXY=file://...`).
@@ -110,6 +134,21 @@ Gotchas seen on Derick's laptop:
 ---
 
 ## 5. What's Left
+
+### Next
+
+| # | Task | Notes | Priority |
+|---|---|---|---|
+| L1 | Final presentation (slides or video) | Problem, solution, design, testing, team contributions, ethics, SE trends. Material: `docs/proses`, `docs/pengujian`, `docs/analisis` | high |
+| L2 | Every member contributes through their own branch and PR | The VCS criterion grades consistent contributions from all members; most PRs since 2026-10-02 come from one account. See `docs/proses/jadwal.md` §3 | high |
+| L3 | Branch protection on `main` | Repo owner (`jojondrw`): require PR, the 5 CI jobs, and one approval | high |
+| L4 | Run acceptance scenarios AT-10 (purchase order) and AT-13 (on-chain payment) | `docs/pengujian/acceptance.md` | medium |
+| L5 | Project-level access (OWASP A01) | Project roles in `project_member` are not enforced yet; needs a team decision on who sees which project | medium |
+| L6 | Audit trail for role and status changes (A09) | Touches `auth/*` (see §6), so agree on it first | medium |
+| L7 | `COOKIE_SECURE=true` for the HTTPS demo, CSP headers on Vercel, NIK encryption | `docs/analisis/risiko-keamanan.md` follow-up table | low |
+| L8 | Billing toward the employer (receivable terms) and posting billing payments to cash | Current terms pay the contractor; billing payments do not create cash entries yet | low |
+
+### Done
 
 | # | Task | Notes | Priority |
 |---|---|---|---|
@@ -125,7 +164,7 @@ Gotchas seen on Derick's laptop:
 
 ## 6. Don't Touch
 
-- `auth/*` and the login/session frontend.
+- `auth/*` and the login/session frontend. The only changes since 2026-10-03 were small security fixes (#62 password length, #68 login rate limit and security headers), each with tests.
 - The `site` slice's stub fallback — it keeps the demo alive if the scoring service is down.
 - `scoring/train.py`'s refusal to bulk-query the live ATR/BPN server.
 - The RDTR scraper's throttling in `BanguninAja/scripts/ambil_rdtr.py`.
@@ -134,5 +173,6 @@ Gotchas seen on Derick's laptop:
 
 ## 7. Open Questions
 
-- New deadline (the 2026-09-27 target has passed).
-- Has `scoring-bundle.zip` been uploaded to the Drive for the team?
+- Final presentation date and format (slides or video).
+- Who owns L4 to L6, and through which PRs.
+- Has `scoring-bundle.zip` been uploaded to the team Drive?
