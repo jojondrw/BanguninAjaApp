@@ -35,7 +35,7 @@ func (r *gormRepository) GetByPoint(ctx context.Context, latitude, longitude flo
 			longitude,
 			latitude,
 		)).
-		First(&regulation).Error
+		Take(&regulation).Error
 
 	if err != nil {
 		return nil, err
