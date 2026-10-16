@@ -5,6 +5,7 @@ import {
   useBudgetItemPage,
   useCreateBudgetItem,
   useDeleteBudgetItem,
+  usePhases,
   useUpdateBudgetItem,
 } from '../../controllers/useProjectWorkspace'
 import { summarizeBudgets, type Budget } from '../../models/finance'
@@ -17,14 +18,16 @@ import {
   budgetShare,
   EMPTY_BUDGET_ITEM_FORM,
   isProjectClosed,
+  sortPhases,
   type BudgetItem,
   type BudgetItemFormValues,
   type Project,
+  type ProjectPhase,
 } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { kpiValue, number, rupiah } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table, type Column } from '../components/Data'
-import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
+import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
 import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -32,6 +35,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { FormSection, InlineConfirm } from './parts'
 
 const PAGE_SIZE = 20
+const NO_PHASES: ProjectPhase[] = []
 const NO_BUDGETS: Budget[] = []
 
 type UpdateBudgetItem = ReturnType<typeof useUpdateBudgetItem>
@@ -47,6 +51,8 @@ export function BudgetItemsCard({ project }: { project: Project }) {
     pageSize: PAGE_SIZE,
   })
   const budgets = useBudgets(project.id)
+  const phases = sortPhases(usePhases(project.id).data ?? NO_PHASES)
+  const phaseNames = new Map(phases.map((phase) => [phase.id, phase.name]))
   const updateItem = useUpdateBudgetItem(project.id)
   const deleteItem = useDeleteBudgetItem(project.id)
   const isClosed = isProjectClosed(project)
@@ -73,7 +79,17 @@ export function BudgetItemsCard({ project }: { project: Project }) {
 
   const columns: Column<BudgetItem>[] = [
     { header: 'Kode', cell: (row) => <span className="font-medium text-slate-900">{row.code}</span> },
-    { header: 'Uraian', cell: (row) => row.description },
+    {
+      header: 'Uraian',
+      cell: (row) => (
+        <div>
+          <p>{row.description}</p>
+          {row.phaseId && phaseNames.has(row.phaseId) ? (
+            <p className="mt-0.5 text-xs text-slate-500">{phaseNames.get(row.phaseId)}</p>
+          ) : null}
+        </div>
+      ),
+    },
     {
       header: 'Volume',
       align: 'right',
@@ -151,7 +167,7 @@ export function BudgetItemsCard({ project }: { project: Project }) {
 
       {panel?.kind === 'new' && !isClosed ? (
         <FormPanel>
-          <NewBudgetItemForm projectId={project.id} />
+          <NewBudgetItemForm projectId={project.id} phases={phases} />
         </FormPanel>
       ) : null}
 
@@ -193,6 +209,7 @@ export function BudgetItemsCard({ project }: { project: Project }) {
         <EditBudgetItemForm
           key={selected.id}
           item={selected}
+          phases={phases}
           update={updateItem}
           onDone={() => setPanel(null)}
         />
@@ -272,9 +289,10 @@ function totalHint(values: BudgetItemFormValues): string {
   return total === null ? 'Jumlah = volume x harga satuan' : `Jumlah ${rupiah(total)}`
 }
 
-function BudgetItemFields({ idPrefix, values, onChange, onUnitChange, autoFocus = false }: {
+function BudgetItemFields({ idPrefix, values, phases, onChange, onUnitChange, autoFocus = false }: {
   idPrefix: string
   values: BudgetItemFormValues
+  phases: ProjectPhase[]
   onChange: (key: keyof BudgetItemFormValues) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   onUnitChange: (unitOfMeasureId: string) => void
   autoFocus?: boolean
@@ -305,6 +323,20 @@ function BudgetItemFields({ idPrefix, values, onChange, onUnitChange, autoFocus 
           onChange={onChange('description')}
         />
       </div>
+      <SelectField
+        id={`${idPrefix}-phase`}
+        label="Tahap"
+        hint="Nilai item ini menjadi bobot tahapnya di progres proyek"
+        value={values.phaseId}
+        onChange={onChange('phaseId')}
+      >
+        <option value="">Belum dikaitkan</option>
+        {phases.map((phase) => (
+          <option key={phase.id} value={phase.id}>
+            {phase.sortOrder}. {phase.name}
+          </option>
+        ))}
+      </SelectField>
       <Field
         id={`${idPrefix}-volume`}
         label="Volume"
@@ -358,20 +390,25 @@ function useBudgetItemValues(initial: BudgetItemFormValues) {
 
 // Formulir tetap terbuka setelah menyimpan supaya beberapa item bisa dicatat
 // berturut-turut. Satuan terakhir dipertahankan karena biasanya sama.
-function NewBudgetItemForm({ projectId }: { projectId: string }) {
+function NewBudgetItemForm({ projectId, phases }: { projectId: string; phases: ProjectPhase[] }) {
   const { values, setValues, change, changeUnit } = useBudgetItemValues(EMPTY_BUDGET_ITEM_FORM)
   const createItem = useCreateBudgetItem(projectId)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     createItem.mutate(values, {
-      onSuccess: () => setValues((current) => ({ ...EMPTY_BUDGET_ITEM_FORM, unitOfMeasureId: current.unitOfMeasureId })),
+      onSuccess: () =>
+        setValues((current) => ({
+          ...EMPTY_BUDGET_ITEM_FORM,
+          unitOfMeasureId: current.unitOfMeasureId,
+          phaseId: current.phaseId,
+        })),
     })
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <BudgetItemFields idPrefix="rab-new" values={values} onChange={change} onUnitChange={changeUnit} />
+      <BudgetItemFields idPrefix="rab-new" values={values} phases={phases} onChange={change} onUnitChange={changeUnit} />
 
       <Button type="submit" isPending={createItem.isPending} pendingLabel="Menyimpan item">
         Simpan item RAB
@@ -387,8 +424,9 @@ function NewBudgetItemForm({ projectId }: { projectId: string }) {
   )
 }
 
-function EditBudgetItemForm({ item, update, onDone }: {
+function EditBudgetItemForm({ item, phases, update, onDone }: {
   item: BudgetItem
+  phases: ProjectPhase[]
   update: UpdateBudgetItem
   onDone: () => void
 }) {
@@ -402,7 +440,14 @@ function EditBudgetItemForm({ item, update, onDone }: {
   return (
     <FormSection title={`Ubah item ${item.code}`}>
       <form onSubmit={submit} className="space-y-4">
-        <BudgetItemFields idPrefix="rab-edit" values={values} onChange={change} onUnitChange={changeUnit} autoFocus />
+        <BudgetItemFields
+          idPrefix="rab-edit"
+          values={values}
+          phases={phases}
+          onChange={change}
+          onUnitChange={changeUnit}
+          autoFocus
+        />
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" isPending={update.isPending} pendingLabel="Menyimpan item">

@@ -8,6 +8,7 @@ import type {
   Permit,
   PermitRequest,
   PhaseRequest,
+  ProgressCurve,
   Project,
   ProjectPhase,
   ProjectRequest,
@@ -39,6 +40,8 @@ export const projectWorkspaceApi = {
 
   deletePermit: (projectId: string, permitId: string) =>
     request<void>(`/projects/${projectId}/permits/${permitId}`, { method: 'DELETE' }),
+
+  progressCurve: (projectId: string) => request<ProgressCurve>(`/projects/${projectId}/progress-curve`),
 
   budgetItems: (projectId: string, filter: BudgetItemFilter = {}) =>
     request<BudgetItemPage>(`/projects/${projectId}/budget-items${toQueryString({ ...filter })}`),

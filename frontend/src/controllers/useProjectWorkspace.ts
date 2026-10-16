@@ -220,8 +220,16 @@ export function useDeletePermit(projectId: string) {
   })
 }
 
-// Kuncinya di bawah detailKey(projectId, 'budget-items'), jadi satu
-// pembatalan menyegarkan tabel RAB sekaligus KPI Nilai RAB.
+export function useProgressCurve(projectId: string) {
+  return useQuery({
+    queryKey: detailKey(projectId, 'progress-curve'),
+    queryFn: () => projectWorkspaceApi.progressCurve(projectId),
+    ...DATA_QUERY,
+  })
+}
+
+// Item RAB menentukan bobot tiap tahap, jadi perubahan RAB ikut mengubah
+// progres proyek dan kurva S. Karena itu mutasi RAB menyegarkan PROJECTS_KEY.
 export function useBudgetItemPage(projectId: string, filter: BudgetItemFilter) {
   return useQuery({
     queryKey: [...detailKey(projectId, 'budget-items'), filter],
@@ -237,7 +245,7 @@ export function useCreateBudgetItem(projectId: string) {
   return useMutation({
     mutationFn: (values: BudgetItemFormValues) =>
       projectWorkspaceApi.createBudgetItem(projectId, toBudgetItemRequest(values)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
   })
 }
 
@@ -247,7 +255,7 @@ export function useUpdateBudgetItem(projectId: string) {
   return useMutation({
     mutationFn: ({ itemId, values }: { itemId: string; values: BudgetItemFormValues }) =>
       projectWorkspaceApi.updateBudgetItem(projectId, itemId, toBudgetItemRequest(values)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
   })
 }
 
@@ -256,7 +264,7 @@ export function useDeleteBudgetItem(projectId: string) {
 
   return useMutation({
     mutationFn: (itemId: string) => projectWorkspaceApi.deleteBudgetItem(projectId, itemId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: detailKey(projectId, 'budget-items') }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [PROJECTS_KEY] }),
   })
 }
 

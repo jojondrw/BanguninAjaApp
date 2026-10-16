@@ -288,6 +288,7 @@ export function summarizePermits(permits: Permit[]): PermitSummary {
 export interface BudgetItem {
   id: string
   projectId: string
+  phaseId: string | null
   code: string
   description: string
   volume: number
@@ -465,6 +466,7 @@ export interface BudgetItemFilter {
 }
 
 export interface BudgetItemRequest {
+  phaseId: string | null
   code: string
   description: string
   volume: number
@@ -473,6 +475,7 @@ export interface BudgetItemRequest {
 }
 
 export interface BudgetItemFormValues {
+  phaseId: string
   code: string
   description: string
   volume: string
@@ -481,6 +484,7 @@ export interface BudgetItemFormValues {
 }
 
 export const EMPTY_BUDGET_ITEM_FORM: BudgetItemFormValues = {
+  phaseId: '',
   code: '',
   description: '',
   volume: '',
@@ -496,6 +500,7 @@ const VOLUME_PRECISION = 100
 
 export function budgetItemFormValues(item: BudgetItem): BudgetItemFormValues {
   return {
+    phaseId: item.phaseId ?? '',
     code: item.code,
     description: item.description,
     volume: String(item.volume),
@@ -506,6 +511,7 @@ export function budgetItemFormValues(item: BudgetItem): BudgetItemFormValues {
 
 export function toBudgetItemRequest(values: BudgetItemFormValues): BudgetItemRequest {
   return {
+    phaseId: values.phaseId === '' ? null : values.phaseId,
     code: values.code.trim(),
     description: values.description.trim(),
     volume: values.volume === '' ? 0 : Number(values.volume),
@@ -528,3 +534,61 @@ export function budgetItemTotal(values: BudgetItemFormValues): number | null {
 export function budgetShare(total: number, grandTotal: number): number {
   return grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0
 }
+
+export type ProgressWeighting = 'budget' | 'equal'
+
+export interface PhaseWeight {
+  id: string
+  name: string
+  weightPercent: number
+  budget: number
+  progress: number
+  dated: boolean
+}
+
+export interface CurvePoint {
+  date: string
+  planned: number
+  actual: number | null
+}
+
+export interface ProgressCurve {
+  weighting: ProgressWeighting
+  undatedPhases: number
+  phases: PhaseWeight[]
+  points: CurvePoint[]
+  today: {
+    date: string
+    planned: number | null
+    actual: number
+    deviation: number | null
+  }
+}
+
+const ON_TRACK_TOLERANCE = 2
+
+// Selisih realisasi terhadap rencana, dalam poin persen. Dua poin dianggap
+// masih sesuai rencana supaya pembulatan harian tidak memicu peringatan.
+export function scheduleStatus(deviation: number | null): { label: string; tone: 'good' | 'warn' | 'neutral' } {
+  if (deviation === null) {
+    return { label: 'rencana belum lengkap', tone: 'neutral' }
+  }
+  if (Math.abs(deviation) <= ON_TRACK_TOLERANCE) {
+    return { label: 'sesuai rencana', tone: 'good' }
+  }
+  const points = Math.round(Math.abs(deviation))
+  return deviation < 0
+    ? { label: `${points} poin di belakang rencana`, tone: 'warn' }
+    : { label: `${points} poin di depan rencana`, tone: 'good' }
+}
+
+export function progressBasis(curve: ProgressCurve | undefined, phaseCount: number): string {
+  if (phaseCount === 0) {
+    return 'belum ada tahap'
+  }
+  if (!curve || curve.weighting === 'equal') {
+    return `rata-rata ${phaseCount} tahap`
+  }
+  return 'berbobot nilai RAB'
+}
+
