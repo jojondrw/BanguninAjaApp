@@ -20,6 +20,7 @@ type termRepository struct {
 	contract  *ConstructionContract
 	vendor    ContractVendor
 	terms     []PaymentTerm
+	changes   []ContractChange
 	paid      map[uuid.UUID]int64
 	recorded  []PayableEntry
 	createdAt time.Time
@@ -45,7 +46,8 @@ func (f *termRepository) addTerm(required int, percent float64) *PaymentTerm {
 }
 
 func (f *termRepository) claim(term *PaymentTerm) {
-	gross, retention := termAmounts(contractValue, term.Percent, 5)
+	gross := shareOf(contractValue, percentUnits(term.Percent))
+	retention := shareOf(gross, percentUnits(5))
 	payable := uuid.New()
 	term.GrossAmount, term.RetentionAmount, term.PayableID = gross, retention, &payable
 }
@@ -148,6 +150,53 @@ func (f *termRepository) Payables() PayableLedger {
 	return f
 }
 
+func (f *termRepository) ListContractChanges(context.Context, uuid.UUID) ([]ContractChangeRow, error) {
+	rows := make([]ContractChangeRow, 0, len(f.changes))
+	for _, change := range f.changes {
+		rows = append(rows, ContractChangeRow{
+			ID: change.ID, Sequence: change.Sequence, Description: change.Description,
+			ValueChange: change.ValueChange, DaysChange: change.DaysChange, Status: change.Status,
+			DecidedOn: change.DecidedOn, CreatedAt: change.CreatedAt,
+		})
+	}
+	return rows, nil
+}
+
+func (f *termRepository) FindContractChange(_ context.Context, _, id uuid.UUID) (ContractChange, error) {
+	for _, change := range f.changes {
+		if change.ID == id {
+			return change, nil
+		}
+	}
+	return ContractChange{}, database.ErrNotFound
+}
+
+func (f *termRepository) CreateContractChange(_ context.Context, change *ContractChange) error {
+	change.ID = uuid.New()
+	f.changes = append(f.changes, *change)
+	return nil
+}
+
+func (f *termRepository) SaveContractChange(_ context.Context, change *ContractChange) error {
+	for i := range f.changes {
+		if f.changes[i].ID == change.ID {
+			f.changes[i] = *change
+			return nil
+		}
+	}
+	return database.ErrNotFound
+}
+
+func (f *termRepository) DeleteContractChange(_ context.Context, _, id uuid.UUID) error {
+	for i := range f.changes {
+		if f.changes[i].ID == id {
+			f.changes = append(f.changes[:i], f.changes[i+1:]...)
+			return nil
+		}
+	}
+	return database.ErrNotFound
+}
+
 func (f *termRepository) Record(_ context.Context, entry PayableEntry) (uuid.UUID, error) {
 	f.recorded = append(f.recorded, entry)
 	return uuid.New(), nil
@@ -171,11 +220,39 @@ func requireCode(t *testing.T, err error, code string) {
 	}
 }
 
-func TestTermAmountsTakeRetentionFromTheGrossValue(t *testing.T) {
-	gross, retention := termAmounts(contractValue, 20, 5)
+func TestPlannedAmountsAreCumulativeSoTheTermsAddUpToTheRunningValue(t *testing.T) {
+	repository := newTermRepository(statusOngoing, 0)
+	first := repository.addTerm(20, 20)
+	repository.claim(first)
+	second := repository.addTerm(40, 25)
+	third := repository.addTerm(100, 55)
+	rows, _ := repository.ListPaymentTerms(context.Background(), uuid.Nil)
+	sortTerms(rows)
 
-	if gross != 6_000_000_000 || retention != 300_000_000 {
-		t.Fatalf("gross %d retention %d, want 6.000.000.000 and 300.000.000", gross, retention)
+	amounts := plannedAmounts(rows, contractValue+3_000_000_000, 5)
+
+	if amounts[second.ID].gross != 8_850_000_000 || amounts[third.ID].gross != 18_150_000_000 {
+		t.Fatalf("amounts = %+v, want 45%% and 100%% of 33 M minus what was billed before", amounts)
+	}
+	if total := 6_000_000_000 + amounts[second.ID].gross + amounts[third.ID].gross; total != contractValue+3_000_000_000 {
+		t.Fatalf("terms add up to %d, want the running contract value", total)
+	}
+	if amounts[second.ID].retention != 442_500_000 {
+		t.Fatalf("retention = %d, want 5%% of the term", amounts[second.ID].retention)
+	}
+}
+
+func TestPlannedAmountsNeverGoNegativeAfterAContractReduction(t *testing.T) {
+	repository := newTermRepository(statusOngoing, 0)
+	repository.claim(repository.addTerm(20, 50))
+	next := repository.addTerm(40, 10)
+	rows, _ := repository.ListPaymentTerms(context.Background(), uuid.Nil)
+	sortTerms(rows)
+
+	amounts := plannedAmounts(rows, 20_000_000_000, 5)
+
+	if amounts[next.ID].gross != 0 {
+		t.Fatalf("gross = %d, want 0 when 60%% of the reduced value is already billed", amounts[next.ID].gross)
 	}
 }
 

@@ -94,6 +94,9 @@ type Service interface {
 	DeletePaymentTerm(ctx context.Context, projectID, termID uuid.UUID) (PaymentScheduleResponse, error)
 	ClaimPaymentTerm(ctx context.Context, projectID, termID, actorID uuid.UUID) (PaymentScheduleResponse, error)
 	ReleaseRetention(ctx context.Context, projectID, actorID uuid.UUID) (PaymentScheduleResponse, error)
+	ProposeContractChange(ctx context.Context, projectID, actorID uuid.UUID, request ContractChangeRequest) (PaymentScheduleResponse, error)
+	DecideContractChange(ctx context.Context, projectID, changeID, actorID uuid.UUID, role string, decision ContractChangeDecision) (PaymentScheduleResponse, error)
+	DeleteContractChange(ctx context.Context, projectID, changeID uuid.UUID) (PaymentScheduleResponse, error)
 
 	ListPermits(ctx context.Context, projectID uuid.UUID) ([]PermitResponse, error)
 	CreatePermit(ctx context.Context, projectID uuid.UUID, request PermitRequest) (PermitResponse, error)

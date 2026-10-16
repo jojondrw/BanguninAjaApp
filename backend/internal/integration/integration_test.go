@@ -327,3 +327,46 @@ func TestAProjectCanReleaseItsRetentionOnlyOnce(t *testing.T) {
 		t.Fatalf("second release err = %v, want a duplicate rejected by uq_payment_term_retention", err)
 	}
 }
+
+func TestApprovedChangeOrderRaisesTheValueUsedForTheNextClaim(t *testing.T) {
+	ctx := context.Background()
+	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	created := newProject(t, projects)
+	retention := 5.0
+	if _, err := projects.SaveContract(ctx, created.ID, project.ContractRequest{
+		VendorID: newContractor(t), Number: "SPK-UJI-02", Value: 1_000_000_000, RetentionPercent: &retention,
+	}); err != nil {
+		t.Fatalf("save contract: %v", err)
+	}
+	required := 0
+	if _, err := projects.CreatePaymentTerm(ctx, created.ID, project.PaymentTermRequest{RequiredProgress: &required, Percent: 100}); err != nil {
+		t.Fatalf("create term: %v", err)
+	}
+
+	proposer, approver := newUser(t), newUser(t)
+	schedule, err := projects.ProposeContractChange(ctx, created.ID, proposer, project.ContractChangeRequest{
+		Description: "Tambah pagar keliling", ValueChange: 200_000_000, DaysChange: 14,
+	})
+	if err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+	changeID := schedule.Changes[0].ID
+	schedule, err = projects.DecideContractChange(ctx, created.ID, changeID, approver, "admin", project.ContractChangeDecision{Status: "approved"})
+	if err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if schedule.Changes[0].ProposerName == nil || schedule.Changes[0].DeciderName == nil {
+		t.Fatalf("change = %+v, want proposer and approver names from users", schedule.Changes[0])
+	}
+	if schedule.Contract.CurrentValue != 1_200_000_000 || schedule.Contract.ExtensionDays != 14 {
+		t.Fatalf("contract = %+v, want 1,2 M and 14 extra days", schedule.Contract)
+	}
+
+	schedule, err = projects.ClaimPaymentTerm(ctx, created.ID, schedule.Terms[0].ID, approver)
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	if count(t, "SELECT COUNT(*) FROM payable WHERE id = ? AND amount = 1140000000", *schedule.Terms[0].PayableID) != 1 {
+		t.Fatal("claim did not use the contract value after the approved change")
+	}
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 )
 
 const (
@@ -474,5 +475,56 @@ func (c *Controller) ReleaseRetention(ctx *gin.Context) {
 		return
 	}
 	schedule, err := c.service.ReleaseRetention(ctx.Request.Context(), projectID, actorID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) ProposeContractChange(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request ContractChangeRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.ProposeContractChange(ctx.Request.Context(), projectID, actorID, request)
+	httpresponse.RespondCreated(ctx, schedule, err)
+}
+
+func (c *Controller) DecideContractChange(ctx *gin.Context) {
+	projectID, changeID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var decision ContractChangeDecision
+	if err := httprequest.BindJSON(ctx, &decision); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	role, _ := middleware.AuthenticatedRole(ctx)
+	schedule, err := c.service.DecideContractChange(ctx.Request.Context(), projectID, changeID, actorID, role, decision)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) DeleteContractChange(ctx *gin.Context) {
+	projectID, changeID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.DeleteContractChange(ctx.Request.Context(), projectID, changeID)
 	httpresponse.Respond(ctx, schedule, err)
 }
