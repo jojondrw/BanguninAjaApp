@@ -17,7 +17,7 @@ di [rencana pengujian](README.md).
 
 ### Pembaruan setelah termin dan retensi
 
-Diukur ulang pada branch `feat/termin-retensi`, yang sudah memuat PR #67 sampai
+Diukur ulang pada branch PR #71 (termin dan retensi), yang sudah memuat PR #67 sampai
 #70. Angka di bagian lain laporan ini tetap angka pengukuran pertama.
 
 | Level | Jumlah | Lulus | Gagal | Catatan |

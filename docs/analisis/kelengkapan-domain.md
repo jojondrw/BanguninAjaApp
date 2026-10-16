@@ -26,7 +26,7 @@ Empat celah paling penting, semuanya bisa ditambahkan tanpa menu baru:
 | Ruang lega di seluruh halaman | Selesai (#60) |
 | Progres berbobot RAB dan kurva S | Selesai (#61) |
 | Laporan harian lapangan | Selesai (#65), tab Lapangan |
-| Termin dan retensi | Selesai (branch `feat/termin-retensi`), kartu Termin kontraktor di tab Keuangan proyek |
+| Termin dan retensi | Selesai (#71), kartu Termin kontraktor di tab Keuangan proyek |
 | Pekerjaan tambah-kurang | Belum |
 
 ## 1. Peta fitur
