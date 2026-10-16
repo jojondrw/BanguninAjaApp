@@ -113,7 +113,9 @@ export function ComparisonGrid({ locations, table, names, onRemove, downloadingI
             label="Skor keseluruhan"
             hint="0 sampai 100, makin tinggi makin baik"
             items={locations}
-            render={(location, index) => <ScoreCell value={location.score} isBest={table.scoreBest.has(index)} />}
+            render={(location, index) => (
+              <ScoreCell value={location.score} isBest={table.scoreBest.has(index)} isSimulated={location.scoreSimulated} />
+            )}
           />
           <Row
             label="Penanda risiko"

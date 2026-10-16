@@ -10,6 +10,7 @@ import { Button } from '../components/Form'
 import { Pager } from '../components/RecordControls'
 import { SITE_EVALUATION_ID, SiteEvaluation } from '../components/SiteEvaluation'
 import type { MapPoint } from '../components/SiteMap'
+import { SimulatedScoreNote } from '../location/parts'
 import { DownloadNotes } from '../location/ReportDownload'
 import { ProgressMeter } from './parts'
 
@@ -93,6 +94,7 @@ export function ProjectSiteTab({ project }: { project: Project }) {
                   cell: (row) => (
                     <div className="min-w-32">
                       <ProgressMeter percent={row.score} label={`Skor kelayakan ${row.name}`} suffix="" />
+                      {row.scoreSimulated ? <SimulatedScoreNote /> : null}
                     </div>
                   ),
                 },

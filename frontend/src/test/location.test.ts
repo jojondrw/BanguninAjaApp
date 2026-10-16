@@ -31,6 +31,7 @@ function site(overrides: Partial<SavedLocationDetail>): SavedLocationDetail {
     areaSqm: 0,
     landPricePerSqm: 0,
     score: 50,
+    scoreSimulated: false,
     floodIndex: 0,
     earthquakeIndex: 0,
     note: '',

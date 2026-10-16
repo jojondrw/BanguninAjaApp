@@ -26,6 +26,7 @@ type ScoreResult struct {
 	RiskFlags       []RiskFlag       `json:"risk_flags"`
 	Region          string           `json:"region,omitempty"`
 	Facts           *ScoreFacts      `json:"facts,omitempty"`
+	Simulated       bool             `json:"-"`
 }
 
 type ScoreFacts struct {
@@ -174,6 +175,7 @@ func (stubScoreClient) Score(_ context.Context, input ScoreInput) (ScoreResult, 
 		OverallScore:    total / len(scoredDimensions),
 		DimensionScores: dimensions,
 		RiskFlags:       []RiskFlag{},
+		Simulated:       true,
 	}, nil
 }
 

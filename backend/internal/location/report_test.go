@@ -153,6 +153,9 @@ func TestSiteDocumentCoversTheStoredEvaluation(t *testing.T) {
 	}
 
 	score := sectionTitled(t, document, "Skor kelayakan")
+	if got := fieldValue(t, score, "Sumber skor"); !strings.HasPrefix(got, "Model penilaian") {
+		t.Fatalf("got score source %q", got)
+	}
 	if got := fieldValue(t, score, "Skor keseluruhan"); got != "78 dari 100" {
 		t.Fatalf("got overall %q", got)
 	}
@@ -355,5 +358,16 @@ func TestReportSamplesRenderAsPDF(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(directory, name), content.Bytes(), 0o644); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
+	}
+}
+
+func TestSiteDocumentWarnsWhenTheScoreWasSimulated(t *testing.T) {
+	report := fullSiteReport()
+	report.Location.ScoreSimulated = true
+
+	score := sectionTitled(t, newSiteDocument(report), "Skor kelayakan")
+
+	if got := fieldValue(t, score, "Sumber skor"); !strings.HasPrefix(got, "SIMULASI") {
+		t.Fatalf("got score source %q, want a simulation warning", got)
 	}
 }

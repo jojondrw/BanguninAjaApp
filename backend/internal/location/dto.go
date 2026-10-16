@@ -77,6 +77,7 @@ type SavedLocationResponse struct {
 	AreaSqm           float64    `json:"areaSqm"`
 	LandPricePerSqm   int64      `json:"landPricePerSqm"`
 	Score             int        `json:"score"`
+	ScoreSimulated    bool       `json:"scoreSimulated"`
 	FloodIndex        float64    `json:"floodIndex"`
 	EarthquakeIndex   float64    `json:"earthquakeIndex"`
 	Note              string     `json:"note"`
@@ -115,6 +116,7 @@ type ComparisonItemResponse struct {
 	SortOrder       int                      `json:"sortOrder"`
 	Name            string                   `json:"name"`
 	Score           int                      `json:"score"`
+	ScoreSimulated  bool                     `json:"scoreSimulated"`
 	AreaSqm         float64                  `json:"areaSqm"`
 	LandPricePerSqm int64                    `json:"landPricePerSqm"`
 	FloodIndex      float64                  `json:"floodIndex"`
@@ -158,6 +160,7 @@ func newSavedLocationResponse(location SavedLocation) SavedLocationResponse {
 		AreaSqm:           location.AreaSqm,
 		LandPricePerSqm:   location.LandPricePerSqm,
 		Score:             location.Score,
+		ScoreSimulated:    location.ScoreSimulated,
 		FloodIndex:        location.FloodIndex,
 		EarthquakeIndex:   location.EarthquakeIndex,
 		Note:              location.Note,
@@ -188,6 +191,7 @@ func newComparisonItemResponse(item ComparisonItem, location SavedLocation, scor
 		SortOrder:       item.SortOrder,
 		Name:            location.Name,
 		Score:           location.Score,
+		ScoreSimulated:  location.ScoreSimulated,
 		AreaSqm:         location.AreaSqm,
 		LandPricePerSqm: location.LandPricePerSqm,
 		FloodIndex:      location.FloodIndex,

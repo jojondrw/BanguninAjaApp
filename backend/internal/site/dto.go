@@ -22,6 +22,7 @@ type Predictive struct {
 	OverallScore    int              `json:"overall_score"`
 	DimensionScores []DimensionScore `json:"dimension_scores"`
 	RiskFlags       []RiskFlag       `json:"risk_flags"`
+	IsSimulated     bool             `json:"is_simulated"`
 }
 
 type DimensionScore struct {

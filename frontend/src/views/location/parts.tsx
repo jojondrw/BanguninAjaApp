@@ -29,7 +29,7 @@ export function ValueWithMark({ isBest, children }: { isBest: boolean; children:
 
 // Angka di atas, batang di bawah, supaya batang di satu kolom tetap sejajar
 // walaupun sebagian baris punya penanda terbaik.
-export function ScoreCell({ value, isBest }: { value: number | null; isBest: boolean }) {
+export function ScoreCell({ value, isBest, isSimulated = false }: { value: number | null; isBest: boolean; isSimulated?: boolean }) {
   if (value === null) {
     return <span className="text-slate-400">Tidak ada data</span>
   }
@@ -45,6 +45,7 @@ export function ScoreCell({ value, isBest }: { value: number | null; isBest: boo
           style={{ width: `${safe}%` }}
         />
       </span>
+      {isSimulated ? <SimulatedScoreNote /> : null}
     </div>
   )
 }
@@ -61,4 +62,10 @@ export function RiskChips({ flags }: { flags: RiskFlag[] }) {
       ))}
     </span>
   )
+}
+
+// Skor dari cadangan saat layanan penilaian mati: angka contoh, bukan hasil
+// data GIS, jadi harus selalu kelihatan berbeda dari skor model.
+export function SimulatedScoreNote() {
+  return <span className="mt-1 block text-xs font-medium text-amber-800">Skor simulasi</span>
 }
