@@ -27,7 +27,7 @@ Empat celah paling penting, semuanya bisa ditambahkan tanpa menu baru:
 | Progres berbobot RAB dan kurva S | Selesai (#61) |
 | Laporan harian lapangan | Selesai (#65), tab Lapangan |
 | Termin dan retensi | Selesai (#71), kartu Termin kontraktor di tab Keuangan proyek |
-| Pekerjaan tambah-kurang | Selesai (PR adendum), kartu di bawah Termin kontraktor. Pindah dari rencana awal di tab Ringkasan karena adendum mengubah kontrak kontraktor yang ada di tab Keuangan |
+| Pekerjaan tambah-kurang | Selesai (#72), kartu di bawah Termin kontraktor. Pindah dari rencana awal di tab Ringkasan karena adendum mengubah kontrak kontraktor yang ada di tab Keuangan |
 
 ## 1. Peta fitur
 
