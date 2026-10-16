@@ -98,7 +98,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	}
 
 	router := gin.New()
-	router.Use(gin.Recovery(), middleware.CORS(cfg.CORS), middleware.ErrorHandler())
+	router.Use(gin.Recovery(), middleware.SecurityHeaders(), middleware.CORS(cfg.CORS), middleware.ErrorHandler())
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
