@@ -25,7 +25,7 @@ Diukur ulang pada branch PR #71 (termin dan retensi), yang sudah memuat PR #67 s
 | Unit, backend Go | 500 test (+62 subtest) | 500 | 0 | Coverage pernyataan 47,8%. Paket `project` 72 test, coverage 62,1% |
 | Unit, frontend | 156 test di 24 berkas | 156 | 0 | Ditambah 13 test kartu dan model termin serta adendum |
 | Integration (PostgreSQL + PostGIS) | 9 | 9 | 0 | Ditambah pengajuan termin menjadi hutang sungguhan, retensi yang hanya bisa dilepas sekali, dan adendum yang mengubah nilai pengajuan berikutnya |
-| Acceptance | 17 skenario | 15 | 0 | Ditambah AT-15 dan AT-17 (lewat UI) serta AT-16 (lewat test render dan aturan akses); AT-10 dan AT-13 masih belum dijalankan |
+| Acceptance | 17 skenario | 16 | 0 | Ditambah AT-15 dan AT-17 (lewat UI) serta AT-16 (lewat test render dan aturan akses); AT-10 sekarang dijalankan lewat UI; AT-13 (bayar dengan dompet di Sepolia) masih belum dijalankan |
 
 Coverage `billing` turun tipis dari 73,4% ke 72,8% karena `payable_ledger.go`
 diuji lewat integration test, bukan unit test paket itu sendiri.
