@@ -21,6 +21,7 @@ type SavedLocation struct {
 	AreaSqm           float64    `gorm:"type:numeric(14,2);not null;default:0"`
 	LandPricePerSqm   int64      `gorm:"not null;default:0"`
 	Score             int        `gorm:"not null;default:0;index:idx_saved_location_score"`
+	ScoreSimulated    bool       `gorm:"not null;default:false"`
 	FloodIndex        float64    `gorm:"type:numeric(4,3);not null;default:0"`
 	EarthquakeIndex   float64    `gorm:"type:numeric(4,3);not null;default:0"`
 	Note              string     `gorm:"type:text"`

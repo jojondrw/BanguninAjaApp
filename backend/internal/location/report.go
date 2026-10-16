@@ -118,11 +118,19 @@ func identitySection(report siteReport) export.Section {
 	return export.Section{Title: "Identitas lokasi", Fields: fields}
 }
 
+func scoreSourceText(simulated bool) string {
+	if simulated {
+		return "SIMULASI. Layanan penilaian tidak tersedia saat lokasi dievaluasi, jadi skor ini angka contoh tanpa bobot dan bukan hasil data GIS. Evaluasi ulang sebelum dipakai untuk keputusan"
+	}
+	return "Model penilaian dari data GIS nasional, berbobot sesuai profil bangunan"
+}
+
 func scoreSection(report siteReport) export.Section {
 	values := scoresOf(report.Scores)[report.Location.ID]
 	section := export.Section{
 		Title: "Skor kelayakan",
 		Fields: []export.Field{
+			{Label: "Sumber skor", Value: scoreSourceText(report.Location.ScoreSimulated)},
 			{Label: "Skor keseluruhan", Value: scoreText(report.Location.Score)},
 			{Label: "Penanda risiko", Value: riskSummaryText(decodeRiskFlags(report.Location.RiskFlags))},
 		},

@@ -301,13 +301,21 @@ function ProjectSelect({ value, onChange }: { value: string; onChange: (projectI
 function EvaluationResult({ result }: { result: SiteEvaluateResponse }) {
   return (
     <>
+      {result.predictive.is_simulated ? (
+        <p role="alert" className="rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+          <span className="font-semibold">Skor simulasi.</span> Layanan penilaian sedang tidak tersedia, jadi angka di
+          bawah adalah contoh, bukan hasil data GIS. Lokasi tetap tersimpan dengan tanda simulasi; evaluasi ulang
+          sebelum dipakai untuk keputusan.
+        </p>
+      ) : null}
+
       <SiteReportPanel key={result.saved_location_id} savedLocationId={result.saved_location_id} />
 
       <KpiRow>
         <Kpi
           label="Skor keseluruhan"
           value={`${result.predictive.overall_score}`}
-          note="Skor kelayakan lokasi"
+          note={result.predictive.is_simulated ? 'Skor simulasi, bukan hasil data GIS' : 'Skor kelayakan lokasi'}
         />
 
         <Kpi

@@ -43,6 +43,7 @@ export interface ComparisonItem {
   sortOrder: number
   name: string
   score: number
+  scoreSimulated: boolean
   areaSqm: number
   landPricePerSqm: number
   floodIndex: number

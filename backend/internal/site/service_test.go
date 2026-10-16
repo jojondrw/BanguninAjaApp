@@ -211,6 +211,7 @@ func (factScoreClient) Score(ctx context.Context, input ScoreInput) (ScoreResult
 		EarthquakeIndex: pointer(0.77),
 		LandPricePerSqm: pointer(int64(17490000)),
 	}
+	result.Simulated = false
 	return result, err
 }
 
@@ -297,5 +298,34 @@ func TestNewServiceGivesNewsTwoSeconds(t *testing.T) {
 	evaluator := newTestService(&fakeRepository{}).(*service)
 	if evaluator.newsBudget != 2*time.Second {
 		t.Fatalf("news budget = %v, want 2s", evaluator.newsBudget)
+	}
+}
+
+func TestEvaluateMarksFallbackScoresAsSimulatedAndStoresTheMark(t *testing.T) {
+	repository := &fakeRepository{}
+	response, err := NewService(repository, stubScoreClient{}, fakeRegulation{}, &fakeNews{}).
+		Evaluate(context.Background(), uuid.New(), evaluateRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !response.Predictive.IsSimulated {
+		t.Fatal("a fallback score was returned without is_simulated")
+	}
+	if repository.saved == nil || !repository.saved.Location.ScoreSimulated {
+		t.Fatal("a fallback score was stored as if it came from the model")
+	}
+}
+
+func TestEvaluateLeavesModelScoresUnmarked(t *testing.T) {
+	repository := &fakeRepository{}
+	response, err := NewService(repository, factScoreClient{}, fakeRegulation{}, &fakeNews{}).
+		Evaluate(context.Background(), uuid.New(), evaluateRequest(nil))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if response.Predictive.IsSimulated || repository.saved.Location.ScoreSimulated {
+		t.Fatal("a model score was marked as simulated")
 	}
 }

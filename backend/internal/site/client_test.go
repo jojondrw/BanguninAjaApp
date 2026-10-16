@@ -125,3 +125,20 @@ func TestHTTPScoreClientAcceptsNullOrMissingRegion(t *testing.T) {
 		}
 	}
 }
+
+func TestHTTPScoreClientMarksItsFallbackAsSimulated(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	result, err := NewScoreClient(server.URL, time.Second).Score(context.Background(), ScoreInput{
+		Latitude: -6.9, Longitude: 107.6, BuildingProfileCode: "housing",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Simulated {
+		t.Fatal("the scoring service was down but the result is not marked as simulated")
+	}
+}

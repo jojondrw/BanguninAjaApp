@@ -110,6 +110,7 @@ export interface SiteEvaluateResponse {
     overall_score: number
     dimension_scores: SiteDimensionScore[]
     risk_flags: SiteRiskFlag[]
+    is_simulated: boolean
   }
   descriptive: {
     regulasi: SiteRegulation | null
@@ -157,6 +158,7 @@ export interface SavedLocation {
   areaSqm: number
   landPricePerSqm: number
   score: number
+  scoreSimulated: boolean
   floodIndex: number
   earthquakeIndex: number
   note: string

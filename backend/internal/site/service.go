@@ -102,6 +102,7 @@ func (s *service) Evaluate(ctx context.Context, userID uuid.UUID, request Evalua
 			OverallScore:    result.OverallScore,
 			DimensionScores: result.DimensionScores,
 			RiskFlags:       nonNilFlags(result.RiskFlags),
+			IsSimulated:     result.Simulated,
 		},
 		Descriptive: &Descriptive{
 			Regulasi: toRegulasi(regulationData),
@@ -156,7 +157,8 @@ func (s *service) persist(ctx context.Context, userID uuid.UUID, request Evaluat
 				Lon: *request.Longitude,
 				Lat: *request.Latitude,
 			},
-			Score: result.OverallScore,
+			Score:          result.OverallScore,
+			ScoreSimulated: result.Simulated,
 		},
 		Scores: scores,
 	}
