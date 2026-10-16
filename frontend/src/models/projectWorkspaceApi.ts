@@ -1,6 +1,7 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type { DailyReport, DailyReportPage, DailyReportRequest } from './dailyReport'
+import type { ContractRequest, PaymentSchedule, PaymentTermRequest } from './paymentTerm'
 import type {
   BudgetItem,
   BudgetItemFilter,
@@ -46,6 +47,23 @@ export const projectWorkspaceApi = {
 
   dailyReports: (projectId: string, page: number, pageSize: number) =>
     request<DailyReportPage>(`/projects/${projectId}/daily-reports${toQueryString({ page, pageSize })}`),
+
+  paymentSchedule: (projectId: string) => request<PaymentSchedule>(`/projects/${projectId}/payment-schedule`),
+
+  saveContract: (projectId: string, body: ContractRequest) =>
+    request<PaymentSchedule>(`/projects/${projectId}/construction-contract`, { method: 'PUT', body }),
+
+  createPaymentTerm: (projectId: string, body: PaymentTermRequest) =>
+    request<PaymentSchedule>(`/projects/${projectId}/payment-terms`, { method: 'POST', body }),
+
+  deletePaymentTerm: (projectId: string, termId: string) =>
+    request<PaymentSchedule>(`/projects/${projectId}/payment-terms/${termId}`, { method: 'DELETE' }),
+
+  claimPaymentTerm: (projectId: string, termId: string) =>
+    request<PaymentSchedule>(`/projects/${projectId}/payment-terms/${termId}/claim`, { method: 'POST' }),
+
+  releaseRetention: (projectId: string) =>
+    request<PaymentSchedule>(`/projects/${projectId}/retention-release`, { method: 'POST' }),
 
   createDailyReport: (projectId: string, body: DailyReportRequest) =>
     request<DailyReport>(`/projects/${projectId}/daily-reports`, { method: 'POST', body }),

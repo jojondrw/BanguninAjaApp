@@ -27,6 +27,7 @@ import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from '../co
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
+import { PaymentTermsCard } from './PaymentTermsCard'
 
 const NO_BUDGETS: Budget[] = []
 const MIN_VISIBLE_BAR = 2
@@ -92,6 +93,8 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
           ) : null}
         </Card>
       </div>
+
+      <PaymentTermsCard project={project} />
 
       <TransactionsCard project={project} />
     </div>
