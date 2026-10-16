@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -10,15 +11,32 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/ratelimit"
+)
+
+const (
+	loginAttemptsPerEmail = 10
+	loginAttemptWindow    = 15 * time.Minute
+)
+
+var errTooManyLogins = apperror.New(
+	http.StatusTooManyRequests,
+	"too_many_login_attempts",
+	"Terlalu banyak percobaan masuk untuk email ini. Coba lagi dalam 15 menit",
 )
 
 type Controller struct {
 	service       Service
 	refreshCookie cookie.RefreshWriter
+	logins        *ratelimit.Window
 }
 
 func NewController(service Service, refreshCookie cookie.RefreshWriter) *Controller {
-	return &Controller{service: service, refreshCookie: refreshCookie}
+	return &Controller{
+		service:       service,
+		refreshCookie: refreshCookie,
+		logins:        ratelimit.NewWindow(loginAttemptsPerEmail, loginAttemptWindow),
+	}
 }
 
 func (c *Controller) Register(ctx *gin.Context) {
@@ -41,6 +59,10 @@ func (c *Controller) Login(ctx *gin.Context) {
 	var request LoginRequest
 	if err := httprequest.BindJSON(ctx, &request); err != nil {
 		_ = ctx.Error(err)
+		return
+	}
+	if !c.logins.Allow(normalizeEmail(request.Email)) {
+		_ = ctx.Error(errTooManyLogins)
 		return
 	}
 
