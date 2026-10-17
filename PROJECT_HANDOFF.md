@@ -166,7 +166,7 @@ Tracked as issues in the [AoL akhir milestone](https://github.com/jojondrw/Bangu
 
 ## 6. Don't Touch
 
-- `auth/*` and the login/session frontend. The only changes since 2026-10-03 were small security fixes (#62 password length, #68 login rate limit and security headers), each with tests.
+- `auth/*` and the login/session frontend. The only changes since 2026-10-03 were small security fixes (#62 password length, #68 login rate limit and security headers) and the user audit trail (#83, approved by Derick), each with tests.
 - The `site` slice's stub fallback — it keeps the demo alive if the scoring service is down.
 - `scoring/train.py`'s refusal to bulk-query the live ATR/BPN server.
 - The RDTR scraper's throttling in `BanguninAja/scripts/ambil_rdtr.py`.

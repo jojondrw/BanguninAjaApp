@@ -66,6 +66,8 @@ type Repository interface {
 	UpdateUserRole(ctx context.Context, id, roleID uuid.UUID) error
 	UpdateUserActive(ctx context.Context, id uuid.UUID, active bool) error
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	CreateUserAudit(ctx context.Context, entry *UserAudit) error
+	ListUserAudit(ctx context.Context, limit int) ([]UserAuditRow, error)
 	LockAdminChanges(ctx context.Context) error
 	UpsertRoles(ctx context.Context, roles []Role) error
 	AssignRoleToLegacyUsers(ctx context.Context, roleCode string) (int64, error)

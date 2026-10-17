@@ -50,6 +50,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 
 	users := router.Group("/users", authenticated)
 	users.GET("", m.controller.ListUsers)
+	users.GET("/audit", m.controller.ListUserAudit)
 	users.PATCH("/:id/role", m.controller.ChangeUserRole)
 	users.PATCH("/:id/active", m.controller.ChangeUserActive)
 }

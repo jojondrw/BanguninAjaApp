@@ -60,7 +60,7 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 | A06 Vulnerable and Outdated Components | Sebagian | Job CI `Security (govulncheck)` gagal kalau ada kerentanan Go yang terjangkau kode; `npm audit --omit=dev --audit-level=high` jalan di job frontend. Pemeriksaan pertama menemukan 10 kerentanan terjangkau (standard library Go 1.27.1, `golang.org/x/net`, `quic-go`), semua ditutup dengan Go 1.27.2 dan upgrade modul | 1 kerentanan *high* di `source-map-js` (alat build dan test, tidak ikut ke produksi). Image Docker yang sudah terlanjur dibangun perlu dibangun ulang |
 | A07 Identification and Authentication Failures | Diperbaiki | Batas 10 percobaan login per email per 15 menit (#68); panjang kata sandi 8 sampai 72 byte (#62); rotasi refresh token dengan deteksi pemakaian ulang (diuji integration test); akun nonaktif ditolak di request berikutnya | Batas per email bisa dipakai orang lain untuk mengunci satu akun selama 15 menit |
 | A08 Software and Data Integrity Failures | Sebagian | CI lima job di setiap PR, termasuk integration test PostGIS dan pemeriksaan kerentanan | Branch `main` belum diproteksi, jadi merge tanpa CI hijau masih mungkin |
-| A09 Security Logging and Monitoring Failures | Sebagian | Log terstruktur (`slog`); pembayaran mencatat `created_by`; laporan harian mencatat penulis | Belum ada jejak audit untuk perubahan peran dan status pengguna; belum ada peringatan otomatis |
+| A09 Security Logging and Monitoring Failures | Sebagian | Log terstruktur (`slog`); pembayaran mencatat `created_by`; laporan harian, pengajuan termin, dan keputusan adendum mencatat pelakunya; perubahan peran dan status pengguna tercatat di `user_audit` dalam transaksi yang sama dan tampil di halaman Pengguna (#83) | Belum ada peringatan otomatis untuk kejadian mencurigakan, misalnya banyak login gagal |
 | A10 Server-Side Request Forgery | Terkendali | Permintaan keluar hanya ke alamat dari konfigurasi (layanan penilaian, node RPC, Google News); proxy tile memvalidasi nama layer dengan regex dan koordinat sebagai angka | |
 
 ### Pemetaan ke OWASP Top 10:2025
@@ -79,7 +79,7 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 | A06:2025 Insecure Design | A04 | Terkendali | Aturan bisnis keuangan dijaga di service dan constraint database, misalnya termin yang tidak bisa diajukan sebelum progresnya tercapai |
 | A07:2025 Authentication Failures | A07 | Diperbaiki | |
 | A08:2025 Software or Data Integrity Failures | A08 | Sebagian | |
-| A09:2025 Security Logging and Alerting Failures | A09 | Sebagian | |
+| A09:2025 Security Logging and Alerting Failures | A09 | Sebagian | Jejak audit akses sudah ada; peringatan (*alerting*) belum |
 | A10:2025 Mishandling of Exceptional Conditions | Baru | Terkendali | Galat ditranslasi ke kode dan pesan aman tanpa detail internal (`apperror`, `database.Translate`). Perubahan berlapis berjalan dalam transaksi, jadi galat di tengah jalan membatalkan semuanya. Layanan luar yang gagal (penilaian, berita) tidak menggagalkan evaluasi lokasi, dan hasil cadangannya ditandai simulasi. Frontend punya error boundary |
 
 ### Rencana tindak lanjut keamanan
@@ -89,7 +89,7 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 | Tinggi | Nyalakan `COOKIE_SECURE=true` di lingkungan demo dan produksi | A02 |
 | Tinggi | Aktifkan branch protection di `main` (pemilik repo) | A08 |
 | Sedang | Perluas hak akses per proyek ke modul keuangan, tagihan, pengadaan, dan laporan | A01 |
-| Sedang | Tabel audit untuk perubahan peran, status pengguna, dan pembayaran | A09 |
+| Sedang | Peringatan otomatis untuk login gagal beruntun dan perubahan peran Admin | A09 |
 | Rendah | Enkripsi kolom NIK, atau simpan hanya empat digit terakhir untuk tampilan | A02 |
 | Rendah | Header CSP untuk frontend di Vercel; trusted proxies di backend | A05 |
 

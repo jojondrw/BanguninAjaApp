@@ -37,3 +37,26 @@ export type RoleCode = (typeof ROLE_OPTIONS)[number]['code']
 export function roleLabel(code: string | undefined): string {
   return ROLE_OPTIONS.find((option) => option.code === code)?.label ?? 'Tanpa peran'
 }
+
+export interface UserAuditEntry {
+  id: string
+  actorName: string | null
+  userName: string | null
+  userEmail: string | null
+  action: 'role' | 'active'
+  oldValue: string
+  newValue: string
+  createdAt: string
+}
+
+// Satu kalimat per perubahan. Pelaku kosong berarti perubahan dari sistem,
+// misalnya seed data demo.
+export function auditSentence(entry: UserAuditEntry): string {
+  const actor = entry.actorName ?? 'Sistem'
+  const target = entry.userName ?? 'pengguna yang sudah dihapus'
+  if (entry.action === 'active') {
+    return entry.newValue === 'true' ? `${actor} mengaktifkan lagi akun ${target}` : `${actor} menonaktifkan akun ${target}`
+  }
+  return `${actor} mengubah peran ${target} dari ${roleLabel(entry.oldValue || undefined)} menjadi ${roleLabel(entry.newValue || undefined)}`
+}
+

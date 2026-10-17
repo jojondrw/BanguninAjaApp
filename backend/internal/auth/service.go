@@ -49,8 +49,9 @@ type Service interface {
 	UpdateProfile(ctx context.Context, userID uuid.UUID, request UpdateProfileRequest) (UserResponse, error)
 	ChangePassword(ctx context.Context, userID uuid.UUID, currentRefreshToken string, request ChangePasswordRequest) error
 	ListUsers(ctx context.Context, query UserQuery) (pagination.Page[ManagedUserResponse], error)
-	ChangeRole(ctx context.Context, userID uuid.UUID, request ChangeRoleRequest) (ManagedUserResponse, error)
-	ChangeActive(ctx context.Context, userID uuid.UUID, request ChangeActiveRequest) (ManagedUserResponse, error)
+	ChangeRole(ctx context.Context, actorID, userID uuid.UUID, request ChangeRoleRequest) (ManagedUserResponse, error)
+	ChangeActive(ctx context.Context, actorID, userID uuid.UUID, request ChangeActiveRequest) (ManagedUserResponse, error)
+	ListUserAudit(ctx context.Context) ([]UserAuditResponse, error)
 }
 
 type subjectCache interface {
@@ -322,12 +323,12 @@ func (s *service) ListUsers(ctx context.Context, query UserQuery) (pagination.Pa
 	return pagination.New(pagination.Map(rows, newManagedUserResponse), query.Query, total), nil
 }
 
-func (s *service) ChangeRole(ctx context.Context, userID uuid.UUID, request ChangeRoleRequest) (ManagedUserResponse, error) {
+func (s *service) ChangeRole(ctx context.Context, actorID, userID uuid.UUID, request ChangeRoleRequest) (ManagedUserResponse, error) {
 	if _, ok := access.FindRole(request.Role); !ok {
 		return ManagedUserResponse{}, errUnknownRole
 	}
 
-	return s.changeUser(ctx, userID, func(repository Repository, target UserRow) error {
+	return s.changeUser(ctx, actorID, userID, func(repository Repository, target UserRow) error {
 		if err := guardLastAdmin(ctx, repository, target, request.Role != access.RoleAdmin); err != nil {
 			return err
 		}
@@ -339,10 +340,10 @@ func (s *service) ChangeRole(ctx context.Context, userID uuid.UUID, request Chan
 	})
 }
 
-func (s *service) ChangeActive(ctx context.Context, userID uuid.UUID, request ChangeActiveRequest) (ManagedUserResponse, error) {
+func (s *service) ChangeActive(ctx context.Context, actorID, userID uuid.UUID, request ChangeActiveRequest) (ManagedUserResponse, error) {
 	active := *request.Active
 
-	return s.changeUser(ctx, userID, func(repository Repository, target UserRow) error {
+	return s.changeUser(ctx, actorID, userID, func(repository Repository, target UserRow) error {
 		if err := guardLastAdmin(ctx, repository, target, !active); err != nil {
 			return err
 		}
@@ -356,7 +357,7 @@ func (s *service) ChangeActive(ctx context.Context, userID uuid.UUID, request Ch
 	})
 }
 
-func (s *service) changeUser(ctx context.Context, userID uuid.UUID, change func(Repository, UserRow) error) (ManagedUserResponse, error) {
+func (s *service) changeUser(ctx context.Context, actorID, userID uuid.UUID, change func(Repository, UserRow) error) (ManagedUserResponse, error) {
 	var updated UserRow
 	err := s.repository.Transaction(ctx, func(repository Repository) error {
 		if err := repository.LockAdminChanges(ctx); err != nil {
@@ -370,7 +371,10 @@ func (s *service) changeUser(ctx context.Context, userID uuid.UUID, change func(
 			return err
 		}
 		updated, err = repository.FindUserRow(ctx, userID)
-		return err
+		if err != nil {
+			return err
+		}
+		return recordAudit(ctx, repository, actorID, target, updated)
 	})
 	s.subjects.Forget(userID)
 	if err != nil {

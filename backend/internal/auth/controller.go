@@ -172,7 +172,12 @@ func (c *Controller) ChangeUserRole(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.service.ChangeRole(ctx.Request.Context(), userID, request)
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	user, err := c.service.ChangeRole(ctx.Request.Context(), actorID, userID, request)
 	httpresponse.Respond(ctx, user, err)
 }
 
@@ -189,6 +194,16 @@ func (c *Controller) ChangeUserActive(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.service.ChangeActive(ctx.Request.Context(), userID, request)
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	user, err := c.service.ChangeActive(ctx.Request.Context(), actorID, userID, request)
 	httpresponse.Respond(ctx, user, err)
+}
+
+func (c *Controller) ListUserAudit(ctx *gin.Context) {
+	entries, err := c.service.ListUserAudit(ctx.Request.Context())
+	httpresponse.Respond(ctx, entries, err)
 }
