@@ -68,7 +68,7 @@ gantt
 | **4** | **Dokumentasi dan mutu** | | |
 | 4.1 | Requirements | Berjalan terus | [requirements](../requirements) |
 | 4.2 | Desain UML dan ERD | Selesai | #55 |
-| 4.3 | Pengujian unit, integration, system, acceptance | Selesai, 1 skenario acceptance (AT-13, butuh dompet Sepolia) belum dijalankan | #57, #66, #67 |
+| 4.3 | Pengujian unit, integration, system, acceptance | Selesai, 17 dari 17 skenario acceptance lulus (AT-13 dibayar di Sepolia 18 Oktober) | #57, #66, #67 |
 | 4.4 | Risiko, keamanan, etika | Selesai | #69 |
 | 4.5 | Proses SDLC dan jadwal | Dokumen ini | |
 | **5** | **Presentasi akhir** | Berjalan | #78 |

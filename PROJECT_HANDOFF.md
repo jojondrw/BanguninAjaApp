@@ -144,7 +144,7 @@ Tracked as issues in the [AoL akhir milestone](https://github.com/jojondrw/Bangu
 | L1 (#78) | Final presentation (slides or video) | Problem, solution, design, testing, team contributions, ethics, SE trends. Material: `docs/proses`, `docs/pengujian`, `docs/analisis` | high |
 | L2 (#79) | Every member contributes through their own branch and PR | The VCS criterion grades consistent contributions from all members; most PRs since 2026-10-02 come from one account. See `docs/proses/jadwal.md` §3 | high |
 | L3 (#80) | Branch protection on `main` | Repo owner (`jojondrw`): require PR, the 5 CI jobs, and one approval | high |
-| L4 (#81) | Run acceptance scenario AT-13 (on-chain payment with a wallet on Sepolia) | AT-10 passed through the UI on 2026-10-17. `docs/pengujian/acceptance.md` | medium |
+| L4 (#81) | ~~Run acceptance scenario AT-13 (on-chain payment with a wallet on Sepolia)~~ | ✅ 2026-10-18: DEMO-INV-003 paid on Sepolia (tx `0x7be583…abff02`), invoice and linked receivable paid, cash-in recorded; 17 of 17 acceptance scenarios pass. `docs/pengujian/acceptance.md` | done |
 | L5 (#82) | Project-level access (OWASP A01) | Project roles in `project_member` are not enforced yet; needs a team decision on who sees which project | medium |
 | L6 (#83) | Audit trail for role and status changes (A09) | Touches `auth/*` (see §6), so agree on it first | medium |
 | L7 (#84) | `COOKIE_SECURE=true` for the HTTPS demo, CSP headers on Vercel, NIK encryption | `docs/analisis/risiko-keamanan.md` follow-up table | low |
