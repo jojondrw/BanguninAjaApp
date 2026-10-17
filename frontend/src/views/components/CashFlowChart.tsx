@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
 import { monthLabel, rupiahShort } from '../../shared/format'
+import { Money } from './Money'
 
 export interface CashFlowBar {
   period: string
@@ -80,7 +81,7 @@ export function CashFlowChart({ periods }: { periods: CashFlowBar[] }) {
                 y={toY(tick)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                className="fill-slate-500 text-[11px] tabular-nums"
+                className="fill-slate-500 font-uang text-[11px] tabular-nums"
               >
                 {tick === 0 ? '0' : rupiahShort(tick)}
               </text>
@@ -173,9 +174,9 @@ export function CashFlowChart({ periods }: { periods: CashFlowBar[] }) {
           {periods.map((period) => (
             <tr key={period.period}>
               <th scope="row">{monthLabel(period.period)}</th>
-              <td>{rupiahShort(period.cashIn)}</td>
-              <td>{rupiahShort(period.cashOut)}</td>
-              <td>{rupiahShort(period.net)}</td>
+              <td><Money>{rupiahShort(period.cashIn)}</Money></td>
+              <td><Money>{rupiahShort(period.cashOut)}</Money></td>
+              <td><Money>{rupiahShort(period.net)}</Money></td>
             </tr>
           ))}
         </tbody>
@@ -197,7 +198,7 @@ function TooltipRow({ label, value, tone = 'text-slate-900' }: { label: string; 
   return (
     <p className="mt-1 flex justify-between gap-3">
       <span className="text-slate-500">{label}</span>
-      <span className={`font-medium tabular-nums ${tone}`}>{value}</span>
+      <span className={`font-uang font-medium tabular-nums ${tone}`}>{value}</span>
     </p>
   )
 }

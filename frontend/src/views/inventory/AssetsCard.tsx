@@ -32,6 +32,7 @@ import {
 } from '../components/RecordControls'
 import { amountHint, pageAfterRemoval, refusalText } from '../hr/hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from '../hr/RowActions'
+import { Money } from '../components/Money'
 
 const ASSET_PAGE_SIZE = 10
 const CATEGORY_OPTIONS_ID = 'asset-category-options'
@@ -341,7 +342,7 @@ export function AssetsCard() {
             ].map((item) => (
               <div key={item.label} className="rounded-lg bg-slate-50 px-3 py-2">
                 <dt className="text-xs text-slate-500">{item.label}</dt>
-                <dd className="text-sm font-semibold text-slate-900 tabular-nums">{rupiahShort(item.value)}</dd>
+                <dd className="text-sm font-semibold text-slate-900 tabular-nums"><Money>{rupiahShort(item.value)}</Money></dd>
               </div>
             ))}
           </dl>

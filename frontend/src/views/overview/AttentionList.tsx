@@ -9,6 +9,7 @@ import { useInstallmentCount } from '../../controllers/useSales'
 import { number, rupiahShort } from '../../shared/format'
 import { currentPeriod } from '../../shared/localDate'
 import { moduleForPath } from '../components/navigation'
+import { MoneyText } from '../components/Money'
 
 type Severity = 'urgent' | 'pending'
 
@@ -137,7 +138,7 @@ function AttentionRow({ item }: { item: Attention }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[13px] font-medium text-slate-900">{item.label}</span>
-        <span className="block truncate text-xs text-slate-500">{item.detail}</span>
+        <span className="block truncate text-xs text-slate-500"><MoneyText>{item.detail}</MoneyText></span>
       </span>
       <span
         className={`text-[15px] font-semibold tabular-nums ${hasItems ? 'text-slate-900' : 'text-slate-400'}`}

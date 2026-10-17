@@ -22,6 +22,7 @@ import { ProjectSiteTab } from './project/ProjectSiteTab'
 import { ProjectStatusCard } from './project/ProjectStatusCard'
 import { ProjectSummaryTab } from './project/ProjectSummaryTab'
 import { ProjectTeamTab } from './project/ProjectTeamTab'
+import { Money, MoneyText } from './components/Money'
 
 type WorkspaceTab = 'ringkasan' | 'lapangan' | 'tim' | 'lokasi' | 'keuangan'
 
@@ -190,7 +191,7 @@ function ProjectFacts({ project }: { project: Project }) {
           <StatusChip project={project} />
         </Fact>
         <Fact label="Nilai kontrak">
-          <span className="tabular-nums">{rupiah(project.contractValue)}</span>
+          <span className="tabular-nums"><Money>{rupiah(project.contractValue)}</Money></span>
         </Fact>
         <Fact label="Mulai">{shortDate(project.startDate)}</Fact>
         <Fact label="Target selesai">{shortDate(project.targetEndDate)}</Fact>
@@ -206,7 +207,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1.5 text-sm font-medium text-slate-900">{children}</dd>
+      <dd className="mt-1.5 text-sm font-medium text-slate-900"><MoneyText>{children}</MoneyText></dd>
     </div>
   )
 }

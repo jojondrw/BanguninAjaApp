@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useBillingReconciliation } from '../../controllers/useBilling'
 import { number, rupiah } from '../../shared/format'
 import { Pager } from '../components/RecordControls'
+import { Money } from '../components/Money'
 
 const PAGE_SIZE = 10
 
@@ -69,10 +70,10 @@ export function ReconciliationBanner() {
                   <td className="px-3 py-2 font-medium text-slate-900">{pair.invoiceNumber}</td>
                   <td className="px-3 py-2">{pair.receivableReference}</td>
                   <td className="px-3 py-2">{pair.customerName ?? '-'}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{rupiah(pair.invoicePaidAmount)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{rupiah(pair.receivablePaidAmount)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums"><Money>{rupiah(pair.invoicePaidAmount)}</Money></td>
+                  <td className="px-3 py-2 text-right tabular-nums"><Money>{rupiah(pair.receivablePaidAmount)}</Money></td>
                   <td className="px-3 py-2 text-right font-medium tabular-nums text-amber-800">
-                    {rupiah(Math.abs(pair.difference))}
+                    <Money>{rupiah(Math.abs(pair.difference))}</Money>
                   </td>
                 </tr>
               ))}

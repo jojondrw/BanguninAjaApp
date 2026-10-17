@@ -33,6 +33,7 @@ import { LookupName } from '../components/LookupName'
 import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
 import { FormSection, InlineConfirm } from './parts'
+import { Money, MoneyText } from '../components/Money'
 
 const PAGE_SIZE = 20
 const NO_PHASES: ProjectPhase[] = []
@@ -255,7 +256,7 @@ function BudgetTotals({ project, grandTotal, itemsState, budgets, budgetsState }
             : 'kontrak belum diisi'
         }
       >
-        {rupiah(project.contractValue)}
+        <Money>{rupiah(project.contractValue)}</Money>
       </Total>
       <Total
         label="Realisasi kas keluar"
@@ -278,8 +279,8 @@ function Total({ label, note, children }: { label: string; note: string; childre
   return (
     <div className="min-w-0">
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-slate-900 tabular-nums">{children}</dd>
-      <dd className="mt-0.5 text-xs text-slate-500">{note}</dd>
+      <dd className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-slate-900 tabular-nums"><MoneyText>{children}</MoneyText></dd>
+      <dd className="mt-0.5 text-xs text-slate-500"><MoneyText>{note}</MoneyText></dd>
     </div>
   )
 }

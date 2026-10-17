@@ -26,6 +26,7 @@ import {
 import { SearchSelect } from '../components/SearchSelect'
 import { amountHint, PAGE_SIZE, pageAfterRemoval, refusalText } from './hrShared'
 import { ActionGroup, ConfirmAction, RowNotice } from './RowActions'
+import { Money } from '../components/Money'
 
 type PaidFilter = 'true' | 'false' | ''
 type PayrollAsk = { id: string; kind: 'pay' | 'delete' } | null
@@ -142,7 +143,7 @@ function EditPayrollForm({ payroll, onSaved, onCancel }: {
           </h3>
           <p className="mt-1 text-sm text-slate-600">
             Gaji pokok dihitung ulang dari data karyawan dan absensi terbaru saat disimpan. Sekarang{' '}
-            {rupiah(payroll.basicPay)}.
+            <Money>{rupiah(payroll.basicPay)}</Money>.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -391,7 +392,7 @@ export function PayrollSection({ period, onPeriodChange }: {
               {
                 header: 'Gaji bersih',
                 align: 'right',
-                cell: (row) => <span className="font-medium text-slate-900">{rupiah(row.netPay)}</span>,
+                cell: (row) => <span className="font-medium text-slate-900"><Money>{rupiah(row.netPay)}</Money></span>,
               },
               {
                 header: 'Pembayaran',

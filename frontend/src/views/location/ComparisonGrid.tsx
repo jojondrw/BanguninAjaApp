@@ -5,6 +5,7 @@ import type { ComparisonTable, SavedLocationDetail } from '../../models/location
 import { number, rupiah, shortDate } from '../../shared/format'
 import { RiskChips, ScoreCell, ValueWithMark } from './parts'
 import { ReportRowButton } from './ReportDownload'
+import { Money } from '../components/Money'
 
 const COORDINATE_DIGITS = 4
 const LABEL_COLUMN_REM = 11
@@ -170,7 +171,7 @@ export function ComparisonGrid({ locations, table, names, onRemove, downloadingI
               items={locations}
               render={(location, index) =>
                 location.landPricePerSqm > 0 ? (
-                  <ValueWithMark isBest={table.landPriceBest.has(index)}>{rupiah(location.landPricePerSqm)}</ValueWithMark>
+                  <ValueWithMark isBest={table.landPriceBest.has(index)}><Money>{rupiah(location.landPricePerSqm)}</Money></ValueWithMark>
                 ) : (
                   emptyText('Belum diisi')
                 )

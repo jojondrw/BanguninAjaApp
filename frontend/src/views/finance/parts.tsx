@@ -7,6 +7,7 @@ import type { CashType } from '../../models/finance'
 import { rupiah } from '../../shared/format'
 import { BUTTON_BASE, BUTTON_PRIMARY } from '../components/Form'
 import { ToolbarInput } from '../components/RecordControls'
+import { Money } from '../components/Money'
 
 // Hapus dua langkah di baris yang sama, bukan confirm() yang memblokir
 // halaman. Fokus pindah ke Batal supaya Enter tidak langsung menghapus.
@@ -95,7 +96,7 @@ export function SignedAmount({ type, amount }: { type: CashType; amount: number 
   return (
     <span className={`font-medium ${type === 'in' ? 'text-green-700' : 'text-red-700'}`}>
       {type === 'in' ? '+' : '−'}
-      {rupiah(amount)}
+      <Money>{rupiah(amount)}</Money>
     </span>
   )
 }

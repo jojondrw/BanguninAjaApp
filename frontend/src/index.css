@@ -1,15 +1,5 @@
 @import "tailwindcss";
 
-/* Hanya digit dan persen yang diambil dari Geist Mono; huruf dan tanda baca tetap memakai font sistem. */
-@font-face {
-  font-family: "Geist Angka";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0025, U+0030-0039;
-}
-
 @theme {
   --color-slate-50: #f9f9fa;
   --color-slate-100: #f2f2f4;
@@ -34,8 +24,9 @@
 
   --color-amber-merek: #fbbb16;
 
-  --font-sans: "Geist Angka", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro",
-    "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Inter Variable", Inter,
+    ui-sans-serif, system-ui, sans-serif;
+  --font-uang: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --shadow-hairline: 0 0 0 1px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.04);
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.05);

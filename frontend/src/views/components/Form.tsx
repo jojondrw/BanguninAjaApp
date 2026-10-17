@@ -1,6 +1,8 @@
 import { CircleAlert, CircleCheck } from 'lucide-react'
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
 
+import { MoneyText } from './Money'
+
 export const CONTROL_CLASS =
   'rounded-lg border border-slate-200 bg-white text-sm text-slate-900 shadow-control transition-[border-color,box-shadow] ' +
   'placeholder:text-slate-400 hover:border-slate-300 focus:border-navy-500 focus:ring-4 focus:ring-navy-500/15 ' +
@@ -35,7 +37,7 @@ export function Field({ label, hint, id, ...rest }: FieldProps) {
       <input id={id} aria-describedby={hintId} className={`${CONTROL_CLASS} h-9 px-3`} {...rest} />
       {hint ? (
         <p id={hintId} className="text-xs text-slate-500">
-          {hint}
+          <MoneyText>{hint}</MoneyText>
         </p>
       ) : null}
     </div>
@@ -61,7 +63,7 @@ export function SelectField({ label, hint, id, children, ...rest }: SelectFieldP
       </select>
       {hint ? (
         <p id={hintId} className="text-xs text-slate-500">
-          {hint}
+          <MoneyText>{hint}</MoneyText>
         </p>
       ) : null}
     </div>
@@ -108,7 +110,7 @@ export function ErrorNote({ message }: { message: string }) {
   return (
     <p role="alert" className="flex items-start gap-2 rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
       <CircleAlert aria-hidden="true" className="mt-px size-4 shrink-0" strokeWidth={1.9} />
-      {message}
+      <MoneyText>{message}</MoneyText>
     </p>
   )
 }
@@ -117,7 +119,7 @@ export function SuccessNote({ message }: { message: string }) {
   return (
     <p role="status" className="flex items-start gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-[13px] text-green-700">
       <CircleCheck aria-hidden="true" className="mt-px size-4 shrink-0" strokeWidth={1.9} />
-      {message}
+      <MoneyText>{message}</MoneyText>
     </p>
   )
 }

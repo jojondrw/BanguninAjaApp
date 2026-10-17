@@ -23,6 +23,7 @@ import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../componen
 import { SearchSelect } from '../components/SearchSelect'
 import { amountHint } from './financeTabs'
 import { ConfirmDelete, Notice, RowActions } from './parts'
+import { Money } from '../components/Money'
 
 const PAGE_SIZE = 10
 const FULL_PERCENT = 100
@@ -296,7 +297,7 @@ export function BudgetsTab() {
                 align: 'right',
                 cell: (row) => (
                   <span className={row.remaining < 0 ? 'font-medium text-red-700' : undefined}>
-                    {rupiah(row.remaining)}
+                    <Money>{rupiah(row.remaining)}</Money>
                   </span>
                 ),
               },

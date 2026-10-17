@@ -2,6 +2,7 @@ import type { ReactNode, TextareaHTMLAttributes } from 'react'
 
 import { useScopedCan } from '../../controllers/useAccess'
 import { BUTTON_BASE, BUTTON_PRIMARY, BUTTON_SUBTLE, CONTROL_CLASS, LABEL_CLASS } from '../components/Form'
+import { MoneyText } from '../components/Money'
 
 type Tone = 'neutral' | 'danger'
 type Size = 'sm' | 'md'
@@ -165,7 +166,7 @@ export function Facts({ items }: { items: { label: string; value: ReactNode }[] 
       {items.map((item) => (
         <div key={item.label} className="min-w-0">
           <dt className="text-xs text-slate-500">{item.label}</dt>
-          <dd className="mt-0.5 text-slate-900">{item.value}</dd>
+          <dd className="mt-0.5 text-slate-900"><MoneyText>{item.value}</MoneyText></dd>
         </div>
       ))}
     </dl>

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import type { StockPhoto } from '../../shared/photos'
 import { Button, ErrorNote } from './Form'
+import { MoneyText } from './Money'
 
 export function Card({ title, description, action, children }: {
   title: string
@@ -15,7 +16,7 @@ export function Card({ title, description, action, children }: {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4">
         <div className="min-w-0 flex-1 basis-44">
           <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
-          {description ? <p className="mt-0.5 text-[13px] text-slate-500">{description}</p> : null}
+          {description ? <p className="mt-0.5 text-[13px] text-slate-500"><MoneyText>{description}</MoneyText></p> : null}
         </div>
         {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
       </div>
@@ -29,9 +30,9 @@ export function Kpi({ label, value, note }: { label: string; value: string; note
     <div className="min-w-0 bg-white px-4 py-3.5 sm:px-6 sm:py-5">
       <p className="text-[13px] font-medium text-slate-500">{label}</p>
       <p className="mt-1.5 text-[22px] leading-7 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums sm:text-[26px] sm:leading-8">
-        {value}
+        <MoneyText>{value}</MoneyText>
       </p>
-      {note ? <p className="mt-1 text-xs text-slate-500">{note}</p> : null}
+      {note ? <p className="mt-1 text-xs text-slate-500"><MoneyText>{note}</MoneyText></p> : null}
     </div>
   )
 }
@@ -139,7 +140,7 @@ export function Table<T>({ rows, columns, emptyMessage, emptyPhoto }: {
                     column.align === 'right' ? 'text-right whitespace-nowrap tabular-nums' : 'text-left'
                   }`}
                 >
-                  {column.cell(row)}
+                  <MoneyText>{column.cell(row)}</MoneyText>
                 </td>
               ))}
             </tr>

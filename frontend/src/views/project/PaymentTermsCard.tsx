@@ -36,6 +36,7 @@ import { Card, type Column, Empty, LoadFailed, Loading, Table } from '../compone
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection, InlineConfirm } from './parts'
+import { Money, MoneyText } from '../components/Money'
 
 type Panel = 'contract' | 'term' | null
 
@@ -114,7 +115,7 @@ function ScheduleBody({ project, schedule, contract, canWrite }: {
       align: 'right',
       cell: (row) => (
         <Stacked note={row.kind === 'progress' ? `${formatPercent(row.percent)} kontrak` : undefined}>
-          {rupiahShort(row.grossAmount)}
+          <Money>{rupiahShort(row.grossAmount)}</Money>
         </Stacked>
       ),
     },
@@ -123,7 +124,7 @@ function ScheduleBody({ project, schedule, contract, canWrite }: {
       align: 'right',
       cell: (row) => (
         <Stacked note={row.retentionAmount > 0 ? `retensi ${rupiahShort(row.retentionAmount)}` : undefined}>
-          {rupiahShort(row.netAmount)}
+          <Money>{rupiahShort(row.netAmount)}</Money>
         </Stacked>
       ),
     },
@@ -159,16 +160,16 @@ function ScheduleBody({ project, schedule, contract, canWrite }: {
     <div className="space-y-6">
       <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         <Fact label="Nilai kontrak" note={contractValueNote(contract)}>
-          {rupiahShort(contract.currentValue)}
+          <Money>{rupiahShort(contract.currentValue)}</Money>
         </Fact>
         <Fact label="Sudah diajukan" note={`${shareOf(schedule.claimedAmount, contract.currentValue)} dari kontrak`}>
-          {rupiahShort(schedule.claimedAmount)}
+          <Money>{rupiahShort(schedule.claimedAmount)}</Money>
         </Fact>
         <Fact label="Sudah dibayar" note="lewat modul Tagihan">
-          {rupiahShort(schedule.paidAmount)}
+          <Money>{rupiahShort(schedule.paidAmount)}</Money>
         </Fact>
         <Fact label="Retensi ditahan" note={retentionNote(schedule)}>
-          {rupiahShort(schedule.retentionHeld)}
+          <Money>{rupiahShort(schedule.retentionHeld)}</Money>
         </Fact>
       </dl>
 
@@ -272,7 +273,7 @@ function ScheduleActions({ project, schedule, panel, onToggle }: {
           />
         ) : null}
       </div>
-      {hint ? <p className="text-[13px] text-slate-500">{hint}</p> : null}
+      {hint ? <p className="text-[13px] text-slate-500"><MoneyText>{hint}</MoneyText></p> : null}
       {release.isError ? <ErrorNote message={errorMessage(release.error)} /> : null}
       {release.isSuccess ? (
         <SuccessNote message="Retensi dilepas. Hutangnya tercatat di Tagihan untuk dibayar ke kontraktor." />
@@ -320,8 +321,8 @@ function Fact({ label, note, children }: { label: string; note: string; children
   return (
     <div>
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1.5 text-[15px] font-semibold tabular-nums text-slate-900">{children}</dd>
-      <dd className="mt-0.5 text-xs text-slate-500">{note}</dd>
+      <dd className="mt-1.5 text-[15px] font-semibold tabular-nums text-slate-900"><MoneyText>{children}</MoneyText></dd>
+      <dd className="mt-0.5 text-xs text-slate-500"><MoneyText>{note}</MoneyText></dd>
     </div>
   )
 }
@@ -329,8 +330,8 @@ function Fact({ label, note, children }: { label: string; note: string; children
 function Stacked({ children, note, align = 'right' }: { children: ReactNode; note?: string; align?: 'left' | 'right' }) {
   return (
     <span className={`inline-flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
-      <span className="tabular-nums">{children}</span>
-      {note ? <span className="text-xs text-slate-500">{note}</span> : null}
+      <span className="tabular-nums"><MoneyText>{children}</MoneyText></span>
+      {note ? <span className="text-xs text-slate-500"><MoneyText>{note}</MoneyText></span> : null}
     </span>
   )
 }
