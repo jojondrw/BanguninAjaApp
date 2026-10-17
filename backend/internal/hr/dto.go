@@ -26,6 +26,8 @@ type EmployeeQuery struct {
 	EmploymentType string     `form:"employmentType" binding:"omitempty,oneof=permanent contract daily subcontractor"`
 	ProjectID      *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
 	Active         *bool      `form:"active"`
+
+	IdentityVisible bool `form:"-"`
 }
 
 type EmployeeResponse struct {

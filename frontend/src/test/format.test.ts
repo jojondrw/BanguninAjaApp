@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { dateRange, kpiValue, monthLabel, number, rupiah, rupiahShort, shortDate } from '../shared/format'
+import { dateRange, kpiValue, maskIdentity, monthLabel, number, rupiah, rupiahShort, shortDate } from '../shared/format'
 import { currentPeriod, firstDayOfMonth, toApiDate, todayDate } from '../shared/localDate'
 
 // Intl memakai spasi tak terputus di antara "Rp" dan angka.
@@ -89,5 +89,13 @@ describe('unitText', () => {
     expect(unitText('m3')).toBe('m³')
     expect(unitText('kg')).toBe('kg')
     expect(unitText('batang')).toBe('batang')
+  })
+})
+
+describe('NIK tersamar', () => {
+  it('hanya menampilkan empat karakter terakhir', () => {
+    expect(maskIdentity('3273011504900003')).toBe('••••••••••••0003')
+    expect(maskIdentity('1234')).toBe('••••')
+    expect(maskIdentity('')).toBe('')
   })
 })

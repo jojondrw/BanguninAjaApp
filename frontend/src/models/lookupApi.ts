@@ -1,5 +1,5 @@
 import { request } from '../shared/apiClient'
-import { rupiah } from '../shared/format'
+import { maskIdentity, rupiah } from '../shared/format'
 import type { Invoice } from './billing'
 import { toQueryString, type Page } from './common'
 import type { Employee } from './hr'
@@ -63,7 +63,7 @@ export const activeVendorOptions = vendorOptions(true)
 export const customerOptions = source<Customer>('/sales/customers', (customer) => ({
   value: customer.id,
   label: customer.name,
-  hint: customer.identityNumber || customer.contact,
+  hint: customer.contact || maskIdentity(customer.identityNumber),
 }))
 
 export function employeeOptions(active?: boolean): OptionSource {

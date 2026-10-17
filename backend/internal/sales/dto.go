@@ -19,7 +19,8 @@ type CustomerRequest struct {
 
 type CustomerQuery struct {
 	pagination.Query
-	Search string `form:"search" binding:"omitempty,max=160"`
+	Search          string `form:"search" binding:"omitempty,max=160"`
+	IdentityVisible bool   `form:"-"`
 }
 
 type CustomerResponse struct {

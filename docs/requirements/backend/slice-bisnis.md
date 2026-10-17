@@ -440,6 +440,20 @@ menjadikannya `reserved`. Kontrak `paid` menjadikan unit `sold`. Kontrak
 | Total cicilan tidak boleh melebihi nilai kontrak | `installment_exceeds_contract` |
 | Cicilan hanya bisa dibayar pada kontrak `active`, dan cicilan lunas terkunci | `contract_not_active`, `installment_paid` |
 
+### NIK tersamar
+
+Nomor identitas (`identity_number`) pelanggan dan karyawan adalah data pribadi
+menurut UU No. 27 Tahun 2022.
+
+| Pemanggil | `identityNumber` di respons | Pencarian `search` |
+|---|---|---|
+| Peran dengan hak tulis modulnya (Penjualan untuk pelanggan, SDM untuk karyawan, Admin) | Utuh, karena dipakai untuk mengubah data | Nama, email, dan NIK |
+| Peran yang hanya membaca (misalnya Pengamat, Keuangan) | Hanya empat karakter terakhir, sisanya `•` | Nama dan email saja, supaya NIK tidak bisa ditebak lewat pencarian |
+
+Laporan gaji (PDF, Excel, CSV) selalu memakai NIK tersamar, karena berkas
+laporan bisa diunduh peran lain. Penyamaran ada di `shared/privacy`; NIK di
+database belum dienkripsi.
+
 ## Finance
 
 Semua di bawah `/api/finance`.
