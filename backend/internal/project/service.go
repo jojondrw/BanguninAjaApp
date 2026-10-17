@@ -66,10 +66,11 @@ var (
 )
 
 type Service interface {
-	ListProjects(ctx context.Context, viewerID uuid.UUID, query ProjectQuery) (pagination.Page[ProjectResponse], error)
-	SummarizeProjects(ctx context.Context) (ProjectSummaryResponse, error)
+	ListProjects(ctx context.Context, viewerID uuid.UUID, role string, query ProjectQuery) (pagination.Page[ProjectResponse], error)
+	SummarizeProjects(ctx context.Context, viewerID uuid.UUID, role string) (ProjectSummaryResponse, error)
+	EnsureProjectAccess(ctx context.Context, projectID, viewerID uuid.UUID, role string) error
 	GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse, error)
-	CreateProject(ctx context.Context, request ProjectRequest) (ProjectResponse, error)
+	CreateProject(ctx context.Context, creatorID uuid.UUID, role string, request ProjectRequest) (ProjectResponse, error)
 	UpdateProject(ctx context.Context, id uuid.UUID, request ProjectRequest) (ProjectResponse, error)
 	UpdateProjectStatus(ctx context.Context, id uuid.UUID, request ProjectStatusRequest) (ProjectResponse, error)
 	DeleteProject(ctx context.Context, id uuid.UUID) error
@@ -123,11 +124,12 @@ func (s *service) today() time.Time {
 	return duedate.Today(s.now())
 }
 
-func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, query ProjectQuery) (pagination.Page[ProjectResponse], error) {
+func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, role string, query ProjectQuery) (pagination.Page[ProjectResponse], error) {
 	filter := ProjectFilter{
 		Search:   query.Search,
 		Status:   query.Status,
 		RegionID: query.RegionID,
+		MemberID: memberScope(viewerID, role),
 		Offset:   query.Offset(),
 		Limit:    query.Size(),
 	}
@@ -142,8 +144,8 @@ func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, query Pr
 	return pagination.New(pagination.Map(projects, newProjectResponse), query.Query, total), nil
 }
 
-func (s *service) SummarizeProjects(ctx context.Context) (ProjectSummaryResponse, error) {
-	totals, err := s.repository.SummarizeProjects(ctx)
+func (s *service) SummarizeProjects(ctx context.Context, viewerID uuid.UUID, role string) (ProjectSummaryResponse, error) {
+	totals, err := s.repository.SummarizeProjects(ctx, memberScope(viewerID, role))
 	if err != nil {
 		return ProjectSummaryResponse{}, apperror.Internal(err)
 	}
@@ -158,17 +160,35 @@ func (s *service) GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse
 	return newProjectResponse(project), nil
 }
 
-func (s *service) CreateProject(ctx context.Context, request ProjectRequest) (ProjectResponse, error) {
+func (s *service) CreateProject(ctx context.Context, creatorID uuid.UUID, role string, request ProjectRequest) (ProjectResponse, error) {
 	if !dateRangeValid(request.StartDate, request.TargetEndDate) {
 		return ProjectResponse{}, errInvalidDateRange
 	}
 
 	project := Project{Status: statusPlanning}
 	applyProjectRequest(&project, request)
-	if err := s.repository.CreateProject(ctx, &project); err != nil {
-		return ProjectResponse{}, projectWriteErrors.Resolve(err)
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
+		if err := repository.CreateProject(ctx, &project); err != nil {
+			return projectWriteErrors.Resolve(err)
+		}
+		return joinAsCreator(ctx, repository, project.ID, creatorID, role)
+	})
+	if err != nil {
+		return ProjectResponse{}, apperror.From(err)
 	}
 	return newProjectResponse(project), nil
+}
+
+func joinAsCreator(ctx context.Context, repository Repository, projectID, creatorID uuid.UUID, role string) error {
+	if role == "" || creatorID == uuid.Nil {
+		return nil
+	}
+	roleID, err := repository.FindRoleID(ctx, role)
+	if err != nil {
+		return memberRoleErrors.Resolve(err)
+	}
+	member := ProjectMember{UserID: creatorID, ProjectID: projectID, RoleID: roleID}
+	return memberWriteErrors.Resolve(repository.CreateMember(ctx, &member))
 }
 
 func (s *service) UpdateProject(ctx context.Context, id uuid.UUID, request ProjectRequest) (ProjectResponse, error) {

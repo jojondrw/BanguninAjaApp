@@ -68,7 +68,7 @@ func date(year int, month time.Month, day int) *time.Time {
 
 func newProject(t *testing.T, projects project.Service) project.ProjectResponse {
 	t.Helper()
-	created, err := projects.CreateProject(context.Background(), project.ProjectRequest{
+	created, err := projects.CreateProject(context.Background(), uuid.Nil, "", project.ProjectRequest{
 		Code:          uniqueCode("IT"),
 		Name:          "Proyek uji integrasi",
 		Type:          "Perumahan",

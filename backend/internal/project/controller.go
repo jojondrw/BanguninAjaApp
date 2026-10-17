@@ -33,12 +33,19 @@ func (c *Controller) ListProjects(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	page, err := c.service.ListProjects(ctx.Request.Context(), viewerID, query)
+	role, _ := middleware.AuthenticatedRole(ctx)
+	page, err := c.service.ListProjects(ctx.Request.Context(), viewerID, role, query)
 	httpresponse.Respond(ctx, page, err)
 }
 
 func (c *Controller) SummarizeProjects(ctx *gin.Context) {
-	summary, err := c.service.SummarizeProjects(ctx.Request.Context())
+	viewerID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	role, _ := middleware.AuthenticatedRole(ctx)
+	summary, err := c.service.SummarizeProjects(ctx.Request.Context(), viewerID, role)
 	httpresponse.Respond(ctx, summary, err)
 }
 
@@ -58,7 +65,13 @@ func (c *Controller) CreateProject(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	project, err := c.service.CreateProject(ctx.Request.Context(), request)
+	creatorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	role, _ := middleware.AuthenticatedRole(ctx)
+	project, err := c.service.CreateProject(ctx.Request.Context(), creatorID, role, request)
 	httpresponse.RespondCreated(ctx, project, err)
 }
 

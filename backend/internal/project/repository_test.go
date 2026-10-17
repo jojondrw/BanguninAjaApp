@@ -15,7 +15,7 @@ func TestSummarizeProjectsAggregatesInDatabase(t *testing.T) {
 		Rows:    [][]driver.Value{{int64(140), int64(30), int64(70), int64(10), int64(25), int64(5), "912000000000", "47"}},
 	})
 
-	totals, err := NewRepository(db, nil).SummarizeProjects(context.Background())
+	totals, err := NewRepository(db, nil).SummarizeProjects(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

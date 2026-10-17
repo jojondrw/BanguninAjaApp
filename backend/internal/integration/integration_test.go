@@ -370,3 +370,51 @@ func TestApprovedChangeOrderRaisesTheValueUsedForTheNextClaim(t *testing.T) {
 		t.Fatal("claim did not use the contract value after the approved change")
 	}
 }
+
+func newUserWithRole(t *testing.T, code string) uuid.UUID {
+	t.Helper()
+	id := newUser(t)
+	if err := db.Exec("UPDATE users SET role_id = (SELECT id FROM role WHERE code = ?) WHERE id = ?", code, id).Error; err != nil {
+		t.Fatalf("set role %s: %v", code, err)
+	}
+	return id
+}
+
+func TestRestrictedRolesSeeOnlyProjectsWhoseTeamTheyAreIn(t *testing.T) {
+	ctx := context.Background()
+	projects := project.NewService(project.NewRepository(db, nil))
+	manager := newUserWithRole(t, "manajer_proyek")
+
+	own, err := projects.CreateProject(ctx, manager, "manajer_proyek", project.ProjectRequest{
+		Code: uniqueCode("IT"), Name: "Proyek milik manajer", Type: "Perumahan",
+	})
+	if err != nil {
+		t.Fatalf("create own project: %v", err)
+	}
+	other := newProject(t, projects)
+
+	page, err := projects.ListProjects(ctx, manager, "manajer_proyek", project.ProjectQuery{})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if page.TotalItems != 1 || page.Items[0].ID != own.ID {
+		t.Fatalf("manager sees %d projects, want only the one they created", page.TotalItems)
+	}
+	summary, err := projects.SummarizeProjects(ctx, manager, "manajer_proyek")
+	if err != nil {
+		t.Fatalf("summary: %v", err)
+	}
+	if summary.Count != 1 {
+		t.Fatalf("summary counts %d projects, want 1", summary.Count)
+	}
+
+	if err := projects.EnsureProjectAccess(ctx, other.ID, manager, "manajer_proyek"); appCode(err) != "project_member_required" {
+		t.Fatalf("other project: err = %v, want project_member_required", err)
+	}
+	if err := projects.EnsureProjectAccess(ctx, own.ID, manager, "manajer_proyek"); err != nil {
+		t.Fatalf("own project: %v", err)
+	}
+	if err := projects.EnsureProjectAccess(ctx, other.ID, newUser(t), "keuangan"); err != nil {
+		t.Fatalf("finance: %v", err)
+	}
+}

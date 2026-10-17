@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
+
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 )
 
@@ -219,14 +221,14 @@ func TestListProjectsFiltersByMembershipOnlyWhenAsked(t *testing.T) {
 	repository := &memberRepository{}
 	service := NewService(repository)
 
-	if _, err := service.ListProjects(context.Background(), viewerID, ProjectQuery{}); err != nil {
+	if _, err := service.ListProjects(context.Background(), viewerID, access.RoleAdmin, ProjectQuery{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if repository.filter.MemberID != nil {
 		t.Fatalf("plain list must not filter by membership, got %v", *repository.filter.MemberID)
 	}
 
-	if _, err := service.ListProjects(context.Background(), viewerID, ProjectQuery{Mine: true}); err != nil {
+	if _, err := service.ListProjects(context.Background(), viewerID, access.RoleAdmin, ProjectQuery{Mine: true}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if repository.filter.MemberID == nil || *repository.filter.MemberID != viewerID {
