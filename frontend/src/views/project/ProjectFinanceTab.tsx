@@ -119,8 +119,8 @@ function SpendByMonth({ periods }: { periods: CashFlowPeriod[] }) {
         return (
           <li key={period.period} className="grid grid-cols-[5rem_1fr_5.5rem] items-center gap-3">
             <span className="text-xs text-slate-600">{monthLabel(period.period)}</span>
-            <span aria-hidden="true" className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-              <span className="block h-full rounded-full bg-navy-600" style={{ width: `${width}%` }} />
+            <span aria-hidden="true" className="h-2.5 overflow-hidden rounded-[3px] bg-slate-100">
+              <span className="bar-fill block h-full rounded-[3px]" style={{ width: `${width}%` }} />
             </span>
             <span className="text-right text-xs tabular-nums text-slate-700">
               <MoneyText>{period.cashOut > 0 ? rupiahShort(period.cashOut) : '-'}</MoneyText>
