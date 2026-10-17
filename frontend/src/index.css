@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
-/* Hanya angka dan tanda di dalam angka yang diambil dari Geist; huruf tetap memakai font sistem. */
+/* Hanya digit dan persen yang diambil dari Geist Mono; huruf dan tanda baca tetap memakai font sistem. */
 @font-face {
   font-family: "Geist Angka";
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0025, U+002C, U+002E, U+0030-0039;
+  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0025, U+0030-0039;
 }
 
 @theme {
