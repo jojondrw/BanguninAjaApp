@@ -57,9 +57,11 @@ func serveProjects(t *testing.T, call projectCall, results ...databasetest.Resul
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
 	api := router.Group("/api")
-	if call.role != "" {
-		api.Use(middleware.Authorization(tokens, fixedSubject{role: call.role}))
+	role := call.role
+	if role == "" {
+		role = access.RoleAdmin
 	}
+	api.Use(middleware.Authorization(tokens, fixedSubject{role: role}))
 	NewModule(db, tokens).RegisterRoutes(api)
 
 	request := httptest.NewRequest(call.method, call.path, strings.NewReader(call.body))
@@ -72,6 +74,14 @@ func serveProjects(t *testing.T, call projectCall, results ...databasetest.Resul
 
 func projectFound(projectID uuid.UUID) databasetest.Result {
 	return databasetest.Result{Columns: []string{"id", "status"}, Rows: [][]driver.Value{{projectID.String(), statusOngoing}}}
+}
+
+func membership(isMember bool) databasetest.Result {
+	result := databasetest.Result{Columns: []string{"id"}}
+	if isMember {
+		result.Rows = [][]driver.Value{{uuid.NewString()}}
+	}
+	return result
 }
 
 func projectMissing() databasetest.Result {
@@ -290,7 +300,7 @@ func TestMemberWritesNeedProjectWriteAccess(t *testing.T) {
 		{method: http.MethodGet, path: membersPath(projectID, "/member-candidates"), role: access.RoleSales},
 	}
 	for _, call := range reads {
-		response, _ := serveProjects(t, call, projectMissing())
+		response, _ := serveProjects(t, call, membership(true), projectMissing())
 		requireStatus(t, response, http.StatusNotFound, "project_not_found")
 	}
 }

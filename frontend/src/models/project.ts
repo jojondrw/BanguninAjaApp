@@ -592,3 +592,11 @@ export function progressBasis(curve: ProgressCurve | undefined, phaseCount: numb
   return 'berbobot nilai RAB'
 }
 
+// Sama dengan rolesSeeingEveryProject di backend (project/project_access.go):
+// tiga peran ini melihat semua proyek, peran lain hanya proyek yang timnya
+// memuat mereka.
+const ROLES_SEEING_EVERY_PROJECT: readonly string[] = ['admin', 'pengamat', 'keuangan']
+
+export function seesEveryProject(roleCode: string | undefined): boolean {
+  return roleCode !== undefined && ROLES_SEEING_EVERY_PROJECT.includes(roleCode)
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 )
 
@@ -165,7 +166,7 @@ func (s *seeder) seedProject(seed projectSeed) error {
 		return err
 	}
 	id, created, err := s.ensure("project", map[string]any{"code": seed.code}, func() (uuid.UUID, error) {
-		response, err := s.services.projects.CreateProject(s.ctx, project.ProjectRequest{
+		response, err := s.services.projects.CreateProject(s.ctx, s.owner, access.RoleAdmin, project.ProjectRequest{
 			Code: seed.code, Name: seed.name, RegionID: &regionID, Type: seed.kind,
 			StartDate: s.monthOffset(seed.startMonth), TargetEndDate: s.monthOffset(seed.endMonth),
 			ContractValue: seed.contractValue,

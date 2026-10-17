@@ -223,8 +223,20 @@ untuk formulir tambah anggota memakai `member-candidates`.
 | Pengguna harus ada dan aktif | `member_user_not_found`, `member_user_inactive` (422) |
 | Kode peran harus ada di tabel `role`. Pengguna tanpa peran akun wajib dipilihkan peran | `member_role_not_found`, `member_role_required` (422) |
 
-Keanggotaan belum membatasi proyek mana yang bisa dilihat atau diubah. Hak akses
-masih mengikuti peran akun di semua proyek, dan `mine=true` hanya penyaring.
+### Hak akses per proyek
+
+Admin, Pengamat, dan Keuangan melihat semua proyek. Peran lain (Manajer Proyek,
+Pengadaan, Penjualan, SDM) hanya melihat proyek yang timnya memuat mereka:
+
+| Bagian | Aturan |
+|---|---|
+| `GET /` dan `GET /summary` | Daftar dan ringkasan otomatis disaring ke proyek tim pemanggil. `mine=true` tetap tersedia sebagai penyaring untuk tiga peran yang melihat semua |
+| Semua rute `/:id/...` | Diperiksa middleware `RequireProjectAccess` sebelum handler. Bukan anggota mendapat `project_member_required` (403) |
+| Peran tidak diketahui | Ditolak dengan `project_viewer_unknown` (403), bukan diloloskan |
+| `POST /` | Pembuat proyek otomatis masuk tim dengan perannya, supaya Manajer Proyek bisa membuka proyek yang baru ia buat |
+
+Aturan ini hanya berlaku di modul Proyek. Modul lain yang menyaring per proyek
+(keuangan, tagihan, pengadaan, laporan) masih mengikuti hak akses per modul.
 
 ## Inventory
 

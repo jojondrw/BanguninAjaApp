@@ -63,7 +63,7 @@ type fakeProjects struct {
 	store *fakeStore
 }
 
-func (f fakeProjects) CreateProject(_ context.Context, request project.ProjectRequest) (project.ProjectResponse, error) {
+func (f fakeProjects) CreateProject(_ context.Context, _ uuid.UUID, _ string, request project.ProjectRequest) (project.ProjectResponse, error) {
 	return project.ProjectResponse{ID: f.store.put("project", map[string]any{"code": request.Code})}, nil
 }
 

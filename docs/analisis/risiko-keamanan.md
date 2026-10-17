@@ -52,7 +52,7 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 
 | Kategori | Status | Kontrol yang ada | Celah yang tersisa |
 |---|---|---|---|
-| A01 Broken Access Control | Sebagian | Matriks peran per modul diperiksa backend di setiap request (`shared/access`, middleware `Authorization`), termasuk status aktif; frontend menyembunyikan tombol ubah; rute publik hanya `/auth` dan `/pay/:token` dengan token acak | Peran per proyek (`project_member`) belum ditegakkan: Manajer Proyek bisa membuka semua proyek |
+| A01 Broken Access Control | Sebagian | Matriks peran per modul diperiksa backend di setiap request (`shared/access`, middleware `Authorization`), termasuk status aktif; frontend menyembunyikan tombol ubah; rute publik hanya `/auth` dan `/pay/:token` dengan token acak. Di modul Proyek, peran selain Admin, Pengamat, dan Keuangan hanya bisa membuka proyek yang timnya memuat mereka (#82), dengan middleware yang menolak peran tak dikenal | Modul lain yang menyaring per proyek (keuangan, tagihan, pengadaan, laporan) belum mengikuti keanggotaan tim |
 | A02 Cryptographic Failures | Sebagian | Kata sandi bcrypt; refresh token 32 byte acak, disimpan sebagai hash SHA-256; JWT HS256 dengan rahasia dari env; HTTPS di demo lewat Vercel dan Cloudflare | `COOKIE_SECURE` bawaan `false` dan belum dinyalakan untuk demo HTTPS; NIK pelanggan disimpan tanpa enkripsi |
 | A03 Injection | Terkendali | Query lewat GORM dengan parameter; tidak ada SQL yang disusun dari input pengguna; React meng-escape keluaran | |
 | A04 Insecure Design | Terkendali | Peta transisi status di service; pembayaran on-chain: hash unik, baris dikunci, chain id dan batas waktu diperiksa; data simulasi ditandai (#64) | |
@@ -71,7 +71,7 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 
 | Kategori 2025 | Padanan 2021 | Status | Catatan |
 |---|---|---|---|
-| A01:2025 Broken Access Control | A01, ditambah A10 SSRF | Sebagian | Sama dengan A01 di atas; SSRF terkendali |
+| A01:2025 Broken Access Control | A01, ditambah A10 SSRF | Sebagian | Hak akses per proyek di modul Proyek sudah ditegakkan; modul lain belum. SSRF terkendali |
 | A02:2025 Security Misconfiguration | A05 | Diperbaiki | |
 | A03:2025 Software Supply Chain Failures | A06, diperluas | Sebagian | `go.sum` dan `package-lock.json` mengunci versi dan checksum; `govulncheck` dan `npm audit` di CI (#74). Belum ada SBOM dan branch `main` belum diproteksi |
 | A04:2025 Cryptographic Failures | A02 | Sebagian | |
@@ -88,7 +88,7 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 |---|---|---|
 | Tinggi | Nyalakan `COOKIE_SECURE=true` di lingkungan demo dan produksi | A02 |
 | Tinggi | Aktifkan branch protection di `main` (pemilik repo) | A08 |
-| Sedang | Tegakkan peran per proyek: daftar dan detail proyek hanya untuk anggota, kecuali Admin dan Pengamat | A01 |
+| Sedang | Perluas hak akses per proyek ke modul keuangan, tagihan, pengadaan, dan laporan | A01 |
 | Sedang | Tabel audit untuk perubahan peran, status pengguna, dan pembayaran | A09 |
 | Rendah | Enkripsi kolom NIK, atau simpan hanya empat digit terakhir untuk tampilan | A02 |
 | Rendah | Header CSP untuk frontend di Vercel; trusted proxies di backend | A05 |

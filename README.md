@@ -89,6 +89,10 @@ Semua kode berawalan `DEMO-`, tanggal dihitung dari hari ini, dan aman diulang
   lama tetap memakai nilai awal) dan satu usulan yang menunggu Admin. Griya Asri
   punya satu adendum ditolak. Adendum dicek per proyek dan uraian, jadi database
   yang sudah punya kontrak demo tetap mendapatkannya.
+- Kalau `DEMO_USER_PASSWORD` diisi, dibuat juga akun Manajer Proyek
+  `manajer@banguninaja.id` (Rina Wulandari, kata sandi sama) yang hanya menjadi
+  anggota tim RSIA dan Griya Asri, untuk memperagakan hak akses per proyek.
+  Akun demo utama masuk tim semua proyek DEMO.
 - Laporan harian memakai pola cuaca tetap musim hujan (pagi cerah atau berawan,
   hujan siang atau sore) supaya hasilnya sama setiap dibuat ulang.
 

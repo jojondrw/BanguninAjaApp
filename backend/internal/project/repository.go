@@ -88,7 +88,8 @@ type Repository interface {
 	Transaction(ctx context.Context, work func(Repository) error) error
 
 	ListProjects(ctx context.Context, filter ProjectFilter) ([]Project, int64, error)
-	SummarizeProjects(ctx context.Context) (ProjectTotals, error)
+	SummarizeProjects(ctx context.Context, memberID *uuid.UUID) (ProjectTotals, error)
+	IsProjectMember(ctx context.Context, projectID, userID uuid.UUID) (bool, error)
 	FindProject(ctx context.Context, id uuid.UUID) (Project, error)
 	LockProject(ctx context.Context, id uuid.UUID) (Project, error)
 	CreateProject(ctx context.Context, project *Project) error
@@ -175,10 +176,11 @@ func (r *gormRepository) ListProjects(ctx context.Context, filter ProjectFilter)
 	})
 }
 
-func (r *gormRepository) SummarizeProjects(ctx context.Context) (ProjectTotals, error) {
+func (r *gormRepository) SummarizeProjects(ctx context.Context, memberID *uuid.UUID) (ProjectTotals, error) {
 	var totals ProjectTotals
 	err := r.db.WithContext(ctx).
 		Model(&Project{}).
+		Scopes(ProjectFilter{MemberID: memberID}.apply).
 		Select(projectTotalsColumns, statusPlanning, statusOngoing, statusOnHold, statusCompleted, statusCancelled).
 		Scan(&totals).Error
 	return totals, database.Translate(err)

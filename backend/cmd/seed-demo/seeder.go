@@ -62,6 +62,7 @@ type seeder struct {
 	terms    termWriter
 	today    time.Time
 	owner    uuid.UUID
+	manager  uuid.UUID
 	ids      map[string]uuid.UUID
 	tally    *tally
 	scoring  bool
@@ -77,6 +78,7 @@ type seedStep struct {
 func (s *seeder) run() error {
 	steps := []seedStep{
 		{"projects", s.seedProjects},
+		{"project teams", s.seedProjectTeams},
 		{"progress history", s.seedProgressHistory},
 		{"daily reports", s.seedDailyReports},
 		{"finance", s.seedFinance},

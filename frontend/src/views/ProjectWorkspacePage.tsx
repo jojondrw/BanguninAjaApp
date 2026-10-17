@@ -41,8 +41,19 @@ function toTab(value: string | null): WorkspaceTab {
   return TABS.find((tab) => tab.id === value)?.id ?? DEFAULT_TAB
 }
 
+function isOutsideTeam(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'project_member_required'
+}
+
 function isMissingProject(error: unknown): boolean {
   return error instanceof ApiError && NOT_FOUND_STATUSES.includes(error.status)
+}
+
+function workspaceErrorTitle(error: unknown): string {
+  if (isOutsideTeam(error)) {
+    return 'Bukan proyek tim Anda'
+  }
+  return isMissingProject(error) ? 'Proyek tidak ditemukan' : 'Gagal memuat proyek'
 }
 
 type ManagePanel = 'status' | 'edit' | 'delete'
@@ -100,12 +111,16 @@ export function ProjectWorkspacePage() {
   if (project.isError) {
     return (
       <AppShell title="Ruang kerja proyek" actions={<BackLink />}>
-        <Card title={isMissingProject(project.error) ? 'Proyek tidak ditemukan' : 'Gagal memuat proyek'}>
+        <Card title={workspaceErrorTitle(project.error)}>
+          {isOutsideTeam(project.error) ? (
+            <Empty message="Proyek ini hanya bisa dibuka anggota timnya. Minta Admin atau Manajer Proyek di proyek ini menambahkan Anda di tab Tim." />
+          ) : null}
           {isMissingProject(project.error) ? (
             <Empty message="Proyek ini tidak ada atau sudah dihapus. Pilih proyek lain dari daftar proyek." />
-          ) : (
+          ) : null}
+          {!isOutsideTeam(project.error) && !isMissingProject(project.error) ? (
             <LoadFailed onRetry={() => project.refetch()} />
-          )}
+          ) : null}
         </Card>
       </AppShell>
     )
