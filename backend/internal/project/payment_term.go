@@ -92,8 +92,17 @@ type PayableEntry struct {
 	Amount    int64
 }
 
-type PayableLedger interface {
-	Record(ctx context.Context, entry PayableEntry) (uuid.UUID, error)
+type ReceivableEntry struct {
+	CustomerID uuid.UUID
+	ProjectID  uuid.UUID
+	Reference  string
+	DueDate    time.Time
+	Amount     int64
+}
+
+type BillingLedger interface {
+	RecordPayable(ctx context.Context, entry PayableEntry) (uuid.UUID, error)
+	RecordReceivable(ctx context.Context, entry ReceivableEntry) (uuid.UUID, error)
 }
 
 type ContractVendor struct {
@@ -434,7 +443,7 @@ func recordPayable(ctx context.Context, repository Repository, contract Construc
 	}
 	entry.VendorID = contract.VendorID
 	entry.DueDate = today.AddDate(0, 0, vendor.PaymentTermDays)
-	return repository.Payables().Record(ctx, entry)
+	return repository.Billing().RecordPayable(ctx, entry)
 }
 
 func markClaimed(term *PaymentTerm, payableID uuid.UUID, progress int, actorID uuid.UUID, today time.Time) {
@@ -736,8 +745,8 @@ func (r *gormRepository) FindContractVendor(ctx context.Context, id uuid.UUID) (
 	return vendor, database.Translate(err)
 }
 
-func (r *gormRepository) Payables() PayableLedger {
-	return r.payables(r.db)
+func (r *gormRepository) Billing() BillingLedger {
+	return r.billing(r.db)
 }
 
-type PayableLedgerFactory func(db *gorm.DB) PayableLedger
+type BillingLedgerFactory func(db *gorm.DB) BillingLedger

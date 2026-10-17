@@ -128,7 +128,7 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 
 func newServices(ctx context.Context, tx *gorm.DB, cfg config.Config) services {
 	return services{
-		projects:    project.NewService(project.NewRepository(tx, project.NewBillingPayables)),
+		projects:    project.NewService(project.NewRepository(tx, project.NewBillingLedger)),
 		finance:     finance.NewService(finance.NewRepository(tx)),
 		sales:       sales.NewService(sales.NewRepository(tx)),
 		inventory:   inventory.NewService(inventory.NewRepository(tx)),

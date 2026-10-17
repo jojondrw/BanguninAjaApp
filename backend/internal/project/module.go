@@ -19,21 +19,33 @@ type Module struct {
 
 func NewModule(db *gorm.DB, tokens *token.Manager) *Module {
 	return &Module{
-		controller: NewController(NewService(NewRepository(db, NewBillingPayables))),
+		controller: NewController(NewService(NewRepository(db, NewBillingLedger))),
 		tokens:     tokens,
 	}
 }
 
-type billingPayables struct {
-	ledger billing.PayableLedger
+type billingLedger struct {
+	payables    billing.PayableLedger
+	receivables billing.ReceivableLedger
 }
 
-func NewBillingPayables(db *gorm.DB) PayableLedger {
-	return billingPayables{ledger: billing.NewPayableLedger(billing.NewRepository(db, nil))}
+func NewBillingLedger(db *gorm.DB) BillingLedger {
+	repository := billing.NewRepository(db, nil)
+	return billingLedger{payables: billing.NewPayableLedger(repository), receivables: billing.NewReceivableLedger(repository)}
 }
 
-func (p billingPayables) Record(ctx context.Context, entry PayableEntry) (uuid.UUID, error) {
-	return p.ledger.Record(ctx, billing.PayableEntry{
+func (l billingLedger) RecordReceivable(ctx context.Context, entry ReceivableEntry) (uuid.UUID, error) {
+	return l.receivables.Record(ctx, billing.ReceivableEntry{
+		CustomerID: entry.CustomerID,
+		ProjectID:  entry.ProjectID,
+		Reference:  entry.Reference,
+		DueDate:    entry.DueDate,
+		Amount:     entry.Amount,
+	})
+}
+
+func (l billingLedger) RecordPayable(ctx context.Context, entry PayableEntry) (uuid.UUID, error) {
+	return l.payables.Record(ctx, billing.PayableEntry{
 		VendorID:  entry.VendorID,
 		ProjectID: entry.ProjectID,
 		Reference: entry.Reference,
@@ -76,6 +88,12 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	project.DELETE("/payment-terms/:childId", m.controller.DeletePaymentTerm)
 	project.POST("/payment-terms/:childId/claim", m.controller.ClaimPaymentTerm)
 	project.POST("/retention-release", m.controller.ReleaseRetention)
+	project.GET("/owner-billing", m.controller.OwnerSchedule)
+	project.PUT("/owner-billing/contract", m.controller.SaveOwnerContract)
+	project.POST("/owner-billing/terms", m.controller.CreateOwnerTerm)
+	project.DELETE("/owner-billing/terms/:childId", m.controller.DeleteOwnerTerm)
+	project.POST("/owner-billing/terms/:childId/claim", m.controller.ClaimOwnerTerm)
+	project.POST("/owner-billing/retention-release", m.controller.ReleaseOwnerRetention)
 	project.POST("/contract-changes", m.controller.ProposeContractChange)
 	project.PATCH("/contract-changes/:childId", m.controller.DecideContractChange)
 	project.DELETE("/contract-changes/:childId", m.controller.DeleteContractChange)
