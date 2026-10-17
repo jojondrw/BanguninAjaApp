@@ -15,6 +15,20 @@ di [rencana pengujian](README.md).
 | System | 5 skenario, 27 langkah | 27 | 0 | 3,2 detik |
 | Acceptance | 14 skenario | 12 | 0 | 8 lewat UI, 4 lewat API; 2 belum dijalankan (pesanan pembelian, pembayaran on-chain). Persetujuan pengguna di [acceptance.md](acceptance.md) |
 
+### Pembaruan 18 Oktober: pembayaran on-chain dan alur uang
+
+Dihitung ulang pada `main` setelah PR #92 sampai #95 (grafik, pembayaran
+tagihan menjadi kas, termin pemberi kerja, NIK tersamar dan CSP). Jumlah test
+Go dan integration dihitung dari fungsi `Test` di kode sumber dan lulus di CI;
+test frontend dijalankan ulang dengan Vitest. Coverage tidak diukur ulang.
+
+| Level | Jumlah | Lulus | Gagal | Catatan |
+|---|---|---|---|---|
+| Unit, backend Go | 528 test | 528 | 0 | Ditambah buku kas tagihan, termin pemberi kerja, dan NIK tersamar |
+| Unit, frontend | 181 test di 31 berkas | 181 | 0 | Ditambah kurva grafik, nilai uang, kas dari tagihan, dan model termin pemberi kerja |
+| Integration (PostgreSQL + PostGIS) | 13 | 13 | 0 | Ditambah bayar utang menjadi kas keluar dengan jurnalnya, dan termin pemberi kerja menjadi piutang yang pembayarannya masuk kas |
+| Acceptance | 17 skenario | 17 | 0 | AT-13 lulus lewat UI: faktur Rp 48,5 jt dibayar di Sepolia, transaksi [0x7be583…abff02](https://sepolia.etherscan.io/tx/0x7be5838c8694e5c890aded49b5ba3cfad53c617748c2e58a487a04ccf4abff02) |
+
 ### Pembaruan 17 Oktober: hak akses per proyek dan jejak audit
 
 Dihitung ulang pada `main` setelah PR #86 (hak akses per proyek), #87 (jejak audit

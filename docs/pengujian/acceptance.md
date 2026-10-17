@@ -32,7 +32,7 @@ disetujui.
 | AT-10 | Pengadaan | Membuat dan mengirim pesanan pembelian | Lulus (UI) | Akun uji berperan Pengadaan: pesanan 20 sak semen x Rp 72.000 = Rp 1.440.000, harga dan satuan terisi dari material, status Dikirim ke vendor dan isi terkunci; menu hanya modul yang boleh dibuka peran ini. Data uji dihapus | |
 | AT-11 | Keuangan | Membaca transaksi terbaru dan arus kas | Lulus (UI) | Jumlah bertanda dan berwarna, tanggal satu baris | |
 | AT-12 | Admin | Tidak bisa menonaktifkan akun sendiri dari halaman Pengguna | Lulus (UI) | Baris (Anda) tanpa Nonaktifkan | |
-| AT-13 | Pembeli | Membayar tagihan lewat tautan on-chain | Belum | | |
+| AT-13 | Pembeli | Membayar tagihan lewat tautan on-chain | Lulus (UI) | DEMO-INV-003 (Rp 48,5 jt) dibayar 0,0000485 SepoliaETH lewat MetaMask, transaksi [0x7be583…abff02](https://sepolia.etherscan.io/tx/0x7be5838c8694e5c890aded49b5ba3cfad53c617748c2e58a487a04ccf4abff02) sukses; faktur dan piutang tertaut lunas dengan satu pembayaran metode onchain, kas masuk tercatat. Rincian di bawah | |
 | AT-14 | Semua | Memakai aplikasi di ponsel | Lulus (UI) | 390 px: sepuluh halaman dan tab Lapangan tanpa geser ke samping | |
 | AT-15 | Manajer Proyek | Mengajukan termin kontraktor yang progresnya tercapai | Lulus (UI) | Proyek uji: konfirmasi dua langkah, hutang Rp 190 jt (20% dari Rp 1 M dikurangi retensi 5%) tercatat, jatuh tempo 30 hari, kontrak terkunci; 375 px tanpa geser halaman | |
 | AT-16 | Keuangan | Melihat termin tanpa bisa mengajukannya | Lulus (API) | Test render: tanpa tombol Ajukan dan Tambah termin, ada tautan ke Tagihan; endpoint pengajuan butuh hak tulis Proyek | |
@@ -112,6 +112,30 @@ disetujui.
 - **When** Pembeli membuka tautan `/bayar/:token` dan membayar dengan dompet di jaringan Sepolia
 - **Then** halaman menunggu konfirmasi jaringan, lalu menampilkan Lunas dengan tautan Etherscan
 - **And** invoice di modul Tagihan berstatus lunas dengan pembayaran metode onchain
+
+**Hasil 18 Oktober 2026 (Lulus, UI)**
+
+| Langkah | Hasil |
+|---|---|
+| Konfigurasi | `ONCHAIN_RECEIVER_ADDRESS` diisi alamat dompet tim (checksum EIP-55 valid), jaringan Sepolia (chain id 11155111), kurs simulasi Rp 1 triliun = 1 SepoliaETH |
+| Permintaan bayar | Dibuat dari rincian faktur DEMO-INV-003 (cicilan ke-5 unit DEMO-GAB-A01, Rp 48.500.000) pada 18 Okt 2026 00.02 WIB, senilai 48.500.000.000.000 wei (0,0000485 SepoliaETH) |
+| Pembayaran | Tautan `/bayar/:token` dibuka, MetaMask di Sepolia mengirim transaksi [`0x7be5838c8694e5c890aded49b5ba3cfad53c617748c2e58a487a04ccf4abff02`](https://sepolia.etherscan.io/tx/0x7be5838c8694e5c890aded49b5ba3cfad53c617748c2e58a487a04ccf4abff02) |
+| Jaringan | Sukses (`status 0x1`) di blok 11.935.433, 17 Okt 2026 17.03.24 UTC (18 Okt 00.03 WIB), biaya gas 0,000018 SepoliaETH |
+| Halaman bayar | Menunggu konfirmasi, lalu Lunas dengan tautan Etherscan |
+| Tagihan | DEMO-INV-003 dan piutang tertautnya DEMO-PIU-002 sama-sama lunas lewat **satu** baris pembayaran metode `onchain`, referensi berisi hash transaksi |
+| Keuangan | Kas masuk Rp 48.500.000 tanggal 18 Okt 2026 dengan akun lawan 1200 Piutang Usaha, jurnal otomatis KAS-2026-000078 (aturan "Pembayaran tercatat sebagai kas") |
+
+Verifikasi terpisah dari aplikasi: `eth_getTransactionByHash` dan
+`eth_getTransactionReceipt` ke RPC publik Sepolia mengembalikan penerima sama
+dengan `ONCHAIN_RECEIVER_ADDRESS`, nilai tepat 48.500.000.000.000 wei, dan
+chain id 11155111, cocok dengan permintaan bayarnya.
+
+Catatan: dompet pembayar pada uji ini sama dengan dompet penerima (transfer ke
+diri sendiri). Server tetap memeriksa penerima, nilai, jaringan, dan jumlah
+konfirmasi, jadi hasilnya sah untuk skenario ini; uji berikutnya sebaiknya
+memakai dompet pembayar yang berbeda.
+
+![Rincian DEMO-INV-003 setelah dibayar on-chain](bukti/at-13-tagihan-onchain.jpg)
 
 ### AT-15 Mengajukan termin kontraktor
 
