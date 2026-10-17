@@ -3,6 +3,7 @@ import { ChevronRight, Plus, X } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
 import { useCan } from '../controllers/useAccess'
+import { useSessionStore } from '../controllers/sessionStore'
 import { useCreateProject, useProjects } from '../controllers/useErp'
 import {
   deletedProjectName,
@@ -12,6 +13,7 @@ import {
   PROJECT_STATUS_LABEL,
   PROJECT_TYPE_MAX_LENGTH,
   PROJECT_TYPE_SUGGESTIONS,
+  seesEveryProject,
   type ProjectFormValues,
   type ProjectStatus,
 } from '../models/project'
@@ -41,11 +43,21 @@ function filterChipClass(isActive: boolean): string {
           }`
 }
 
-function emptyListMessage(onlyMine: boolean): string {
+function emptyListMessage(onlyMine: boolean, teamOnly: boolean): string {
+  if (teamOnly) {
+    return 'Belum ada proyek yang timnya memuat Anda. Minta Admin atau Manajer Proyek menambahkan Anda di tab Tim ruang kerja proyek.'
+  }
   if (onlyMine) {
     return 'Anda belum masuk tim proyek yang cocok dengan penyaringan ini. Anggota tim diatur di tab Tim ruang kerja proyek.'
   }
   return 'Tidak ada proyek yang cocok dengan penyaringan ini.'
+}
+
+function projectsDescription(total: number | undefined, teamOnly: boolean): string | undefined {
+  if (total === undefined) {
+    return undefined
+  }
+  return teamOnly ? `${total} proyek yang timnya memuat Anda` : `${total} proyek`
 }
 
 const OPEN_LINK_CLASS =
@@ -167,6 +179,7 @@ export function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus | ''>('')
   const [search, setSearch] = useState('')
   const [onlyMine, setOnlyMine] = useState(false)
+  const teamOnly = useSessionStore((state) => !seesEveryProject(state.user?.role?.code))
   const [isFormOpen, setIsFormOpen] = useState(false)
   const canCreate = useCan('projects', 'write')
   const location = useLocation()
@@ -175,7 +188,7 @@ export function ProjectsPage() {
     pageSize: 50,
     status: status === '' ? undefined : status,
     search: search.trim() === '' ? undefined : search.trim(),
-    mine: onlyMine ? 'true' : undefined,
+    mine: onlyMine && !teamOnly ? 'true' : undefined,
   })
 
   return (
@@ -210,7 +223,7 @@ export function ProjectsPage() {
         </div>
       ) : null}
 
-      <Card title="Daftar proyek" description={projects.data ? `${projects.data.totalItems} proyek` : undefined}>
+      <Card title="Daftar proyek" description={projectsDescription(projects.data?.totalItems, teamOnly)}>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <label htmlFor="cari" className="sr-only">
             Cari proyek
@@ -222,15 +235,19 @@ export function ProjectsPage() {
             placeholder="Cari nama proyek"
             className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
           />
-          <button
-            type="button"
-            onClick={() => setOnlyMine((current) => !current)}
-            aria-pressed={onlyMine}
-            className={filterChipClass(onlyMine)}
-          >
-            Proyek saya
-          </button>
-          <span aria-hidden="true" className="h-5 w-px bg-slate-200" />
+          {teamOnly ? null : (
+            <>
+              <button
+                type="button"
+                onClick={() => setOnlyMine((current) => !current)}
+                aria-pressed={onlyMine}
+                className={filterChipClass(onlyMine)}
+              >
+                Proyek saya
+              </button>
+              <span aria-hidden="true" className="h-5 w-px bg-slate-200" />
+            </>
+          )}
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Saring menurut status">
             {FILTERS.map((filter) => (
               <button
@@ -251,7 +268,7 @@ export function ProjectsPage() {
         {projects.data ? (
           <Table
             rows={projects.data.items}
-            emptyMessage={emptyListMessage(onlyMine)}
+            emptyMessage={emptyListMessage(onlyMine, teamOnly)}
             columns={[
               { header: 'Kode', cell: (row) => row.code },
               {
