@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { SearchOption } from '../../models/lookup'
 import { SEARCH_LIMIT } from '../../models/lookupApi'
 import { CONTROL_CLASS, LABEL_CLASS } from './Form'
+import { MoneyText } from './Money'
 import { optionDomId, resolveLabel, stepIndex, useDebounced } from './searchSelectLogic'
 
 interface SearchSelectProps<O extends SearchOption> {
@@ -214,7 +215,7 @@ export function SearchSelect<O extends SearchOption = SearchOption>({
                   } ${option.value === value ? 'font-medium text-navy-700' : 'text-slate-800'}`}
                 >
                   <span className="truncate">{option.label}</span>
-                  {option.hint ? <span className="shrink-0 text-xs text-slate-500">{option.hint}</span> : null}
+                  {option.hint ? <span className="shrink-0 text-xs text-slate-500"><MoneyText>{option.hint}</MoneyText></span> : null}
                 </li>
               ))}
             </ul>
@@ -228,7 +229,7 @@ export function SearchSelect<O extends SearchOption = SearchOption>({
       </div>
       {hint ? (
         <p id={hintId} className="text-xs text-slate-500">
-          {hint}
+          <MoneyText>{hint}</MoneyText>
         </p>
       ) : null}
     </div>

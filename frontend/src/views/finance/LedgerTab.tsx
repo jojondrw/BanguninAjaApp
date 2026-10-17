@@ -15,6 +15,7 @@ import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { Card, Empty, Loading, Table } from '../components/Data'
 import { Button, ErrorNote } from '../components/Form'
+import { MoneyText } from '../components/Money'
 import { Pager, Toolbar } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
 import { ACCOUNT_PARAM, balanceText, journalLink, useSearchParam } from './financeTabs'
@@ -55,8 +56,8 @@ function LedgerSummary({ ledger, dateFrom, dateTo }: { ledger: LedgerPage; dateF
       {cells.map((cell) => (
         <div key={cell.label} className="min-w-0">
           <dt className="text-xs font-medium text-slate-500">{cell.label}</dt>
-          <dd className="mt-1 text-base font-semibold text-slate-900 tabular-nums">{cell.value}</dd>
-          <dd className="text-xs text-slate-500">{cell.note}</dd>
+          <dd className="mt-1 text-base font-semibold text-slate-900 tabular-nums"><MoneyText>{cell.value}</MoneyText></dd>
+          <dd className="text-xs text-slate-500"><MoneyText>{cell.note}</MoneyText></dd>
         </div>
       ))}
     </dl>

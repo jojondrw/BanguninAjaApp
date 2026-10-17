@@ -22,6 +22,7 @@ import { Bar, LoadFailed, Loading } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Pager, SelectField } from '../components/RecordControls'
 import { TxLink } from '../pay/PayParts'
+import { Money } from '../components/Money'
 
 const HISTORY_PAGE_SIZE = 5
 const DEFAULT_EXPLORER_URL = 'https://sepolia.etherscan.io'
@@ -64,7 +65,7 @@ function PaymentItem({ kind, payment, explorerUrl }: { kind: BillingKind; paymen
           <p className="mt-0.5 text-xs text-slate-500">Dicatat oleh {payment.createdByName}</p>
         ) : null}
       </div>
-      <span className="text-sm font-medium text-slate-900 tabular-nums">{rupiah(payment.amount)}</span>
+      <span className="text-sm font-medium text-slate-900 tabular-nums"><Money>{rupiah(payment.amount)}</Money></span>
     </li>
   )
 }
@@ -82,7 +83,7 @@ export function PaymentHistory({ kind, record }: { kind: BillingKind; record: Bi
       </h3>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-700 tabular-nums">
-          {rupiah(record.paidAmount)} dari {rupiah(record.amount)} sudah dibayar
+          <Money>{rupiah(record.paidAmount)}</Money> dari <Money>{rupiah(record.amount)}</Money> sudah dibayar
           {record.lastPaidAt ? `, terakhir ${shortDate(record.lastPaidAt)}` : ''}
         </p>
         <Bar percent={paidPercent(record)} />
@@ -214,7 +215,7 @@ export function PaymentForm({ record, noun, today, linkedTo, pay }: {
         {isConfirming ? (
           <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5">
             <p className="mr-auto text-[13px] text-amber-900">
-              Catat pembayaran {rupiah(amount)} lewat {PAYMENT_METHOD_LABEL[values.method].toLowerCase()} tanggal{' '}
+              Catat pembayaran <Money>{rupiah(amount)}</Money> lewat {PAYMENT_METHOD_LABEL[values.method].toLowerCase()} tanggal{' '}
               {shortDate(values.paidAt)}? Pembayaran yang sudah dicatat tidak bisa dibatalkan.
             </p>
             <Button isPending={pay.isPending} pendingLabel="Mencatat pembayaran" onClick={confirm}>

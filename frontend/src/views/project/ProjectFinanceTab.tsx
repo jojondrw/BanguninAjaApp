@@ -29,6 +29,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
 import { ContractChangesCard } from './ContractChangesCard'
 import { PaymentTermsCard } from './PaymentTermsCard'
+import { MoneyText } from '../components/Money'
 
 const NO_BUDGETS: Budget[] = []
 const MIN_VISIBLE_BAR = 2
@@ -122,7 +123,7 @@ function SpendByMonth({ periods }: { periods: CashFlowPeriod[] }) {
               <span className="block h-full rounded-full bg-navy-600" style={{ width: `${width}%` }} />
             </span>
             <span className="text-right text-xs tabular-nums text-slate-700">
-              {period.cashOut > 0 ? rupiahShort(period.cashOut) : '-'}
+              <MoneyText>{period.cashOut > 0 ? rupiahShort(period.cashOut) : '-'}</MoneyText>
             </span>
           </li>
         )

@@ -22,6 +22,7 @@ import { ContractForm } from './ContractForm'
 import { InstallmentSchedule } from './InstallmentSchedule'
 import { ConfirmPanel } from './RowActions'
 import { refusalText } from './salesShared'
+import { MoneyText } from '../components/Money'
 
 type ContractAction = ContractTarget | 'delete'
 
@@ -73,7 +74,7 @@ function Figure({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium text-slate-900 tabular-nums">{value}</dd>
+      <dd className="mt-0.5 text-sm font-medium text-slate-900 tabular-nums"><MoneyText>{value}</MoneyText></dd>
     </div>
   )
 }

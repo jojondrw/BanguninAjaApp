@@ -33,6 +33,7 @@ import { ConfirmAction, Facts } from './parts'
 import { PurchaseOrderFormCard } from './PurchaseOrderForm'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
 import { ReceiveGoodsForm } from './ReceiveGoodsForm'
+import { Money } from '../components/Money'
 
 const ORDER_FILTERS: { value: PurchaseOrderStatus | ''; label: string }[] = [
   { value: '', label: 'Semua' },
@@ -252,7 +253,7 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
             { header: 'Sisa', align: 'right', cell: (row) => number(row.remainingQuantity) },
           ]}
         />
-        <p className="mt-4 text-right text-sm font-medium text-slate-900 tabular-nums">Total {rupiah(detail.value)}</p>
+        <p className="mt-4 text-right text-sm font-medium text-slate-900 tabular-nums">Total <Money>{rupiah(detail.value)}</Money></p>
 
         {detail.status !== 'draft' ? (
           <div className="mt-5 border-t border-slate-100 pt-4">

@@ -23,6 +23,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { JOURNAL_PARAM, cashLink, ledgerLink, useSearchParam } from './financeTabs'
 import { JournalForm } from './JournalForm'
 import { DateRangeFilter, RowActions, RowLink } from './parts'
+import { Money } from '../components/Money'
 
 const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
@@ -110,7 +111,7 @@ function JournalDetailCard({ id, onClose }: { id: string; onClose: () => void })
               align: 'right',
               cell: (row) =>
                 row.kind === 'total' ? (
-                  <span className="font-semibold text-slate-900">{rupiah(row.debit)}</span>
+                  <span className="font-semibold text-slate-900"><Money>{rupiah(row.debit)}</Money></span>
                 ) : row.line.debit > 0 ? (
                   rupiah(row.line.debit)
                 ) : (
@@ -122,7 +123,7 @@ function JournalDetailCard({ id, onClose }: { id: string; onClose: () => void })
               align: 'right',
               cell: (row) =>
                 row.kind === 'total' ? (
-                  <span className="font-semibold text-slate-900">{rupiah(row.credit)}</span>
+                  <span className="font-semibold text-slate-900"><Money>{rupiah(row.credit)}</Money></span>
                 ) : row.line.credit > 0 ? (
                   rupiah(row.line.credit)
                 ) : (

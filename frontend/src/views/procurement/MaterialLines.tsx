@@ -5,6 +5,7 @@ import { emptyOrderLine, orderLineTotal, type OrderLineValues } from '../../mode
 import { rupiah } from '../../shared/format'
 import { Button, Field } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
+import { Money } from '../components/Money'
 
 function MaterialLineFields({ idPrefix, line, index, usedMaterials, showPrice, canRemove, onChange, onRemove }: {
   idPrefix: string
@@ -83,7 +84,7 @@ function MaterialLineFields({ idPrefix, line, index, usedMaterials, showPrice, c
       {showPrice || canRemove ? (
         <div className="mt-3 flex items-center justify-between gap-3">
           {showPrice ? (
-            <p className="text-sm text-slate-600 tabular-nums">Subtotal {rupiah(orderLineTotal(line))}</p>
+            <p className="text-sm text-slate-600 tabular-nums">Subtotal <Money>{rupiah(orderLineTotal(line))}</Money></p>
           ) : (
             <span />
           )}
@@ -133,7 +134,7 @@ export function MaterialLinesEditor({ idPrefix, lines, showPrice, onChange }: {
         <Button variant="subtle" onClick={() => onChange([...lines, emptyOrderLine()])}>
           Tambah baris material
         </Button>
-        {showPrice ? <p className="text-sm font-medium text-slate-900 tabular-nums">Total {rupiah(total)}</p> : null}
+        {showPrice ? <p className="text-sm font-medium text-slate-900 tabular-nums">Total <Money>{rupiah(total)}</Money></p> : null}
       </div>
     </div>
   )

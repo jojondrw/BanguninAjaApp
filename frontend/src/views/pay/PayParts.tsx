@@ -13,6 +13,7 @@ import {
 import { rupiah } from '../../shared/format'
 import { BUTTON_BASE, BUTTON_SUBTLE } from '../components/Form'
 import { Chip } from '../components/RecordControls'
+import { Money } from '../components/Money'
 
 const COPIED_FEEDBACK_MS = 2_000
 const FAUCET_URL = 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia'
@@ -80,7 +81,7 @@ export function AmountSummary({ amountIdr, amountEth, idrPerEth, chainId }: {
 }) {
   return (
     <div>
-      <p className="text-[28px] leading-9 font-semibold tracking-[-0.025em] text-slate-900 tabular-nums">{rupiah(amountIdr)}</p>
+      <p className="text-[28px] leading-9 font-semibold tracking-[-0.025em] text-slate-900 tabular-nums"><Money>{rupiah(amountIdr)}</Money></p>
       <p className="mt-1 text-[15px] text-slate-700 tabular-nums">≈ {etherLabel(amountEth, chainId)}</p>
       <p className="mt-1 text-xs text-slate-500">{rateLabel(idrPerEth, chainId)}, bukan harga pasar.</p>
     </div>

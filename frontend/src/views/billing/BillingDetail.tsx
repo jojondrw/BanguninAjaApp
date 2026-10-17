@@ -14,6 +14,7 @@ import { number, rupiah, shortDate } from '../../shared/format'
 import { Card, LoadFailed, Loading } from '../components/Data'
 import { BUTTON_BASE, Button, ErrorNote, SuccessNote } from '../components/Form'
 import { FormPanel } from '../components/RecordControls'
+import { Money, MoneyText } from '../components/Money'
 import type { OnchainBillingKind } from '../../models/onchain'
 import { StatusChip } from './BillingCells'
 import { OnchainSection } from './OnchainPanel'
@@ -97,7 +98,7 @@ function DetailList({ fields }: { fields: DetailField[] }) {
       {fields.map((field) => (
         <div key={field.label} className="min-w-0">
           <dt className="text-xs font-medium text-slate-500">{field.label}</dt>
-          <dd className="mt-0.5 text-sm break-words text-slate-900">{field.value}</dd>
+          <dd className="mt-0.5 text-sm break-words text-slate-900"><MoneyText>{field.value}</MoneyText></dd>
         </div>
       ))}
     </dl>
@@ -195,7 +196,7 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
           { label: 'Jatuh tempo', value: shortDate(data.dueDate) },
           { label: 'Nilai', value: rupiah(data.amount) },
           { label: 'Sudah dibayar', value: rupiah(data.paidAmount) },
-          { label: 'Sisa', value: <span className="font-medium">{rupiah(data.outstanding)}</span> },
+          { label: 'Sisa', value: <span className="font-medium"><Money>{rupiah(data.outstanding)}</Money></span> },
           {
             label: 'Keterlambatan',
             value: data.daysOverdue > 0 ? `${number(data.daysOverdue)} hari lewat jatuh tempo` : 'Tidak terlambat',

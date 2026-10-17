@@ -8,6 +8,7 @@ import {
 } from '../../models/billing'
 import { rupiah, shortDate } from '../../shared/format'
 import { Chip } from '../components/RecordControls'
+import { Money } from '../components/Money'
 
 export function StatusChip({ status }: { status: BillingStatus }) {
   return <Chip tone={BILLING_STATUS_TONE[status]}>{BILLING_STATUS_LABEL[status]}</Chip>
@@ -47,12 +48,12 @@ export function ReferenceCell({ reference, sources }: {
 
 export function BalanceCell({ record }: { record: BillingBalance }) {
   if (record.outstanding === 0) {
-    return <span className="text-slate-500">{rupiah(0)}</span>
+    return <span className="text-slate-500"><Money>{rupiah(0)}</Money></span>
   }
 
   return (
     <span className="flex flex-col items-end">
-      <span className="font-medium text-slate-900">{rupiah(record.outstanding)}</span>
+      <span className="font-medium text-slate-900"><Money>{rupiah(record.outstanding)}</Money></span>
       {record.paidAmount > 0 ? (
         <span className="text-xs text-slate-500">terbayar {paidPercent(record)}%</span>
       ) : null}

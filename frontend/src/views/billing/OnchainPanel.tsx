@@ -31,6 +31,7 @@ import { BUTTON_BASE, BUTTON_SUBTLE, Button, CONTROL_CLASS, ErrorNote, Field, LA
 import { FormPanel, Pager } from '../components/RecordControls'
 import { AmountSummary, CopyButton, OnchainStatusChip, TxLink } from '../pay/PayParts'
 import { QrImage } from '../pay/QrImage'
+import { Money } from '../components/Money'
 
 function CreateRequestForm({ kind, record, config, onCreated }: {
   kind: OnchainBillingKind
@@ -187,7 +188,7 @@ function RequestItem({ request, kind }: { request: OnchainRequest; kind: Onchain
         {request.createdByName ? <p className="text-xs text-slate-500">Dibuat oleh {request.createdByName}</p> : null}
       </div>
       <span className="text-right text-sm tabular-nums">
-        <span className="block font-medium text-slate-900">{rupiah(request.amountIdr)}</span>
+        <span className="block font-medium text-slate-900"><Money>{rupiah(request.amountIdr)}</Money></span>
         <span className="block text-xs text-slate-500">{etherLabel(request.amountEth, request.chainId)}</span>
       </span>
     </li>

@@ -27,6 +27,7 @@ import { AccessScope } from '../access/AccessScope'
 import { Card, type Column, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField } from '../components/Form'
 import { Chip, FormSection, InlineConfirm } from './parts'
+import { Money } from '../components/Money'
 
 const ADMIN_ROLE = 'admin'
 const CLOSED_STATUSES: readonly string[] = ['completed', 'cancelled']
@@ -69,7 +70,7 @@ function ChangesContent({ project, contract, changes }: {
     {
       header: 'Nilai',
       align: 'right',
-      cell: (row) => (row.valueChange === 0 ? '-' : <span className="tabular-nums">{signedRupiahShort(row.valueChange, rupiahShort)}</span>),
+      cell: (row) => (row.valueChange === 0 ? '-' : <span className="tabular-nums"><Money>{signedRupiahShort(row.valueChange, rupiahShort)}</Money></span>),
     },
     { header: 'Waktu', align: 'right', cell: (row) => (row.daysChange > 0 ? `+${row.daysChange} hari` : '-') },
     {

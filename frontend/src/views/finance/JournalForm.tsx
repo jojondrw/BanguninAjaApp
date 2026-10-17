@@ -25,6 +25,7 @@ import { rupiah } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { FormPanel } from '../components/RecordControls'
+import { MoneyText } from '../components/Money'
 import { SearchSelect } from '../components/SearchSelect'
 import { amountHint } from './financeTabs'
 import { SubmitButton } from './parts'
@@ -123,7 +124,7 @@ function BalancePanel({ balance }: { balance: JournalBalance }) {
         {cells.map((cell) => (
           <div key={cell.label} className="min-w-0">
             <dt className="text-xs font-medium text-slate-500">{cell.label}</dt>
-            <dd className={`mt-1 text-sm font-semibold tabular-nums ${cell.tone}`}>{cell.value}</dd>
+            <dd className={`mt-1 text-sm font-semibold tabular-nums ${cell.tone}`}><MoneyText>{cell.value}</MoneyText></dd>
           </div>
         ))}
       </dl>

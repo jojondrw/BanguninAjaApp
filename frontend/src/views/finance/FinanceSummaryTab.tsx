@@ -4,6 +4,7 @@ import { useBudgets, useCashFlow, useCashTransactions } from '../../controllers/
 import { monthLabel, rupiahShort, shortDate } from '../../shared/format'
 import { Bar, Card, LoadFailed, Loading, Table } from '../components/Data'
 import { SignedAmount } from './parts'
+import { Money } from '../components/Money'
 
 export function FinanceSummaryTab() {
   const cashFlow = useCashFlow()
@@ -58,7 +59,7 @@ export function FinanceSummaryTab() {
                   align: 'right',
                   cell: (row) => (
                     <span className={row.net < 0 ? 'text-red-600' : 'text-green-700'}>
-                      {rupiahShort(row.net)}
+                      <Money>{rupiahShort(row.net)}</Money>
                     </span>
                   ),
                 },

@@ -12,12 +12,13 @@ import { RowAction } from '../components/ListTools'
 import { Chip } from '../components/RecordControls'
 import { cashProjectName, journalLink } from './financeTabs'
 import { RowActions, RowLink, SignedAmount } from './parts'
+import { MoneyText } from '../components/Money'
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm text-slate-900">{children}</dd>
+      <dd className="mt-1 text-sm text-slate-900"><MoneyText>{children}</MoneyText></dd>
     </div>
   )
 }
