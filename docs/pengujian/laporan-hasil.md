@@ -15,6 +15,20 @@ di [rencana pengujian](README.md).
 | System | 5 skenario, 27 langkah | 27 | 0 | 3,2 detik |
 | Acceptance | 14 skenario | 12 | 0 | 8 lewat UI, 4 lewat API; 2 belum dijalankan (pesanan pembelian, pembayaran on-chain). Persetujuan pengguna di [acceptance.md](acceptance.md) |
 
+### Pembaruan 17 Oktober: hak akses per proyek dan jejak audit
+
+Dihitung ulang pada `main` setelah PR #86 (hak akses per proyek), #87 (jejak audit
+pengguna), dan #88. Jumlah test Go dan integration dihitung dari fungsi `Test` di
+kode sumber dan semuanya lulus di CI PR #88; test frontend dijalankan ulang dengan
+Vitest. Coverage tidak diukur ulang, jadi angka coverage di bawah tetap angka sebelumnya.
+
+| Level | Jumlah | Lulus | Gagal | Catatan |
+|---|---|---|---|---|
+| Unit, backend Go | 510 test | 510 | 0 | Ditambah test hak akses per proyek dan jejak audit |
+| Unit, frontend | 161 test di 26 berkas | 161 | 0 | Ditambah test akses tim proyek dan kalimat riwayat audit |
+| Integration (PostgreSQL + PostGIS) | 11 | 11 | 0 | Ditambah peran terbatas yang hanya melihat proyek timnya, dan audit perubahan peran yang mencatat pelaku dan target |
+| Acceptance | 17 skenario | 16 | 0 | Tidak berubah; AT-13 masih menunggu dompet Sepolia |
+
 ### Pembaruan setelah termin, retensi, dan adendum
 
 Diukur ulang pada branch PR #71 (termin dan retensi), yang sudah memuat PR #67 sampai
