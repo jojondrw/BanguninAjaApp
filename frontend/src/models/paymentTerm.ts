@@ -189,7 +189,10 @@ export function remainingPercent(schedule: Pick<PaymentSchedule, 'plannedPercent
 
 // Isian awal termin berikutnya: sisa persen kontrak, dan syarat progres di atas
 // termin terakhir supaya urutannya langsung masuk akal.
-export function nextTermForm(schedule: Pick<PaymentSchedule, 'plannedPercent' | 'terms'>): PaymentTermFormValues {
+export function nextTermForm(schedule: {
+  plannedPercent: number
+  terms: Pick<PaymentTerm, 'kind' | 'requiredProgress'>[]
+}): PaymentTermFormValues {
   const progressTerms = schedule.terms.filter((term) => term.kind === 'progress')
   const last = progressTerms.at(-1)
   const remaining = remainingPercent(schedule)
@@ -208,6 +211,10 @@ export function toPaymentTermRequest(values: PaymentTermFormValues): PaymentTerm
 
 export function formatPercent(value: number): string {
   return `${value.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`
+}
+
+export function shareOfContract(part: number, whole: number): string {
+  return whole > 0 ? formatPercent(Math.round((part / whole) * 1000) / 10) : '0%'
 }
 
 // Kalimat di bawah status termin. Termin yang sudah diajukan memakai progres

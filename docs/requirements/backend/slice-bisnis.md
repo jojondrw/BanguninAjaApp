@@ -87,6 +87,12 @@ Semua di bawah `/api/projects`.
 | DELETE | `/:id/payment-terms/:childId` | Hanya termin yang belum diajukan |
 | POST | `/:id/payment-terms/:childId/claim` | Ajukan termin, membuat hutang di Tagihan |
 | POST | `/:id/retention-release` | Lepas retensi yang ditahan, membuat hutang di Tagihan |
+| GET | `/:id/owner-billing` | Kontrak dengan pemberi kerja, semua termin tagihannya, dan ringkasan penerimaan |
+| PUT | `/:id/owner-billing/contract` | Buat atau ubah kontrak pemberi kerja. Body `{ "customerId", "number", "value", "retentionPercent", "paymentTermDays" }` |
+| POST | `/:id/owner-billing/terms` | Body `{ "requiredProgress", "percent" }` |
+| DELETE | `/:id/owner-billing/terms/:childId` | Hanya termin yang belum ditagih |
+| POST | `/:id/owner-billing/terms/:childId/claim` | Tagih termin, membuat piutang di Tagihan |
+| POST | `/:id/owner-billing/retention-release` | Tagih retensi yang ditahan pemberi kerja, membuat piutang di Tagihan |
 | POST | `/:id/contract-changes` | Usulkan adendum. Body `{ "description", "valueChange", "daysChange" }`, `valueChange` negatif untuk pekerjaan kurang |
 | PATCH | `/:id/contract-changes/:childId` | Putuskan adendum. Body `{ "status": "approved" }` atau `rejected`, hanya Admin |
 | DELETE | `/:id/contract-changes/:childId` | Hapus usulan yang belum diputuskan |
@@ -198,6 +204,27 @@ karena matriks akses hanya mengenal hak per modul.
 
 Nomor adendum (`sequence`) unik per proyek dan diambil dari nomor terbesar
 ditambah satu, di dalam transaksi yang mengunci baris proyek.
+
+### Termin pemberi kerja
+
+Sisi lain termin kontraktor: developer menagih pemberi kerja (misalnya yayasan
+pemilik rumah sakit) sesuai progres berbobot proyek, dan setiap tagihan menjadi
+piutang di Tagihan. Begitu piutang itu dibayar, kasnya masuk otomatis lewat
+aturan "Pembayaran tercatat sebagai kas".
+
+| Aturan | Isi |
+|---|---|
+| Kontrak | Satu per proyek (`owner_contract`, unik per `project_id`): pemberi kerja dari tabel `customer`, nomor, nilai, retensi 0 sampai 10%, tempo bayar 0 sampai 180 hari |
+| Termin | Tabel `owner_term`, bentuknya sama dengan `payment_term` tetapi menaut `receivable_id`. Hitungan nilai kumulatif, urutan pengajuan, syarat progres, dan retensi memakai fungsi yang sama dengan termin kontraktor |
+| Tagih | Membuat piutang ke pemberi kerja senilai termin dikurangi retensi, referensi "Tagihan termin N KODE", jatuh tempo tanggal tagih ditambah tempo bayar |
+| Retensi | Ditagih sekali setelah proyek selesai dan semua termin progres sudah ditagih, referensi "Tagihan retensi KODE" |
+| Kunci kontrak | Setelah ada termin yang ditagih, pemberi kerja, nilai, retensi, dan tempo tidak bisa diubah (409 `owner_contract_locked`); nomor kontrak tetap boleh diubah |
+| Hak akses | Sama dengan termin kontraktor: butuh hak tulis Proyek dan keanggotaan tim proyek |
+
+Modul Proyek tidak mengimpor Tagihan secara langsung untuk ini: antarmuka
+`BillingLedger` (dulu `PayableLedger`) punya `RecordPayable` dan
+`RecordReceivable`, dan adapternya ke `billing.PayableLedger` serta
+`billing.ReceivableLedger` ada di `project/module.go`.
 
 ### Tim proyek
 

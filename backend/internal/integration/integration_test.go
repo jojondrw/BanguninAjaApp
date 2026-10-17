@@ -68,7 +68,7 @@ func TestMigrationsCanRunAgainOnAnUpToDateDatabase(t *testing.T) {
 
 func TestWeightedProgressIsStoredAndDeletingAPhaseUnlinksItsBudgetItems(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	unit := newUnit(t)
 
@@ -122,7 +122,7 @@ func TestWeightedProgressIsStoredAndDeletingAPhaseUnlinksItsBudgetItems(t *testi
 
 func TestDailyReportForADayThatAlreadyHasOneIsRejectedByTheDatabase(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	workers := 25
 	day := time.Now().AddDate(0, 0, -1)
@@ -146,7 +146,7 @@ func TestDailyReportForADayThatAlreadyHasOneIsRejectedByTheDatabase(t *testing.T
 
 func TestDeletingAProjectRemovesItsDailyReportsAndProgressHistory(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	workers := 10
 	day := time.Now().AddDate(0, 0, -2)
@@ -260,7 +260,7 @@ func newContractor(t *testing.T) uuid.UUID {
 
 func TestClaimedTermBecomesAPayableAndDeletingThePayableReopensTheTerm(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	contractor := newContractor(t)
 	retention := 5.0
@@ -330,7 +330,7 @@ func TestAProjectCanReleaseItsRetentionOnlyOnce(t *testing.T) {
 
 func TestApprovedChangeOrderRaisesTheValueUsedForTheNextClaim(t *testing.T) {
 	ctx := context.Background()
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	retention := 5.0
 	if _, err := projects.SaveContract(ctx, created.ID, project.ContractRequest{

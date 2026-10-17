@@ -13,6 +13,11 @@ import {
 } from '../models/paymentTerm'
 import { financeApi, projectApi } from '../models/erpApi'
 import {
+  toOwnerContractRequest,
+  type OwnerContractFormValues,
+  type OwnerSchedule,
+} from '../models/ownerBilling'
+import {
   lastMonthsRange,
   toCashTransactionRequest,
   type CashTransactionFormValues,
@@ -413,4 +418,56 @@ export function useDeleteContractChange(projectId: string) {
   return useScheduleMutation(projectId, (changeId: string) =>
     projectWorkspaceApi.deleteContractChange(projectId, changeId),
   )
+}
+
+export function useOwnerSchedule(projectId: string) {
+  return useQuery({
+    queryKey: detailKey(projectId, 'owner-billing'),
+    queryFn: () => projectWorkspaceApi.ownerSchedule(projectId),
+    ...DATA_QUERY,
+  })
+}
+
+// Menagih termin dan melepas retensi membuat piutang baru, sehingga daftar di
+// modul Tagihan ikut disegarkan.
+function useOwnerMutation<Input>(
+  projectId: string,
+  mutationFn: (input: Input) => Promise<OwnerSchedule>,
+  createsReceivable = false,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn,
+    onSuccess: (schedule) => {
+      queryClient.setQueryData(detailKey(projectId, 'owner-billing'), schedule)
+      if (createsReceivable) {
+        void queryClient.invalidateQueries({ queryKey: [BILLING_KEY] })
+      }
+    },
+  })
+}
+
+export function useSaveOwnerContract(projectId: string) {
+  return useOwnerMutation(projectId, (values: OwnerContractFormValues) =>
+    projectWorkspaceApi.saveOwnerContract(projectId, toOwnerContractRequest(values)),
+  )
+}
+
+export function useCreateOwnerTerm(projectId: string) {
+  return useOwnerMutation(projectId, (values: PaymentTermFormValues) =>
+    projectWorkspaceApi.createOwnerTerm(projectId, toPaymentTermRequest(values)),
+  )
+}
+
+export function useDeleteOwnerTerm(projectId: string) {
+  return useOwnerMutation(projectId, (termId: string) => projectWorkspaceApi.deleteOwnerTerm(projectId, termId))
+}
+
+export function useClaimOwnerTerm(projectId: string) {
+  return useOwnerMutation(projectId, (termId: string) => projectWorkspaceApi.claimOwnerTerm(projectId, termId), true)
+}
+
+export function useReleaseOwnerRetention(projectId: string) {
+  return useOwnerMutation<void>(projectId, () => projectWorkspaceApi.releaseOwnerRetention(projectId), true)
 }

@@ -95,7 +95,7 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &ContractChange{}, &Permit{}, &ProjectMember{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &ContractChange{}, &Permit{}, &ProjectMember{}, &OwnerContract{}, &OwnerTerm{}}
 }
 
 func Indexes() []string {
@@ -103,6 +103,7 @@ func Indexes() []string {
 		`CREATE INDEX IF NOT EXISTS idx_project_name_trgm ON project USING gin (name gin_trgm_ops)`,
 		`CREATE INDEX IF NOT EXISTS idx_project_code_pattern ON project (code text_pattern_ops)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_term_retention ON payment_term (project_id) WHERE kind = 'retention'`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS uq_owner_term_retention ON owner_term (project_id) WHERE kind = 'retention'`,
 	}
 }
 
@@ -121,6 +122,11 @@ func Constraints() []string {
 		database.ForeignKey("payment_term", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("payment_term", "payable_id", "payable", database.DeleteSetNull),
 		database.ForeignKey("payment_term", "claimed_by", "users", database.DeleteSetNull),
+		database.ForeignKey("owner_contract", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("owner_contract", "customer_id", "customer", database.DeleteRestrict),
+		database.ForeignKey("owner_term", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("owner_term", "receivable_id", "receivable", database.DeleteSetNull),
+		database.ForeignKey("owner_term", "claimed_by", "users", database.DeleteSetNull),
 		database.ForeignKey("contract_change", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("contract_change", "proposed_by", "users", database.DeleteSetNull),
 		database.ForeignKey("contract_change", "decided_by", "users", database.DeleteSetNull),
@@ -145,6 +151,13 @@ func Constraints() []string {
 		database.Check("payment_term", "required_progress", "required_progress BETWEEN 0 AND 100"),
 		database.Check("payment_term", "percent", "percent BETWEEN 0 AND 100"),
 		database.Check("payment_term", "amount", "gross_amount >= 0 AND retention_amount BETWEEN 0 AND gross_amount"),
+		database.Check("owner_contract", "value", "value > 0"),
+		database.Check("owner_contract", "retention", "retention_percent BETWEEN 0 AND 10"),
+		database.Check("owner_contract", "payment_term_days", "payment_term_days BETWEEN 0 AND 180"),
+		database.Check("owner_term", "kind", "kind IN ('progress','retention')"),
+		database.Check("owner_term", "required_progress", "required_progress BETWEEN 0 AND 100"),
+		database.Check("owner_term", "percent", "percent BETWEEN 0 AND 100"),
+		database.Check("owner_term", "amount", "gross_amount >= 0 AND retention_amount BETWEEN 0 AND gross_amount"),
 		database.Check("contract_change", "status", "status IN ('proposed','approved','rejected')"),
 		database.Check("contract_change", "not_empty", "value_change <> 0 OR days_change <> 0"),
 		database.Check("contract_change", "days", "days_change >= 0"),

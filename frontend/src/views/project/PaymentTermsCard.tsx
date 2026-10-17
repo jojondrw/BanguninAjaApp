@@ -18,6 +18,7 @@ import {
   nextTermForm,
   remainingPercent,
   RETENTION_MAX_PERCENT,
+  shareOfContract,
   signedRupiahShort,
   TERM_STATE_LABEL,
   TERM_STATE_TONE,
@@ -162,7 +163,7 @@ function ScheduleBody({ project, schedule, contract, canWrite }: {
         <Fact label="Nilai kontrak" note={contractValueNote(contract)}>
           <Money>{rupiahShort(contract.currentValue)}</Money>
         </Fact>
-        <Fact label="Sudah diajukan" note={`${shareOf(schedule.claimedAmount, contract.currentValue)} dari kontrak`}>
+        <Fact label="Sudah diajukan" note={`${shareOfContract(schedule.claimedAmount, contract.currentValue)} dari kontrak`}>
           <Money>{rupiahShort(schedule.claimedAmount)}</Money>
         </Fact>
         <Fact label="Sudah dibayar" note="lewat modul Tagihan">
@@ -313,11 +314,7 @@ function retentionNote(schedule: PaymentSchedule): string {
   return schedule.retentionHeld > 0 ? 'dilepas setelah serah terima' : 'belum ada yang ditahan'
 }
 
-function shareOf(part: number, whole: number): string {
-  return whole > 0 ? formatPercent(Math.round((part / whole) * 1000) / 10) : '0%'
-}
-
-function Fact({ label, note, children }: { label: string; note: string; children: ReactNode }) {
+export function Fact({ label, note, children }: { label: string; note: string; children: ReactNode }) {
   return (
     <div>
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
@@ -327,7 +324,7 @@ function Fact({ label, note, children }: { label: string; note: string; children
   )
 }
 
-function Stacked({ children, note, align = 'right' }: { children: ReactNode; note?: string; align?: 'left' | 'right' }) {
+export function Stacked({ children, note, align = 'right' }: { children: ReactNode; note?: string; align?: 'left' | 'right' }) {
   return (
     <span className={`inline-flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
       <span className="tabular-nums"><MoneyText>{children}</MoneyText></span>

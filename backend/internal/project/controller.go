@@ -491,6 +491,86 @@ func (c *Controller) ReleaseRetention(ctx *gin.Context) {
 	httpresponse.Respond(ctx, schedule, err)
 }
 
+func (c *Controller) OwnerSchedule(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.OwnerSchedule(ctx.Request.Context(), projectID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) SaveOwnerContract(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request OwnerContractRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.SaveOwnerContract(ctx.Request.Context(), projectID, request)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) CreateOwnerTerm(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	var request PaymentTermRequest
+	if err := httprequest.BindJSON(ctx, &request); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.CreateOwnerTerm(ctx.Request.Context(), projectID, request)
+	httpresponse.RespondCreated(ctx, schedule, err)
+}
+
+func (c *Controller) DeleteOwnerTerm(ctx *gin.Context) {
+	projectID, termID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.DeleteOwnerTerm(ctx.Request.Context(), projectID, termID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) ClaimOwnerTerm(ctx *gin.Context) {
+	projectID, termID, err := nestedIDs(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.ClaimOwnerTerm(ctx.Request.Context(), projectID, termID, actorID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
+func (c *Controller) ReleaseOwnerRetention(ctx *gin.Context) {
+	projectID, err := httprequest.PathID(ctx, projectParam)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	schedule, err := c.service.ReleaseOwnerRetention(ctx.Request.Context(), projectID, actorID)
+	httpresponse.Respond(ctx, schedule, err)
+}
+
 func (c *Controller) ProposeContractChange(ctx *gin.Context) {
 	projectID, err := httprequest.PathID(ctx, projectParam)
 	if err != nil {

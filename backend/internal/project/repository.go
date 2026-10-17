@@ -124,7 +124,17 @@ type Repository interface {
 	CreateContract(ctx context.Context, contract *ConstructionContract) error
 	SaveContract(ctx context.Context, contract *ConstructionContract) error
 	FindContractVendor(ctx context.Context, id uuid.UUID) (ContractVendor, error)
-	Payables() PayableLedger
+
+	ListOwnerTerms(ctx context.Context, projectID uuid.UUID) ([]PaymentTermRow, error)
+	FindOwnerTerm(ctx context.Context, projectID, id uuid.UUID) (OwnerTerm, error)
+	CreateOwnerTerm(ctx context.Context, term *OwnerTerm) error
+	SaveOwnerTerm(ctx context.Context, term *OwnerTerm) error
+	DeleteOwnerTerm(ctx context.Context, projectID, id uuid.UUID) error
+	FindOwnerContract(ctx context.Context, projectID uuid.UUID) (OwnerContract, error)
+	CreateOwnerContract(ctx context.Context, contract *OwnerContract) error
+	SaveOwnerContract(ctx context.Context, contract *OwnerContract) error
+	FindOwnerCustomerName(ctx context.Context, id uuid.UUID) (string, error)
+	Billing() BillingLedger
 	ListContractChanges(ctx context.Context, projectID uuid.UUID) ([]ContractChangeRow, error)
 	FindContractChange(ctx context.Context, projectID, id uuid.UUID) (ContractChange, error)
 	CreateContractChange(ctx context.Context, change *ContractChange) error
@@ -153,17 +163,17 @@ type Repository interface {
 }
 
 type gormRepository struct {
-	db       *gorm.DB
-	payables PayableLedgerFactory
+	db      *gorm.DB
+	billing BillingLedgerFactory
 }
 
-func NewRepository(db *gorm.DB, payables PayableLedgerFactory) Repository {
-	return &gormRepository{db: db, payables: payables}
+func NewRepository(db *gorm.DB, billing BillingLedgerFactory) Repository {
+	return &gormRepository{db: db, billing: billing}
 }
 
 func (r *gormRepository) Transaction(ctx context.Context, work func(Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return work(&gormRepository{db: tx, payables: r.payables})
+		return work(&gormRepository{db: tx, billing: r.billing})
 	})
 }
 

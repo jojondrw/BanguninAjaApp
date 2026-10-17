@@ -28,6 +28,7 @@ import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../component
 import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
 import { ContractChangesCard } from './ContractChangesCard'
+import { OwnerBillingCard } from './OwnerBillingCard'
 import { PaymentTermsCard } from './PaymentTermsCard'
 import { MoneyText } from '../components/Money'
 
@@ -95,6 +96,8 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
           ) : null}
         </Card>
       </div>
+
+      <OwnerBillingCard project={project} />
 
       <PaymentTermsCard project={project} />
 

@@ -28,7 +28,7 @@ func TestPayingAPayableWritesCashAndAJournalThatFinanceCannotEdit(t *testing.T) 
 	ctx := context.Background()
 	cashAccount := ensureAccount(t, "1110", "Kas", "asset")
 	payableAccount := ensureAccount(t, "2100", "Utang Usaha", "liability")
-	projects := project.NewService(project.NewRepository(db, project.NewBillingPayables))
+	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
 	bills := billing.NewService(billing.NewRepository(db, billing.NewFinanceCashBook))
 

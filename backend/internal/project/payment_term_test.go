@@ -146,7 +146,7 @@ func (f *termRepository) DeletePaymentTerm(_ context.Context, _, id uuid.UUID) e
 	return database.ErrNotFound
 }
 
-func (f *termRepository) Payables() PayableLedger {
+func (f *termRepository) Billing() BillingLedger {
 	return f
 }
 
@@ -197,9 +197,13 @@ func (f *termRepository) DeleteContractChange(_ context.Context, _, id uuid.UUID
 	return database.ErrNotFound
 }
 
-func (f *termRepository) Record(_ context.Context, entry PayableEntry) (uuid.UUID, error) {
+func (f *termRepository) RecordPayable(_ context.Context, entry PayableEntry) (uuid.UUID, error) {
 	f.recorded = append(f.recorded, entry)
 	return uuid.New(), nil
+}
+
+func (f *termRepository) RecordReceivable(context.Context, ReceivableEntry) (uuid.UUID, error) {
+	return uuid.Nil, errors.New("contractor terms never bill a receivable")
 }
 
 func termService(repository *termRepository) *service {
