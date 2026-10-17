@@ -21,12 +21,11 @@ gantt
     Semua tugas selesai              :milestone, r4, 2026-09-27, 0d
 
     section Realisasi
-    Studi kelayakan data             :done, a0, 2026-09-07, 2026-09-14
-    Inkremen 0 fondasi               :done, a1, 2026-09-17, 2026-09-28
-    Inkremen 1 MVP lengkap           :done, a2, 2026-10-02, 2026-10-04
+    Sprint 0 eksplorasi data         :done, a0, 2026-09-07, 2026-09-14
+    Sprint 1 fondasi                 :done, a1, 2026-09-14, 2026-09-28
+    Sprint 2 MVP lengkap             :done, a2, 2026-09-28, 2026-10-05
     MVP terintegrasi                 :milestone, a3, 2026-10-03, 0d
-    Inkremen 2 banyak peran          :done, a4, 2026-10-15, 1d
-    Inkremen 3 kualitas dan domain   :done, a5, 2026-10-16, 2026-10-18
+    Sprint 3 peran, mutu, domain     :done, a5, 2026-10-12, 2026-10-19
 
     section Dokumentasi dan mutu
     Requirements dan aturan          :done, d1, 2026-09-18, 2026-10-18
@@ -41,7 +40,7 @@ gantt
 |---|---|---|---|
 | Aplikasi terintegrasi dan bisa didemokan | 27 September | 3 Oktober (#43) | 6 hari terlambat |
 | Cakupan MVP | Tiga tab: Ringkasan, Analisis Lokasi, Keuangan | Semua modul ERP, termasuk Penjualan, Pengadaan, Inventaris, dan SDM yang semula P2 | Cakupan lebih luas dari rencana |
-| Pembagian kerja | Lima vertikal paralel, satu orang satu fitur | Fondasi dikerjakan empat orang; inkremen 1 sampai 3 dikerjakan terutama oleh satu orang | Integrasi menumpuk di satu orang |
+| Pembagian kerja | Lima vertikal paralel, satu orang satu fitur | Sprint 1 dikerjakan empat orang; sprint 2 dan 3 dikerjakan terutama oleh satu orang | Integrasi menumpuk di satu orang |
 | Hari tanpa commit | Tidak direncanakan | 28 September sampai 1 Oktober, dan 4 sampai 14 Oktober | Dua jeda, pekerjaan berlanjut dalam beberapa hari yang padat |
 
 ## 2. Work Breakdown Structure

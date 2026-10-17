@@ -5,31 +5,37 @@ angka diambil dari riwayat git dua repositori: repositori data `BanguninAja`
 (skrip pengumpulan data dan catatan arsitektur) dan repositori aplikasi
 `BanguninAjaApp`. Jadwalnya ada di [jadwal dan pembagian kerja](jadwal.md).
 
-## 1. Model yang dipakai: iteratif dan inkremental
+## 1. Model yang dipakai: Scrum dengan prototipe
 
-BanguninAja dibangun dalam beberapa **inkremen**. Setiap inkremen menambah fitur
-di atas aplikasi yang sudah berjalan, dan sebelum inkremen pertama ada satu
-putaran eksplorasi untuk risiko terbesar proyek, yaitu ketersediaan data.
+Tim memakai **Scrum**, kerangka agile yang iteratif dan inkremental: pekerjaan
+dipecah menjadi sprint pendek, setiap sprint ditutup dengan inkremen aplikasi
+yang bisa dijalankan, dan prioritas berikutnya disesuaikan dari umpan balik
+pemilik produk. Tampilan disepakati lebih dulu lewat **prototipe**. Sebelum
+sprint pertama ada sprint 0 untuk risiko terbesar proyek, yaitu ketersediaan
+data. Model ini sama dengan yang disampaikan di presentasi progres.
 
-| Ciri model | Bukti di repositori |
+| Unsur Scrum | Penerapan di BanguninAja | Bukti |
+|---|---|---|
+| Pemilik produk | Derick menetapkan prioritas dan menerima hasil setiap sprint | Keputusan fitur P1 dan permintaan UI yang lebih lega menjadi #60 sampai #87 |
+| Product backlog | Tugas T1 sampai T19 dan G1 sampai G6 di `PROJECT_HANDOFF.md`; sejak 17 Oktober issue #78 sampai #85 di milestone [AoL akhir](https://github.com/jojondrw/BanguninAjaApp/milestone/1) | `PROJECT_HANDOFF.md`, GitHub Issues |
+| Sprint dan inkremen | Sprint satu sampai dua minggu (bagian 3). Setiap perubahan masuk ke `main` lewat pull request dan CI hijau, jadi `main` selalu bisa dijalankan | Sejak 2 Oktober semua perubahan lewat PR, kecuali satu pembaruan dokumen handoff hari itu; fase fondasi masih punya 14 commit langsung |
+| Sprint review | Presentasi progres dan demo aplikasi kepada dosen | Tujuh versi deck presentasi progres |
+| Definition of done | Test lulus di CI, dokumen ikut diperbarui, perubahan UI dicek di browser | Bagian 4 |
+| Prototipe | Tampilan disepakati sebelum dibangun, lalu diperhalus lewat tinjauan desain | Deck progres, tinjauan desain #53 dan #54 |
+| Kebutuhan yang berubah | Analisis [kelengkapan domain](../analisis/kelengkapan-domain.md) (16 Oktober) menambah empat fitur P1 ke backlog, dan keempatnya selesai di sprint 3 | #61, #65, #71, #72 |
+
+### Kenapa Scrum, bukan model lain
+
+| Model | Alasan tidak dipilih |
 |---|---|
-| Risiko terbesar dikerjakan lebih dulu | Fitur utama (analisis lokasi) bergantung pada data GIS nasional yang belum pasti ada. Minggu pertama (7 sampai 13 September) dipakai untuk mencari sumber data: 34 commit di repositori data. Data RDTR dengan KDB dan KLB baru ditemukan bisa diambil pada 12 September |
-| Setiap inkremen menghasilkan perangkat lunak yang berjalan | Sejak 2 Oktober, perubahan ke `main` masuk lewat pull request (satu pengecualian: pembaruan dokumen handoff pada hari itu). Setiap PR menjalankan CI dan digabung setelah hijau, jadi `main` selalu bisa dijalankan. Pada fase fondasi masih ada 14 commit langsung ke `main` |
-| Kebutuhan bertambah di tengah jalan | Analisis [kelengkapan domain](../analisis/kelengkapan-domain.md) (16 Oktober) menambah empat fitur P1, yaitu progres berbobot, laporan harian, termin, dan adendum. Keempatnya selesai di inkremen 3 |
-| Umpan balik pemilik produk masuk ke inkremen berikutnya | Permintaan UI yang lebih lega dan isi domain yang lebih realistis menjadi #60 sampai #72 |
-
-### Kenapa bukan model lain
-
-| Model | Alasan tidak dipakai utuh |
-|---|---|
-| Waterfall | Kebutuhan tidak bisa dibekukan sebelum datanya pasti ada. Ketersediaan harga tanah, RDTR, dan data bencana baru terjawab pada 11 dan 12 September. Pekerjaan juga terpotong jadwal kuliah menjadi beberapa periode pendek, bukan satu alur panjang |
-| Scrum murni | Tim mahasiswa tidak punya sprint berdurasi tetap dan rapat harian yang tercatat. Unsur Scrum yang dipakai: backlog tugas (T1 sampai T19 dan daftar G1 sampai G6 di `PROJECT_HANDOFF.md`), satu pemilik produk, inkremen yang bisa didemokan, dan tinjauan lewat pull request |
-| Spiral | Putaran pertamanya dipakai (eksplorasi risiko data), tetapi analisis risiko formal per putaran baru ditulis di [risiko dan keamanan](../analisis/risiko-keamanan.md) pada 16 Oktober |
+| Waterfall | Kebutuhan tidak bisa dibekukan sebelum datanya pasti ada. Ketersediaan harga tanah, RDTR, dan data bencana baru terjawab pada 11 dan 12 September |
+| V-Model | Setiap tahap pengujian terikat pada dokumen tahap yang sudah beku; tidak cocok saat kebutuhan masih berubah |
+| Spiral | Analisis risiko formal di setiap putaran terlalu berat untuk tim kecil. Gagasan "risiko terbesar dulu" tetap dipakai sebagai sprint 0 |
 
 ## 2. Tahapan SDLC dan artefaknya
 
 Tahapan tidak berjalan berurutan sekali jalan. Analisis, desain, implementasi,
-dan pengujian berulang di setiap inkremen. Tabel ini mencatat kapan tiap tahapan
+dan pengujian berulang di setiap sprint. Tabel ini mencatat kapan tiap tahapan
 pertama kali dikerjakan dan di mana hasilnya disimpan.
 
 | Tahapan | Mulai | Kegiatan | Artefak |
@@ -37,7 +43,7 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | Perencanaan dan studi kelayakan | 7 September | Mencari dan menguji sumber data (BPS, InaRISK, ZNT, RDTR, Pusiknas), memilih arsitektur, membagi pekerjaan | Repositori data: tracker dataset, desain data, catatan arsitektur, `PROJECT_HANDOFF.md` dengan pembagian kerja dan target |
 | Analisis kebutuhan | 18 September | Aturan arsitektur, skema database, aturan UI, peran dan hak akses, celah domain | [requirements](../requirements), [use case](../desain/use-case.md), [kelengkapan domain](../analisis/kelengkapan-domain.md) |
 | Desain | 18 September (skema), 16 Oktober (UML lengkap) | ERD, class, sequence, state dan activity, deployment | [desain sistem](../desain/README.md) |
-| Implementasi | 17 September | Empat inkremen, lihat bagian 3 | `backend/`, `frontend/`, `scoring/` |
+| Implementasi | 17 September | Tiga sprint pembangunan setelah sprint 0, lihat bagian 3 | `backend/`, `frontend/`, `scoring/` |
 | Pengujian | 23 September (unit test pertama) | Unit, integration, system, acceptance. CI sejak 2 Oktober | [pengujian](../pengujian/README.md) |
 | Deployment | 2 Oktober | Docker Compose untuk pengembangan, demo online lewat Vercel dan Cloudflare tunnel | [deployment](../desain/deployment.md) |
 | Pemeliharaan | 2 Oktober | Perbaikan lewat branch `fix/*`, misalnya #70: bug pencarian zona yang ditemukan integration test di CI | Pull request berawalan `fix` |
@@ -55,14 +61,17 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | Deployment | Dockerfile produksi, Vercel, Cloudflare Tunnel | Frontend di Vercel, API demo dari laptop lewat tunnel tanpa membuka port |
 | Manajemen proyek dan kolaborasi | GitHub Issues dengan milestone dan label prioritas, pull request, GitHub Actions, Gantt Mermaid | Sampai 17 Oktober tugas dilacak di `PROJECT_HANDOFF.md` dan terlihat sebagai PR beserta status CI-nya. Sejak itu sisa pekerjaan menjadi issue #78 sampai #85 di milestone [AoL akhir](https://github.com/jojondrw/BanguninAjaApp/milestone/1), dan PR yang menyelesaikannya menutup issue-nya secara otomatis |
 
-## 3. Inkremen
+## 3. Sprint
 
-| Inkremen | Tanggal | Isi | PR |
+| Sprint | Tanggal | Hasil | PR |
 |---|---|---|---|
-| 0. Fondasi | 17 sampai 27 September | Auth dengan access dan refresh token, skema database, Docker, lapisan service dan controller semua slice, regulasi, berita, evaluasi lokasi, kerangka peta | #1 sampai #3 dan commit langsung |
-| 1. MVP lengkap | 2 sampai 3 Oktober | Penilaian lokasi dari data GIS sungguhan, lapisan peta, ruang kerja proyek, semua layar ERP, modul yang saling terhubung (G1 sampai G6), CI | #4 sampai #43 |
-| 2. Siap dipakai banyak peran | 15 Oktober | Hak akses 7 peran, laporan PDF, XLSX, dan CSV, data demo, tim proyek, data master, pembayaran on-chain, tinjauan desain | #44 sampai #53 |
-| 3. Kualitas dan kedalaman domain | 16 sampai 17 Oktober | Dokumen UML, test keamanan dan integration, performa evaluasi lokasi, ruang lega, progres berbobot, laporan harian, termin dan retensi, adendum, perbaikan keamanan dan kerentanan dependensi | #54 sampai #74 |
+| 0. Eksplorasi data | 7 sampai 13 September | Sumber data nasional diuji dan diambil, arsitektur dan desain data ditulis | Repositori data |
+| 1. Fondasi | 14 sampai 27 September | Auth dengan access dan refresh token, skema database, Docker, lapisan service dan controller semua slice, regulasi, berita, evaluasi lokasi, kerangka peta | #1 sampai #3 dan commit langsung |
+| 2. MVP lengkap | 28 September sampai 4 Oktober | Penilaian lokasi dari data GIS sungguhan, lapisan peta, ruang kerja proyek, semua layar ERP, modul yang saling terhubung (G1 sampai G6), CI | #4 sampai #43 |
+| 3. Banyak peran, mutu, dan kedalaman domain | 12 sampai 18 Oktober | Hak akses 7 peran dan per proyek, laporan, data demo, pembayaran on-chain, dokumen UML, pengujian empat level, keamanan, progres berbobot, laporan harian, termin dan retensi, adendum, jejak audit | #44 sampai #87 |
+
+Tidak ada commit pada 5 sampai 11 Oktober, sehingga minggu itu tidak dihitung
+sebagai sprint.
 
 ## 4. Praktik yang dijalankan di setiap perubahan
 
@@ -83,5 +92,6 @@ Bagian ini sengaja dicatat supaya bisa diperbaiki, bukan disembunyikan.
 |---|---|---|
 | Sebagian besar PR sejak 2 Oktober dibuat dan digabung oleh satu orang | Tinjauan kode oleh orang kedua hampir tidak ada | Setiap anggota memegang tugas lewat branch dan PR sendiri, dan setiap PR ditinjau minimal satu anggota lain |
 | Branch `main` belum dilindungi | Push langsung ke `main` masih mungkin | Pemilik repositori (`jojondrw`) mengaktifkan branch protection: wajib PR, wajib CI hijau, wajib satu persetujuan |
+| Daily scrum dan retrospektif tidak tercatat | Kendala antar-anggota sulit ditelusuri, dan perbaikan proses tidak terdokumentasi | Catat ringkasan singkat di issue atau PR setiap akhir sprint |
 | Target 27 September terlewat | MVP terintegrasi baru tercapai 3 Oktober, enam hari dari target | Lihat analisis rencana dan realisasi di [jadwal](jadwal.md) |
-| Dokumen UML ditulis setelah sebagian besar kode jadi | Desain lebih banyak mendokumentasikan daripada memandu | Fitur P1 (inkremen 3) sudah memakai urutan analisis, desain, implementasi |
+| Dokumen UML ditulis setelah sebagian besar kode jadi | Desain lebih banyak mendokumentasikan daripada memandu | Fitur P1 (sprint 3) sudah memakai urutan analisis, desain, implementasi |
