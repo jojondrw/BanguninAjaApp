@@ -53,7 +53,7 @@ pertama kali dikerjakan dan di mana hasilnya disimpan.
 | Pengujian | `go test`, Vitest dan Testing Library, pytest, test integration ke PostGIS sungguhan, skrip system test, browser untuk acceptance | Empat level pengujian berjalan dengan alat yang sesuai bahasanya. Hasilnya dicatat di [laporan pengujian](../pengujian/laporan-hasil.md) |
 | Keamanan | `govulncheck`, `npm audit`, OWASP Top 10 sebagai daftar periksa | Kerentanan dependensi diperiksa otomatis di setiap PR sejak #74 |
 | Deployment | Dockerfile produksi, Vercel, Cloudflare Tunnel | Frontend di Vercel, API demo dari laptop lewat tunnel tanpa membuka port |
-| Manajemen proyek dan kolaborasi | GitHub pull request, GitHub Actions, Gantt Mermaid | Setiap tugas terlihat sebagai PR beserta status CI-nya. Belum ada papan tugas seperti GitHub Projects atau Trello; untuk sisa proyek, papan seperti itu sebaiknya dibuat tim supaya pembagian tugas terlihat di satu tempat |
+| Manajemen proyek dan kolaborasi | GitHub Issues dengan milestone dan label prioritas, pull request, GitHub Actions, Gantt Mermaid | Sampai 17 Oktober tugas dilacak di `PROJECT_HANDOFF.md` dan terlihat sebagai PR beserta status CI-nya. Sejak itu sisa pekerjaan menjadi issue #78 sampai #85 di milestone [AoL akhir](https://github.com/jojondrw/BanguninAjaApp/milestone/1), dan PR yang menyelesaikannya menutup issue-nya secara otomatis |
 
 ## 3. Inkremen
 

@@ -72,37 +72,36 @@ gantt
 | 4.3 | Pengujian unit, integration, system, acceptance | Selesai, 1 skenario acceptance (AT-13, butuh dompet Sepolia) belum dijalankan | #57, #66, #67 |
 | 4.4 | Risiko, keamanan, etika | Selesai | #69 |
 | 4.5 | Proses SDLC dan jadwal | Dokumen ini | |
-| **5** | **Presentasi akhir** | Belum | |
+| **5** | **Presentasi akhir** | Berjalan | #78 |
 
-## 3. Peran dan kontribusi
+## 3. Peran dan tanggung jawab
 
-Rencana pembagian dari `PROJECT_HANDOFF.md` repositori data, dibandingkan
-dengan penulis commit di kedua repositori sampai 17 Oktober. Jumlah commit tidak
-mengukur seluruh kontribusi; pekerjaan seperti pengujian penerimaan dan
-pengumpulan data di luar repositori tidak tercatat di sini.
+Pembagian peran mengikuti rencana 21 September di `PROJECT_HANDOFF.md`
+repositori data, dilengkapi bagian yang dikerjakan sejak itu.
 
-| Anggota | Peran dalam rencana | Commit repositori data | Commit repositori aplikasi | Bagian yang tercatat di git |
-|---|---|---|---|---|
-| Derick (`draxmit`) | Pemilik produk; pembayaran on-chain | 14 | 189 | Seed data, layanan penilaian, peta, ruang kerja proyek, layar ERP sejak Oktober, CI, dokumentasi |
-| Jonathan Andrew Saleh | Konteks deskriptif: regulasi simulasi, berita | 21 | 10 | Pengumpulan data, auth, skema database, Docker, kerangka frontend ERP |
-| Moses (`nathanaelmosesES`) | Pipeline layanan penilaian | 0 | 1 commit, 2 PR | Lapisan service dan controller untuk semua slice, kerangka peta |
-| Ian (`AnthonyBudiarto`) | Site intelligence: peta dan evaluasi lokasi | 0 | 5 | Regulasi, berita, evaluasi lokasi, halaman Analisis Lokasi |
-| Erick | Frontend ERP | 0 | 0 | Belum ada commit atas namanya |
+| Anggota | Peran dan fokus kerja |
+|---|---|
+| Derick | Pemilik produk; layanan penilaian lokasi, peta, ruang kerja proyek, layar ERP, CI, dokumentasi |
+| Jonathan Andrew Saleh | Pengumpulan data, auth, skema database, Docker, kerangka frontend ERP, konteks deskriptif lokasi |
+| Moses | Pipeline layanan penilaian, lapisan service dan controller backend |
+| Ian | Site intelligence: regulasi, berita, evaluasi lokasi, halaman Analisis Lokasi |
+| Erick | Frontend ERP |
 
-Untuk sisa pekerjaan (presentasi, skenario acceptance AT-13, hak akses
-per proyek), setiap anggota sebaiknya memegang tugasnya lewat branch dan PR
+Sisa pekerjaan dilacak sebagai issue di milestone
+[AoL akhir](https://github.com/jojondrw/BanguninAjaApp/milestone/1) (#78 sampai
+#85). Setiap anggota mengambil issue, mengerjakannya lewat branch dan PR
 sendiri, dan setiap PR ditinjau minimal satu anggota lain.
 
 ## 4. Aktivitas per minggu
 
-| Minggu | Commit repositori data | Commit repositori aplikasi | Penulis aktif |
-|---|---|---|---|
-| 7 sampai 13 September | 34 | 0 | 2 |
-| 14 sampai 20 September | 0 | 8 | 1 |
-| 21 sampai 27 September | 1 | 8 | 4 |
-| 28 September sampai 4 Oktober | 0 | 107 | 1 |
-| 5 sampai 11 Oktober | 0 | 0 | 0 |
-| 12 sampai 18 Oktober | 0 | 82 | 1 |
+| Minggu | Commit repositori data | Commit repositori aplikasi |
+|---|---|---|
+| 7 sampai 13 September | 34 | 0 |
+| 14 sampai 20 September | 0 | 8 |
+| 21 sampai 27 September | 1 | 8 |
+| 28 September sampai 4 Oktober | 0 | 107 |
+| 5 sampai 11 Oktober | 0 | 0 |
+| 12 sampai 18 Oktober | 0 | 82 |
 
 Angka commit tanpa merge commit. Repositori aplikasi juga punya 104 merge commit
 dari 72 pull request.
