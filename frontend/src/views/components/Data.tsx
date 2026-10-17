@@ -156,8 +156,8 @@ export function Bar({ percent }: { percent: number }) {
 
   return (
     <span className="flex items-center justify-end gap-2">
-      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
-        <span className="bar-fill block h-full rounded-full" style={{ width: `${safe}%` }} />
+      <span className="h-1.5 w-20 overflow-hidden rounded-[2px] bg-slate-100">
+        <span className="bar-fill block h-full rounded-[2px]" style={{ width: `${safe}%` }} />
       </span>
       <span className="w-9 text-right text-xs tabular-nums text-slate-600">{safe}%</span>
     </span>
