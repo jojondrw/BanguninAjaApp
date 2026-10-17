@@ -3,8 +3,10 @@ package hr
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/privacy"
 )
 
 const idParam = "id"
@@ -23,6 +25,7 @@ func (c *Controller) ListEmployees(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
+	query.IdentityVisible = privacy.RevealsIdentity(ctx, access.ModuleHR)
 	page, err := c.service.ListEmployees(ctx.Request.Context(), query)
 	httpresponse.Respond(ctx, page, err)
 }
@@ -39,6 +42,9 @@ func (c *Controller) GetEmployee(ctx *gin.Context) {
 		return
 	}
 	employee, err := c.service.GetEmployee(ctx.Request.Context(), id)
+	if !privacy.RevealsIdentity(ctx, access.ModuleHR) {
+		employee.IdentityNumber = privacy.MaskIdentity(employee.IdentityNumber)
+	}
 	httpresponse.Respond(ctx, employee, err)
 }
 

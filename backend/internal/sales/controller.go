@@ -4,8 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httprequest"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/httpresponse"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/privacy"
 )
 
 const (
@@ -27,6 +29,7 @@ func (c *Controller) ListCustomers(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
+	query.IdentityVisible = privacy.RevealsIdentity(ctx, access.ModuleSales)
 	page, err := c.service.ListCustomers(ctx.Request.Context(), query)
 	httpresponse.Respond(ctx, page, err)
 }
@@ -38,6 +41,9 @@ func (c *Controller) GetCustomer(ctx *gin.Context) {
 		return
 	}
 	customer, err := c.service.GetCustomer(ctx.Request.Context(), id)
+	if !privacy.RevealsIdentity(ctx, access.ModuleSales) {
+		customer.IdentityNumber = privacy.MaskIdentity(customer.IdentityNumber)
+	}
 	httpresponse.Respond(ctx, customer, err)
 }
 

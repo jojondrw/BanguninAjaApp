@@ -12,6 +12,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/privacy"
 )
 
 const (
@@ -139,14 +140,21 @@ func NewService(repository Repository) Service {
 
 func (s *service) ListCustomers(ctx context.Context, query CustomerQuery) (pagination.Page[CustomerResponse], error) {
 	customers, total, err := s.repository.ListCustomers(ctx, CustomerFilter{
-		Search: query.Search,
-		Offset: query.Offset(),
-		Limit:  query.Size(),
+		Search:         query.Search,
+		SearchIdentity: query.IdentityVisible,
+		Offset:         query.Offset(),
+		Limit:          query.Size(),
 	})
 	if err != nil {
 		return pagination.Page[CustomerResponse]{}, apperror.Internal(err)
 	}
-	return pagination.New(pagination.Map(customers, newCustomerResponse), query.Query, total), nil
+	responses := pagination.Map(customers, newCustomerResponse)
+	if !query.IdentityVisible {
+		for index := range responses {
+			responses[index].IdentityNumber = privacy.MaskIdentity(responses[index].IdentityNumber)
+		}
+	}
+	return pagination.New(responses, query.Query, total), nil
 }
 
 func (s *service) GetCustomer(ctx context.Context, id uuid.UUID) (CustomerResponse, error) {

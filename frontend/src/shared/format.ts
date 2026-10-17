@@ -76,3 +76,17 @@ export function monthLabel(period: string): string {
     year: 'numeric',
   })
 }
+
+const VISIBLE_IDENTITY_DIGITS = 4
+
+// NIK hanya ditampilkan empat digit terakhirnya di daftar dan petunjuk, sama
+// dengan yang dikirim backend ke peran yang tidak boleh mengubah data itu.
+export function maskIdentity(value: string): string {
+  const characters = [...value]
+  if (characters.length <= VISIBLE_IDENTITY_DIGITS) {
+    return '•'.repeat(characters.length)
+  }
+  const hidden = characters.length - VISIBLE_IDENTITY_DIGITS
+  return '•'.repeat(hidden) + characters.slice(hidden).join('')
+}
+

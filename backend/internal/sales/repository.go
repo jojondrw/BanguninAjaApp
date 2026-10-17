@@ -35,9 +35,10 @@ const (
 )
 
 type CustomerFilter struct {
-	Search string
-	Offset int
-	Limit  int
+	Search         string
+	SearchIdentity bool
+	Offset         int
+	Limit          int
 }
 
 type UnitFilter struct {
@@ -447,7 +448,10 @@ func (r *gormRepository) deleteWhere(ctx context.Context, model any, condition s
 func (f CustomerFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.Search != "" {
 		pattern := database.ContainsPattern(f.Search)
-		db = db.Where("(name ILIKE ? OR email ILIKE ? OR identity_number ILIKE ?)", pattern, pattern, pattern)
+		if f.SearchIdentity {
+			return db.Where("(name ILIKE ? OR email ILIKE ? OR identity_number ILIKE ?)", pattern, pattern, pattern)
+		}
+		db = db.Where("(name ILIKE ? OR email ILIKE ?)", pattern, pattern)
 	}
 	return db
 }

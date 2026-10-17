@@ -9,6 +9,7 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/reporting/export"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/privacy"
 )
 
 const (
@@ -363,7 +364,7 @@ func payrollDetailSection(payrolls []PayrollRow) export.Section {
 	for _, payroll := range payrolls {
 		totals = totals.add(payroll)
 		section.Rows = append(section.Rows, []any{
-			periodLabel(payroll.Period), payroll.IdentityNumber, payroll.EmployeeName, payroll.Position,
+			periodLabel(payroll.Period), privacy.MaskIdentity(payroll.IdentityNumber), payroll.EmployeeName, payroll.Position,
 			projectText(payroll.ProjectCode, payroll.ProjectName), payroll.BasicPay, payroll.Allowance, payroll.Deduction, payroll.NetPay,
 			paidLabel(payroll.Paid),
 		})

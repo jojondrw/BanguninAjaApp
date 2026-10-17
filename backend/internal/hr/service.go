@@ -10,6 +10,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/pagination"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/privacy"
 )
 
 const (
@@ -92,6 +93,7 @@ func (s *service) ListEmployees(ctx context.Context, query EmployeeQuery) (pagin
 	today := s.today()
 	employees, total, err := s.repository.ListEmployees(ctx, EmployeeFilter{
 		Search:         query.Search,
+		SearchIdentity: query.IdentityVisible,
 		EmploymentType: query.EmploymentType,
 		ProjectID:      query.ProjectID,
 		Active:         query.Active,
@@ -103,7 +105,11 @@ func (s *service) ListEmployees(ctx context.Context, query EmployeeQuery) (pagin
 		return pagination.Page[EmployeeResponse]{}, apperror.Internal(err)
 	}
 	responses := pagination.Map(employees, func(employee Employee) EmployeeResponse {
-		return newEmployeeResponse(employee, today)
+		response := newEmployeeResponse(employee, today)
+		if !query.IdentityVisible {
+			response.IdentityNumber = privacy.MaskIdentity(response.IdentityNumber)
+		}
+		return response
 	})
 	return pagination.New(responses, query.Query, total), nil
 }

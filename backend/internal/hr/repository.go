@@ -26,6 +26,7 @@ const (
 
 type EmployeeFilter struct {
 	Search         string
+	SearchIdentity bool
 	EmploymentType string
 	ProjectID      *uuid.UUID
 	Active         *bool
@@ -293,7 +294,11 @@ func (r *gormRepository) deleteByID(ctx context.Context, model any, id uuid.UUID
 func (f EmployeeFilter) apply(db *gorm.DB) *gorm.DB {
 	if f.Search != "" {
 		pattern := database.ContainsPattern(f.Search)
-		db = db.Where("(name ILIKE ? OR identity_number ILIKE ?)", pattern, pattern)
+		if f.SearchIdentity {
+			db = db.Where("(name ILIKE ? OR identity_number ILIKE ?)", pattern, pattern)
+		} else {
+			db = db.Where("name ILIKE ?", pattern)
+		}
 	}
 	if f.EmploymentType != "" {
 		db = db.Where("employment_type = ?", f.EmploymentType)

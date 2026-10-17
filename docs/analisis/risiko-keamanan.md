@@ -53,10 +53,10 @@ diketahui), **Diperbaiki** (celah ditemukan dan ditutup pada siklus ini).
 | Kategori | Status | Kontrol yang ada | Celah yang tersisa |
 |---|---|---|---|
 | A01 Broken Access Control | Sebagian | Matriks peran per modul diperiksa backend di setiap request (`shared/access`, middleware `Authorization`), termasuk status aktif; frontend menyembunyikan tombol ubah; rute publik hanya `/auth` dan `/pay/:token` dengan token acak. Di modul Proyek, peran selain Admin, Pengamat, dan Keuangan hanya bisa membuka proyek yang timnya memuat mereka (#82), dengan middleware yang menolak peran tak dikenal | Modul lain yang menyaring per proyek (keuangan, tagihan, pengadaan, laporan) belum mengikuti keanggotaan tim |
-| A02 Cryptographic Failures | Sebagian | Kata sandi bcrypt; refresh token 32 byte acak, disimpan sebagai hash SHA-256; JWT HS256 dengan rahasia dari env; HTTPS di demo lewat Vercel dan Cloudflare | `COOKIE_SECURE` bawaan `false` dan belum dinyalakan untuk demo HTTPS; NIK pelanggan disimpan tanpa enkripsi |
+| A02 Cryptographic Failures | Sebagian | Kata sandi bcrypt; refresh token 32 byte acak, disimpan sebagai hash SHA-256; JWT HS256 dengan rahasia dari env; HTTPS di demo lewat Vercel dan Cloudflare | NIK pelanggan dan karyawan masih disimpan tanpa enkripsi di database (tampilannya sudah tersamar untuk peran yang hanya membaca) |
 | A03 Injection | Terkendali | Query lewat GORM dengan parameter; tidak ada SQL yang disusun dari input pengguna; React meng-escape keluaran | |
 | A04 Insecure Design | Terkendali | Peta transisi status di service; pembayaran on-chain: hash unik, baris dikunci, chain id dan batas waktu diperiksa; data simulasi ditandai (#64) | |
-| A05 Security Misconfiguration | Diperbaiki | CORS dari daftar asal di env; galat ke klien tanpa detail internal; header keamanan API (#68) | Header frontend (CSP) di Vercel belum diatur; trusted proxies belum diatur |
+| A05 Security Misconfiguration | Diperbaiki | CORS dari daftar asal di env; galat ke klien tanpa detail internal; header keamanan API (#68); CSP dan header keamanan frontend di Vercel dari `frontend/vercel.json` | Trusted proxies belum diatur |
 | A06 Vulnerable and Outdated Components | Sebagian | Job CI `Security (govulncheck)` gagal kalau ada kerentanan Go yang terjangkau kode; `npm audit --omit=dev --audit-level=high` jalan di job frontend. Pemeriksaan pertama menemukan 10 kerentanan terjangkau (standard library Go 1.27.1, `golang.org/x/net`, `quic-go`), semua ditutup dengan Go 1.27.2 dan upgrade modul | 1 kerentanan *high* di `source-map-js` (alat build dan test, tidak ikut ke produksi). Image Docker yang sudah terlanjur dibangun perlu dibangun ulang |
 | A07 Identification and Authentication Failures | Diperbaiki | Batas 10 percobaan login per email per 15 menit (#68); panjang kata sandi 8 sampai 72 byte (#62); rotasi refresh token dengan deteksi pemakaian ulang (diuji integration test); akun nonaktif ditolak di request berikutnya | Batas per email bisa dipakai orang lain untuk mengunci satu akun selama 15 menit |
 | A08 Software and Data Integrity Failures | Sebagian | CI lima job di setiap PR, termasuk integration test PostGIS dan pemeriksaan kerentanan | Branch `main` belum diproteksi, jadi merge tanpa CI hijau masih mungkin |
@@ -86,18 +86,17 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 
 | Prioritas | Tindakan | Menutup |
 |---|---|---|
-| Tinggi | Nyalakan `COOKIE_SECURE=true` di lingkungan demo dan produksi | A02 |
 | Tinggi | Aktifkan branch protection di `main` (pemilik repo) | A08 |
 | Sedang | Perluas hak akses per proyek ke modul keuangan, tagihan, pengadaan, dan laporan | A01 |
 | Sedang | Peringatan otomatis untuk login gagal beruntun dan perubahan peran Admin | A09 |
-| Rendah | Enkripsi kolom NIK, atau simpan hanya empat digit terakhir untuk tampilan | A02 |
-| Rendah | Header CSP untuk frontend di Vercel; trusted proxies di backend | A05 |
+| Rendah | Enkripsi kolom NIK di database; tampilannya sudah tersamar | A02 |
+| Rendah | Trusted proxies di backend | A05 |
 
 ## 3. Etika dan hukum
 
 | Aspek | Pertimbangan | Penerapan |
 |---|---|---|
-| Pelindungan data pribadi (UU No. 27 Tahun 2022) | NIK, kontak, dan alamat pelanggan adalah data pribadi | Hanya peran yang perlu yang bisa membuka modul Penjualan; demo memakai data fiktif; rencana enkripsi NIK |
+| Pelindungan data pribadi (UU No. 27 Tahun 2022) | NIK, kontak, dan alamat pelanggan adalah data pribadi | Hanya peran yang perlu yang bisa membuka modul Penjualan; NIK hanya utuh untuk peran yang boleh mengubah data itu, peran lain dan laporan gaji melihat empat digit terakhir; demo memakai data fiktif; enkripsi NIK di database masih rencana |
 | Lisensi data | GADM melarang redistribusi tanpa izin; ZNT milik ATR/BPN; OSM berlisensi ODbL | Bundle GIS tidak diunggah ke repo publik; atribusi OpenStreetMap tampil di peta |
 | Kejujuran data | Data simulasi dan skor cadangan bisa menyesatkan keputusan investasi | Ditandai `is_simulated` dari API sampai UI dan PDF; regulasi tidak ikut dihitung dalam skor |
 | Transparansi model | Bobot skor berasal dari regresi, bukan pilihan bebas | Bobot per profil ditampilkan; tiap dimensi punya penjelasan satu kalimat; laporan PDF menjelaskan cara membaca skor |
@@ -116,3 +115,4 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 | #64 | Skor cadangan ditandai simulasi sampai laporan PDF | A04, R4 |
 | #66 | Integration test ke PostGIS sungguhan di CI | R11, R12 |
 | #68 | Batas percobaan login dan header keamanan API | A05, A07 |
+| #95 | NIK tersamar untuk peran yang hanya membaca dan di laporan gaji, pencarian NIK hanya untuk peran penulis; CSP dan header keamanan frontend di Vercel | A01, A02, A05 |
