@@ -219,8 +219,6 @@ type gormRepository struct {
 	cashBooks CashBookFactory
 }
 
-// cashBooks boleh nil: repositori tanpa buku kas (migrasi, ledger hutang dari
-// modul Proyek) tidak mencatat pembayaran ke kas.
 func NewRepository(db *gorm.DB, cashBooks CashBookFactory) Repository {
 	return &gormRepository{db: db, cashBooks: cashBooks}
 }
