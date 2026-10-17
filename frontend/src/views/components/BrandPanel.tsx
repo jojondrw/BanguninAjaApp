@@ -1,5 +1,6 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
+import { PHOTOS } from '../../shared/photos'
 import { BrandName } from './Brand'
 
 const figures = [
@@ -7,6 +8,27 @@ const figures = [
   { value: '458 rb', label: 'Objek lahan' },
   { value: '12', label: 'Indeks bahaya' },
 ]
+
+// Urutannya mengikuti alur produk: memilih lokasi, membangun, lalu menjual unit.
+const SLIDES = [PHOTOS.lokasi, PHOTOS.konstruksi, PHOTOS.perumahan]
+const SLIDE_MS = 7000
+
+function useSlideIndex(count: number): number {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    // Tanpa matchMedia (misalnya jsdom) foto tidak berganti, sama seperti saat
+    // pengguna meminta gerakan dikurangi.
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? true
+    if (reduceMotion) {
+      return
+    }
+    const timer = window.setInterval(() => setIndex((current) => (current + 1) % count), SLIDE_MS)
+    return () => window.clearInterval(timer)
+  }, [count])
+
+  return index
+}
 
 export function AuthLayout({ pageTitle, children }: { pageTitle: string; children: ReactNode }) {
   useEffect(() => {
@@ -28,15 +50,25 @@ export function AuthLayout({ pageTitle, children }: { pageTitle: string; childre
 }
 
 export function BrandPanel() {
+  const index = useSlideIndex(SLIDES.length)
+
   return (
     <aside className="relative m-3 hidden overflow-hidden rounded-[28px] bg-navy-900 text-white lg:flex lg:flex-col lg:justify-end">
+      {SLIDES.map((photo, slide) => (
+        <img
+          key={photo.src}
+          src={photo.src}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchPriority={slide === 0 ? 'high' : 'low'}
+          className={`absolute inset-0 size-full object-cover transition-[opacity,scale] ease-out
+                      [transition-duration:1400ms,8000ms] ${slide === index ? 'scale-100 opacity-100' : 'scale-105 opacity-0'}`}
+        />
+      ))}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(120%_80%_at_100%_0%,rgb(31_95_209/0.55),transparent_60%),radial-gradient(70%_60%_at_0%_100%,rgb(251_187_22/0.18),transparent_70%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:44px_44px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]"
+        className="absolute inset-0 bg-[linear-gradient(to_top,rgb(7_28_70/0.96)_0%,rgb(7_28_70/0.82)_38%,rgb(7_28_70/0.25)_75%,rgb(7_28_70/0.1)_100%)]"
       />
 
       <div className="relative px-12 pb-12">

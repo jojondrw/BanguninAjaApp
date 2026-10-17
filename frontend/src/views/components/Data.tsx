@@ -1,6 +1,7 @@
 import { Inbox } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import type { StockPhoto } from '../../shared/photos'
 import { Button, ErrorNote } from './Form'
 
 export function Card({ title, description, action, children }: {
@@ -74,10 +75,21 @@ export function LoadFailed({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-export function Empty({ message }: { message: string }) {
+export function Empty({ message, photo }: { message: string; photo?: StockPhoto }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl bg-slate-50 px-4 py-10 text-center">
-      <Inbox aria-hidden="true" className="size-5 text-slate-400" strokeWidth={1.6} />
+      {photo ? (
+        <img
+          src={photo.src}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="mb-2 h-28 w-44 rounded-xl object-cover shadow-hairline"
+        />
+      ) : (
+        <Inbox aria-hidden="true" className="size-5 text-slate-400" strokeWidth={1.6} />
+      )}
       <p className="max-w-sm text-[13px] text-slate-500">{message}</p>
     </div>
   )
@@ -89,13 +101,14 @@ export interface Column<T> {
   align?: 'left' | 'right'
 }
 
-export function Table<T>({ rows, columns, emptyMessage }: {
+export function Table<T>({ rows, columns, emptyMessage, emptyPhoto }: {
   rows: T[]
   columns: Column<T>[]
   emptyMessage: string
+  emptyPhoto?: StockPhoto
 }) {
   if (rows.length === 0) {
-    return <Empty message={emptyMessage} />
+    return <Empty message={emptyMessage} photo={emptyPhoto} />
   }
 
   return (

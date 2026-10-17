@@ -19,6 +19,7 @@ import {
 } from '../models/project'
 import { errorMessage } from '../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../shared/format'
+import { PHOTOS } from '../shared/photos'
 import { AppShell } from './components/AppShell'
 import { Card, LoadFailed, Loading, Table } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
@@ -269,6 +270,7 @@ export function ProjectsPage() {
           <Table
             rows={projects.data.items}
             emptyMessage={emptyListMessage(onlyMine, teamOnly)}
+            emptyPhoto={PHOTOS.konstruksi}
             columns={[
               { header: 'Kode', cell: (row) => row.code },
               {

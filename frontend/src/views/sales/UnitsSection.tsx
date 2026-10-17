@@ -16,6 +16,7 @@ import {
 } from '../../models/sales'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiahShort } from '../../shared/format'
+import { PHOTOS } from '../../shared/photos'
 import { Card, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
@@ -252,6 +253,7 @@ export function UnitsSection() {
                 ? 'Belum ada unit. Tambahkan unit pertama lewat tombol Tambah unit.'
                 : 'Proyek ini belum punya unit.'
             }
+            emptyPhoto={PHOTOS.perumahan}
             columns={[
               { header: 'Kode', cell: (row) => <span className="font-medium text-slate-900">{row.code}</span> },
               { header: 'Proyek', cell: (row) => <LookupName source={projectOptions} value={row.projectId} /> },
