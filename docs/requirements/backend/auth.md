@@ -260,6 +260,14 @@ didaftarkan. Ini sengaja, supaya modul baru tidak terbuka untuk semua orang.
 | GET | `/api/users` | - | Query `search` (nama atau email), `role` (kode peran, atau `none` untuk akun yang belum punya peran), `active`, `page`, `pageSize` |
 | PATCH | `/api/users/:id/role` | `{ "role": "keuangan" }` | Mengganti peran |
 | PATCH | `/api/users/:id/active` | `{ "active": false }` | Menonaktifkan atau mengaktifkan lagi |
+| GET | `/api/users/audit` | - | 20 perubahan peran dan status terbaru: pelaku, target, nilai lama, nilai baru, waktu |
+
+Setiap perubahan peran dan status yang benar-benar terjadi dicatat di tabel
+`user_audit` dalam transaksi yang sama dengan perubahannya, jadi tidak ada
+perubahan tanpa jejak. Perubahan yang ditolak (misalnya menonaktifkan admin
+terakhir) tidak dicatat. Pelaku kosong berarti perubahan dari sistem, misalnya
+seed data demo. Kolom pelaku dan target memakai `SET NULL`, jadi riwayat tetap
+ada walaupun akun dihapus.
 
 Kedua PATCH membalas baris pengguna yang sudah berubah: `id`, `name`, `email`,
 `active`, `role`, `createdAt`. Menonaktifkan akun langsung mencabut semua refresh
