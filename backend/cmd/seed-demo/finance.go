@@ -72,9 +72,6 @@ func (s *seeder) monthlyCash(monthsAgo int) []cashSeed {
 		{monthsAgo, 20, cashOut, "5400", projectGriyaAsri, 28_000_000 + (step%3)*6_500_000, "Biaya pemasaran & pameran Griya Asri — " + label},
 		{monthsAgo, 3, cashOut, "5600", "", 18_500_000 + (step%2)*2_250_000, officeNote + label},
 	}
-	if monthsAgo%2 == 1 {
-		entries = append(entries, cashSeed{monthsAgo, 15, cashIn, "4000", projectHospital, 2_500_000_000, "Termin pembayaran RSIA Cirebon — " + label})
-	}
 	if monthsAgo >= ledgerMonths-4 {
 		entries = append(entries, cashSeed{monthsAgo, 17, cashIn, "4100", projectCluster, 420_000_000 + step*15_000_000, "Pelunasan unit Cluster Lama Depok — " + label})
 	}

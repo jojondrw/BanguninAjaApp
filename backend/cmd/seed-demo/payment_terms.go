@@ -65,6 +65,7 @@ type termWriter interface {
 	createSchedule(ctx context.Context, contract *project.ConstructionContract, terms []project.PaymentTerm) error
 	reachedOn(ctx context.Context, projectID uuid.UUID, progress int) (time.Time, int, bool, error)
 	backdateClaim(ctx context.Context, termID uuid.UUID, claimedOn time.Time, progress int, due time.Time, status string) error
+	backdateOwnerClaim(ctx context.Context, termID uuid.UUID, claimedOn time.Time, progress int, due time.Time, status string) error
 	backdateChange(ctx context.Context, changeID uuid.UUID, proposedOn time.Time, decidedOn *time.Time) error
 }
 

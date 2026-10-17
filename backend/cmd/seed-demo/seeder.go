@@ -88,6 +88,7 @@ func (s *seeder) run() error {
 		{"stock movements", s.seedStockMovements},
 		{"billing", s.seedBilling},
 		{"payment terms", s.seedPaymentTerms},
+		{"owner billing", s.seedOwnerBilling},
 		{"hr", s.seedHR},
 		{"assets", s.seedAssets},
 		{"locations", s.seedLocations},

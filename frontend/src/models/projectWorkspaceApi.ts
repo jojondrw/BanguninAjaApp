@@ -1,6 +1,7 @@
 import { request } from '../shared/apiClient'
 import { toQueryString, type Page } from './common'
 import type { DailyReport, DailyReportPage, DailyReportRequest } from './dailyReport'
+import type { OwnerContractRequest, OwnerSchedule } from './ownerBilling'
 import type {
   ContractChangeRequest,
   ContractChangeStatus,
@@ -70,6 +71,23 @@ export const projectWorkspaceApi = {
 
   releaseRetention: (projectId: string) =>
     request<PaymentSchedule>(`/projects/${projectId}/retention-release`, { method: 'POST' }),
+
+  ownerSchedule: (projectId: string) => request<OwnerSchedule>(`/projects/${projectId}/owner-billing`),
+
+  saveOwnerContract: (projectId: string, body: OwnerContractRequest) =>
+    request<OwnerSchedule>(`/projects/${projectId}/owner-billing/contract`, { method: 'PUT', body }),
+
+  createOwnerTerm: (projectId: string, body: PaymentTermRequest) =>
+    request<OwnerSchedule>(`/projects/${projectId}/owner-billing/terms`, { method: 'POST', body }),
+
+  deleteOwnerTerm: (projectId: string, termId: string) =>
+    request<OwnerSchedule>(`/projects/${projectId}/owner-billing/terms/${termId}`, { method: 'DELETE' }),
+
+  claimOwnerTerm: (projectId: string, termId: string) =>
+    request<OwnerSchedule>(`/projects/${projectId}/owner-billing/terms/${termId}/claim`, { method: 'POST' }),
+
+  releaseOwnerRetention: (projectId: string) =>
+    request<OwnerSchedule>(`/projects/${projectId}/owner-billing/retention-release`, { method: 'POST' }),
 
   proposeContractChange: (projectId: string, body: ContractChangeRequest) =>
     request<PaymentSchedule>(`/projects/${projectId}/contract-changes`, { method: 'POST', body }),

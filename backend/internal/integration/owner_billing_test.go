@@ -17,7 +17,7 @@ func TestOwnerTermBecomesAReceivableWhosePaymentIsCashIn(t *testing.T) {
 	receivableAccount := ensureAccount(t, "1200", "Piutang Usaha", "asset")
 	projects := project.NewService(project.NewRepository(db, project.NewBillingLedger))
 	created := newProject(t, projects)
-	owner := sales.Customer{Name: "Pemberi kerja uji " + uniqueCode("")}
+	owner := sales.Customer{Name: "Pemberi kerja uji", IdentityNumber: uniqueCode("UJI")}
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create customer: %v", err)
 	}
