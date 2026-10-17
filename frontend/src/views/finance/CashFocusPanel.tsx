@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { useCashTransaction } from '../../controllers/useFinance'
 import { accountText } from '../../models/accounting'
-import { CASH_TYPE_LABEL, CASH_TYPE_TONE, type CashTransaction } from '../../models/finance'
+import { CASH_TYPE_LABEL, CASH_TYPE_TONE, isFromBilling, type CashTransaction } from '../../models/finance'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
 import { Loading } from '../components/Data'
@@ -45,7 +45,7 @@ export function CashFocusPanel({ id, isEditing, onEdit, onClose }: {
           <p className="text-xs text-slate-500">Jurnal otomatis yang Anda buka berasal dari transaksi ini.</p>
         </div>
         <RowActions>
-          {data ? <RowAction label="Ubah" isActive={isEditing} onClick={() => onEdit(data)} /> : null}
+          {data && !isFromBilling(data) ? <RowAction label="Ubah" isActive={isEditing} onClick={() => onEdit(data)} /> : null}
           {data?.journalEntryId ? (
             <RowLink to={journalLink(data.journalEntryId)} label="Lihat jurnal" icon={BookOpen} />
           ) : null}

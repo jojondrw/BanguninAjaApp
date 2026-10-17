@@ -21,7 +21,25 @@ type ledgerStore struct {
 	payments      []Payment
 	links         [][2]uuid.UUID
 	locks         []string
+	cash          []CashEntry
+	cashFailure   error
 	inTransaction bool
+}
+
+type storeCashBook struct {
+	store *ledgerStore
+}
+
+func (b storeCashBook) Record(_ context.Context, entry CashEntry) error {
+	if b.store.cashFailure != nil {
+		return b.store.cashFailure
+	}
+	b.store.cash = append(b.store.cash, entry)
+	return nil
+}
+
+func (f *ledgerStore) CashBook() CashBook {
+	return storeCashBook{store: f}
 }
 
 func newLedgerStore() *ledgerStore {
@@ -135,6 +153,7 @@ func (f *ledgerStore) FindPayableRow(_ context.Context, id uuid.UUID) (PayableRo
 }
 
 func (f *ledgerStore) CreatePayment(_ context.Context, payment *Payment) error {
+	payment.ID = uuid.New()
 	f.payments = append(f.payments, *payment)
 	return nil
 }

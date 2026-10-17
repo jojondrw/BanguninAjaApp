@@ -100,7 +100,7 @@ func backfill(db *gorm.DB) error {
 	}
 	slog.Info("cash journals ready", slog.Int("posted", posted))
 
-	payments, err := billing.BackfillPayments(context.Background(), billing.NewRepository(db))
+	payments, err := billing.BackfillPayments(context.Background(), billing.NewRepository(db, nil))
 	if err != nil {
 		return err
 	}

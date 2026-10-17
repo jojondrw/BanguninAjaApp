@@ -262,3 +262,11 @@ func TestStatusIsRecomputedWhenRead(t *testing.T) {
 		t.Fatalf("got status %s days %d", response.Status, response.DaysOverdue)
 	}
 }
+
+func (f *fakeRepository) CashBook() CashBook {
+	return nil
+}
+
+func (f *ledgerRepository) CashBook() CashBook {
+	return nil
+}

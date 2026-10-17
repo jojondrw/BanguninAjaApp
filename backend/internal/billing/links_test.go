@@ -468,3 +468,7 @@ func TestPayableLinkValidation(t *testing.T) {
 		})
 	}
 }
+
+func (f *linkRepository) CashBook() CashBook {
+	return nil
+}

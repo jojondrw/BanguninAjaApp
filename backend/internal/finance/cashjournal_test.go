@@ -319,6 +319,7 @@ func TestUpdateCashTransactionPostsJournalWhenNoneExists(t *testing.T) {
 func TestDeleteCashTransactionRemovesLinkedJournal(t *testing.T) {
 	transactionID := uuid.New()
 	db, recorder := databasetest.Open(t,
+		cashTransactionsResult(cashTransactionRow(transactionID, cashOut, uuid.New(), 500_000, recordedAt)),
 		databasetest.Result{Affected: 2},
 		databasetest.Result{Affected: 1},
 		databasetest.Result{Affected: 1},
@@ -330,8 +331,8 @@ func TestDeleteCashTransactionRemovesLinkedJournal(t *testing.T) {
 
 	queries := recorder.Queries()
 	assertTransactionCommitted(t, queries)
-	if len(queries) != 5 {
-		t.Fatalf("want lines, journal, and transaction removed:\n%s", strings.Join(statements(queries), "\n"))
+	if len(queries) != 6 {
+		t.Fatalf("want the transaction read, then lines, journal, and transaction removed:\n%s", strings.Join(statements(queries), "\n"))
 	}
 	wants := []string{
 		`DELETE FROM "journal_line" WHERE journal_entry_id IN (SELECT "id" FROM "journal_entry" WHERE cash_transaction_id = $1)`,
@@ -339,9 +340,9 @@ func TestDeleteCashTransactionRemovesLinkedJournal(t *testing.T) {
 		`DELETE FROM "cash_transaction" WHERE id = $1`,
 	}
 	for index, want := range wants {
-		query := queries[index+1]
+		query := queries[index+2]
 		if !strings.Contains(query.SQL, want) || len(query.Args) != 1 || query.Args[0] != transactionID.String() {
-			t.Errorf("statement %d: got %s %v, want %s", index+1, query.SQL, query.Args, want)
+			t.Errorf("statement %d: got %s %v, want %s", index+2, query.SQL, query.Args, want)
 		}
 	}
 }

@@ -29,6 +29,8 @@ type CashTransaction struct {
 	ProjectID *uuid.UUID `gorm:"type:uuid;index:idx_cash_transaction_project"`
 	Amount    int64      `gorm:"not null;default:0"`
 	Note      string     `gorm:"type:varchar(200)"`
+
+	BillingPaymentID *uuid.UUID `gorm:"type:uuid;uniqueIndex:uq_cash_transaction_billing_payment"`
 }
 
 func (CashTransaction) TableName() string {
@@ -77,6 +79,7 @@ func Constraints() []string {
 		database.ForeignKey("budget", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("cash_transaction", "account_id", "account", database.DeleteRestrict),
 		database.ForeignKey("cash_transaction", "project_id", "project", database.DeleteSetNull),
+		database.ForeignKey("cash_transaction", "billing_payment_id", "billing_payment", database.DeleteCascade),
 		database.ForeignKey("journal_entry", "cash_transaction_id", "cash_transaction", database.DeleteCascade),
 		database.ForeignKey("journal_line", "journal_entry_id", "journal_entry", database.DeleteCascade),
 		database.ForeignKey("journal_line", "account_id", "account", database.DeleteRestrict),

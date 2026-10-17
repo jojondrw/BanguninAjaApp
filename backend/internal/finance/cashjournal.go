@@ -81,6 +81,9 @@ func rewriteCashTransaction(ctx context.Context, repository Repository, id uuid.
 	if err != nil {
 		return CashTransactionRow{}, cashReadErrors.Resolve(err)
 	}
+	if err := ensureManualCash(transaction); err != nil {
+		return CashTransactionRow{}, err
+	}
 	applyCashTransactionRequest(&transaction, request)
 
 	cashAccountID, err := resolveCashAccount(ctx, repository, transaction)
@@ -99,6 +102,13 @@ func rewriteCashTransaction(ctx context.Context, repository Repository, id uuid.
 }
 
 func removeCashTransaction(ctx context.Context, repository Repository, id uuid.UUID) error {
+	transaction, err := repository.FindCashTransaction(ctx, id)
+	if err != nil {
+		return cashReadErrors.Resolve(err)
+	}
+	if err := ensureManualCash(transaction); err != nil {
+		return err
+	}
 	if err := repository.DeleteCashJournal(ctx, id); err != nil {
 		return apperror.Internal(err)
 	}
@@ -205,5 +215,7 @@ func newCashTransactionRow(transaction CashTransaction, journalEntryID uuid.UUID
 		JournalEntryID: &journalEntryID,
 		CreatedAt:      transaction.CreatedAt,
 		UpdatedAt:      transaction.UpdatedAt,
+
+		BillingPaymentID: transaction.BillingPaymentID,
 	}
 }

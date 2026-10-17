@@ -29,7 +29,7 @@ type billingPayables struct {
 }
 
 func NewBillingPayables(db *gorm.DB) PayableLedger {
-	return billingPayables{ledger: billing.NewPayableLedger(billing.NewRepository(db))}
+	return billingPayables{ledger: billing.NewPayableLedger(billing.NewRepository(db, nil))}
 }
 
 func (p billingPayables) Record(ctx context.Context, entry PayableEntry) (uuid.UUID, error) {

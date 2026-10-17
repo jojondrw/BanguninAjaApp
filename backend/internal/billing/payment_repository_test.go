@@ -25,7 +25,7 @@ func TestListPaymentsIsNewestFirstForOneParent(t *testing.T) {
 	invoiceID := uuid.New()
 	db, recorder := databasetest.Open(t, countResult)
 
-	if _, _, err := NewRepository(db).ListPayments(context.Background(), PaymentFilter{Column: invoicePaymentColumn, ParentID: invoiceID, Limit: 10}); err != nil {
+	if _, _, err := NewRepository(db, nil).ListPayments(context.Background(), PaymentFilter{Column: invoicePaymentColumn, ParentID: invoiceID, Limit: 10}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	queries := recorder.Queries()
@@ -47,7 +47,7 @@ func TestListPaymentsIsNewestFirstForOneParent(t *testing.T) {
 
 func TestBillingRowsReportPartyNameAndLastPaymentDate(t *testing.T) {
 	db, recorder := databasetest.Open(t, countResult, databasetest.Result{}, countResult, databasetest.Result{}, countResult)
-	repository := NewRepository(db)
+	repository := NewRepository(db, nil)
 
 	if _, _, err := repository.ListInvoices(context.Background(), InvoiceFilter{Limit: 10}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -77,7 +77,7 @@ func TestBackfillInsertsOneRowPerUnrecordedBalanceInOneTransaction(t *testing.T)
 		databasetest.Result{Affected: 4},
 	)
 
-	inserted, err := BackfillPayments(context.Background(), NewRepository(db))
+	inserted, err := BackfillPayments(context.Background(), NewRepository(db, nil))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestBackfillInsertsOneRowPerUnrecordedBalanceInOneTransaction(t *testing.T)
 func TestSecondBackfillRunInsertsNothing(t *testing.T) {
 	db, recorder := databasetest.Open(t)
 
-	inserted, err := BackfillPayments(context.Background(), NewRepository(db))
+	inserted, err := BackfillPayments(context.Background(), NewRepository(db, nil))
 	if err != nil || inserted != 0 {
 		t.Fatalf("got %d %v", inserted, err)
 	}
@@ -145,7 +145,7 @@ func TestReceivablePaymentLocksInvoiceBeforeReceivableInSQL(t *testing.T) {
 		databasetest.Result{Affected: 1},
 	)
 
-	_, _ = fixedService(NewRepository(db), at).PayReceivable(context.Background(), receivableID, PaymentRequest{Amount: 250}, nil)
+	_, _ = fixedService(NewRepository(db, nil), at).PayReceivable(context.Background(), receivableID, PaymentRequest{Amount: 250}, nil)
 
 	var statements []string
 	for _, query := range recorder.Queries() {
@@ -191,10 +191,19 @@ func servePaymentRoute(t *testing.T, db *gorm.DB, method, path, body string) (*h
 func TestPaymentRouteRecordsWhoPaidAndTheDetails(t *testing.T) {
 	payableID, vendorID := uuid.New(), uuid.New()
 	at := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	idResult := func() databasetest.Result {
+		return databasetest.Result{Columns: []string{"id"}, Rows: [][]driver.Value{{uuid.NewString()}}}
+	}
 	db, recorder := databasetest.Open(t,
 		payableLockResult(payableID, vendorID, at),
 		databasetest.Result{Affected: 1},
 		databasetest.Result{Affected: 1},
+		idResult(),
+		idResult(),
+		databasetest.Result{Affected: 1},
+		databasetest.Result{Columns: []string{"nextval"}, Rows: [][]driver.Value{{int64(1)}}},
+		databasetest.Result{Affected: 1},
+		databasetest.Result{Affected: 2},
 		payableLockResult(payableID, vendorID, at),
 	)
 
@@ -203,16 +212,25 @@ func TestPaymentRouteRecordsWhoPaidAndTheDetails(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("got status %d: %s", response.Code, response.Body.String())
 	}
-	var insert databasetest.Query
+	var insert, cash databasetest.Query
 	for _, query := range recorder.Queries() {
 		if strings.HasPrefix(query.SQL, `INSERT INTO "billing_payment"`) {
 			insert = query
+		}
+		if strings.HasPrefix(query.SQL, `INSERT INTO "cash_transaction"`) {
+			cash = query
 		}
 	}
 	joined := fmt.Sprint(insert.Args)
 	for _, want := range []string{payableID.String(), userID.String(), "tunai", "KW-01", "DP", "1500"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("insert args %s are missing %s", joined, want)
+		}
+	}
+	cashArgs := fmt.Sprint(cash.Args)
+	for _, want := range []string{"out", "1500", "Pembayaran hutang UJI-UTG"} {
+		if !strings.Contains(cashArgs, want) {
+			t.Fatalf("the payment must also be written to the cash book, cash args %s are missing %s", cashArgs, want)
 		}
 	}
 }

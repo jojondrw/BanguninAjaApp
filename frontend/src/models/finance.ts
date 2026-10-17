@@ -29,6 +29,8 @@ export interface CashTransaction {
   // Jurnal otomatis milik transaksi ini. null hanya untuk transaksi lama yang
   // belum diisi ulang oleh cmd/migrate.
   journalEntryId: string | null
+  // Terisi kalau kas ini dicatat otomatis dari pembayaran di modul Tagihan.
+  billingPaymentId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -93,6 +95,14 @@ export const CASH_TYPE_LABEL: Record<CashType, string> = {
 export const CASH_TYPE_TONE: Record<CashType, string> = {
   in: 'bg-green-100 text-green-800',
   out: 'bg-amber-100 text-amber-800',
+}
+
+export const BILLING_PATH = '/tagihan'
+
+// Kas dari pembayaran tagihan diubah atau dihapus lewat Tagihan, supaya sisa
+// tagihan dan kasnya tidak pernah berbeda.
+export function isFromBilling(transaction: Pick<CashTransaction, 'billingPaymentId'>): boolean {
+  return transaction.billingPaymentId !== null
 }
 
 // Tanggal lokal "YYYY-MM-DD" untuk isian bertipe date. toISOString tidak
