@@ -137,16 +137,18 @@ Gotchas seen on Derick's laptop:
 
 ### Next
 
+Tracked as issues in the [AoL akhir milestone](https://github.com/jojondrw/BanguninAjaApp/milestone/1).
+
 | # | Task | Notes | Priority |
 |---|---|---|---|
-| L1 | Final presentation (slides or video) | Problem, solution, design, testing, team contributions, ethics, SE trends. Material: `docs/proses`, `docs/pengujian`, `docs/analisis` | high |
-| L2 | Every member contributes through their own branch and PR | The VCS criterion grades consistent contributions from all members; most PRs since 2026-10-02 come from one account. See `docs/proses/jadwal.md` §3 | high |
-| L3 | Branch protection on `main` | Repo owner (`jojondrw`): require PR, the 5 CI jobs, and one approval | high |
-| L4 | Run acceptance scenario AT-13 (on-chain payment with a wallet on Sepolia) | AT-10 passed through the UI on 2026-10-17. `docs/pengujian/acceptance.md` | medium |
-| L5 | Project-level access (OWASP A01) | Project roles in `project_member` are not enforced yet; needs a team decision on who sees which project | medium |
-| L6 | Audit trail for role and status changes (A09) | Touches `auth/*` (see §6), so agree on it first | medium |
-| L7 | `COOKIE_SECURE=true` for the HTTPS demo, CSP headers on Vercel, NIK encryption | `docs/analisis/risiko-keamanan.md` follow-up table | low |
-| L8 | Billing toward the employer (receivable terms) and posting billing payments to cash | Current terms pay the contractor; billing payments do not create cash entries yet | low |
+| L1 (#78) | Final presentation (slides or video) | Problem, solution, design, testing, team contributions, ethics, SE trends. Material: `docs/proses`, `docs/pengujian`, `docs/analisis` | high |
+| L2 (#79) | Every member contributes through their own branch and PR | The VCS criterion grades consistent contributions from all members; most PRs since 2026-10-02 come from one account. See `docs/proses/jadwal.md` §3 | high |
+| L3 (#80) | Branch protection on `main` | Repo owner (`jojondrw`): require PR, the 5 CI jobs, and one approval | high |
+| L4 (#81) | Run acceptance scenario AT-13 (on-chain payment with a wallet on Sepolia) | AT-10 passed through the UI on 2026-10-17. `docs/pengujian/acceptance.md` | medium |
+| L5 (#82) | Project-level access (OWASP A01) | Project roles in `project_member` are not enforced yet; needs a team decision on who sees which project | medium |
+| L6 (#83) | Audit trail for role and status changes (A09) | Touches `auth/*` (see §6), so agree on it first | medium |
+| L7 (#84) | `COOKIE_SECURE=true` for the HTTPS demo, CSP headers on Vercel, NIK encryption | `docs/analisis/risiko-keamanan.md` follow-up table | low |
+| L8 (#85) | Billing toward the employer (receivable terms) and posting billing payments to cash | Current terms pay the contractor; billing payments do not create cash entries yet | low |
 
 ### Done
 
