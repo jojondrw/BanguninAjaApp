@@ -33,6 +33,8 @@ import (
 const (
 	demoAccountEmail = "demo@banguninaja.id"
 	demoAccountName  = "Tim Demo BanguninAja"
+	demoManagerEmail = "manajer@banguninaja.id"
+	demoManagerName  = "Rina Wulandari"
 )
 
 var errNoOwner = errors.New("no user to own the demo data: register an account first, pass --owner, or set DEMO_USER_PASSWORD to create " + demoAccountEmail)
@@ -96,7 +98,12 @@ func run() error {
 
 func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options) error {
 	finder := gormLookup{db: tx}
-	owner, err := resolveOwner(ctx, finder, auth.NewService(auth.NewRepository(tx), nil, noSubjectCache{}), opts.ownerEmail)
+	accounts := auth.NewService(auth.NewRepository(tx), nil, noSubjectCache{})
+	owner, err := resolveOwner(ctx, finder, accounts, opts.ownerEmail)
+	if err != nil {
+		return err
+	}
+	manager, err := resolveManager(ctx, finder, accounts)
 	if err != nil {
 		return err
 	}
@@ -109,6 +116,7 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 		terms:    gormTermWriter{db: tx},
 		today:    todayInJakarta(time.Now()),
 		owner:    owner,
+		manager:  manager,
 		ids:      map[string]uuid.UUID{},
 		tally:    newTally(),
 	}
@@ -157,6 +165,28 @@ func resolveOwner(ctx context.Context, finder lookup, accounts auth.Service, ema
 	}
 	if !found {
 		return uuid.Nil, errNoOwner
+	}
+	return id, nil
+}
+
+func resolveManager(ctx context.Context, finder lookup, accounts auth.Service) (uuid.UUID, error) {
+	id, found, err := finder.find(ctx, "users", map[string]any{"email": demoManagerEmail})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if !found {
+		password := os.Getenv("DEMO_USER_PASSWORD")
+		if password == "" {
+			return uuid.Nil, nil
+		}
+		created, err := accounts.Register(ctx, auth.RegisterRequest{Name: demoManagerName, Email: demoManagerEmail, Password: password})
+		if err != nil {
+			return uuid.Nil, err
+		}
+		id = created.ID
+	}
+	if _, err := accounts.ChangeRole(ctx, id, auth.ChangeRoleRequest{Role: access.RoleProjectManager}); err != nil {
+		return uuid.Nil, fmt.Errorf("make %s project manager: %w", demoManagerEmail, err)
 	}
 	return id, nil
 }
