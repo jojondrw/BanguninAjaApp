@@ -1,4 +1,4 @@
-import { BookOpen } from 'lucide-react'
+import { BookOpen, ReceiptText } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
 import {
@@ -15,9 +15,11 @@ import {
   type CashFormValues,
 } from '../../models/accounting'
 import {
+  BILLING_PATH,
   CASH_NOTE_MAX_LENGTH,
   CASH_TYPE_LABEL,
   CASH_TYPE_TONE,
+  isFromBilling,
   type CashTransaction,
   type CashType,
 } from '../../models/finance'
@@ -340,19 +342,29 @@ export function CashTab() {
               {
                 header: 'Aksi',
                 align: 'right',
-                cell: (row) => (
-                  <RowActions>
-                    <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
-                    <ConfirmDelete
-                      subject={`transaksi ${transactionName(row)} beserta jurnalnya`}
-                      isConfirming={confirmingId === row.id}
-                      isPending={deleteTransaction.isPending && deleteTransaction.variables === row.id}
-                      onAsk={() => setConfirmingId(row.id)}
-                      onCancel={() => setConfirmingId(null)}
-                      onConfirm={() => remove(row)}
-                    />
-                  </RowActions>
-                ),
+                cell: (row) =>
+                  isFromBilling(row) ? (
+                    <RowActions>
+                      <RowLink
+                        to={BILLING_PATH}
+                        label="Dari Tagihan"
+                        icon={ReceiptText}
+                        description={`Kas ${transactionName(row)} dicatat dari pembayaran tagihan; ubah lewat Tagihan`}
+                      />
+                    </RowActions>
+                  ) : (
+                    <RowActions>
+                      <RowAction label="Ubah" isActive={editing?.id === row.id} onClick={() => startEdit(row)} />
+                      <ConfirmDelete
+                        subject={`transaksi ${transactionName(row)} beserta jurnalnya`}
+                        isConfirming={confirmingId === row.id}
+                        isPending={deleteTransaction.isPending && deleteTransaction.variables === row.id}
+                        onAsk={() => setConfirmingId(row.id)}
+                        onCancel={() => setConfirmingId(null)}
+                        onConfirm={() => remove(row)}
+                      />
+                    </RowActions>
+                  ),
               },
             ]}
           />

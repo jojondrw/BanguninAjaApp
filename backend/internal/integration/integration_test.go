@@ -301,7 +301,7 @@ func TestClaimedTermBecomesAPayableAndDeletingThePayableReopensTheTerm(t *testin
 		t.Fatal("payable is not 30% of the contract minus 5% retention, due 30 vendor days after the claim")
 	}
 
-	if err := billing.NewService(billing.NewRepository(db)).DeletePayable(ctx, *payableID); err != nil {
+	if err := billing.NewService(billing.NewRepository(db, billing.NewFinanceCashBook)).DeletePayable(ctx, *payableID); err != nil {
 		t.Fatalf("delete payable: %v", err)
 	}
 	schedule, err = projects.PaymentSchedule(ctx, created.ID)

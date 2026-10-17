@@ -167,6 +167,7 @@ type PayableFilter struct {
 
 type Repository interface {
 	Transaction(ctx context.Context, work func(Repository) error) error
+	CashBook() CashBook
 
 	ListInvoices(ctx context.Context, filter InvoiceFilter) ([]InvoiceRow, int64, error)
 	FindInvoiceRow(ctx context.Context, id uuid.UUID) (InvoiceRow, error)
@@ -214,17 +215,25 @@ type Repository interface {
 }
 
 type gormRepository struct {
-	db *gorm.DB
+	db        *gorm.DB
+	cashBooks CashBookFactory
 }
 
-func NewRepository(db *gorm.DB) Repository {
-	return &gormRepository{db: db}
+func NewRepository(db *gorm.DB, cashBooks CashBookFactory) Repository {
+	return &gormRepository{db: db, cashBooks: cashBooks}
 }
 
 func (r *gormRepository) Transaction(ctx context.Context, work func(Repository) error) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return work(&gormRepository{db: tx})
+		return work(&gormRepository{db: tx, cashBooks: r.cashBooks})
 	})
+}
+
+func (r *gormRepository) CashBook() CashBook {
+	if r.cashBooks == nil {
+		return nil
+	}
+	return r.cashBooks(r.db)
 }
 
 func (r *gormRepository) ListInvoices(ctx context.Context, filter InvoiceFilter) ([]InvoiceRow, int64, error) {

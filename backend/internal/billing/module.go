@@ -1,9 +1,12 @@
 package billing
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/finance"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/config"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/ethereum"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
@@ -17,12 +20,31 @@ type Module struct {
 }
 
 func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain) *Module {
-	repository := NewRepository(db)
+	repository := NewRepository(db, NewFinanceCashBook)
 	return &Module{
 		controller: NewController(NewService(repository)),
 		onchain:    NewOnchainController(NewOnchainService(repository, ethereum.NewClient(onchain.RPCURL), onchain)),
 		tokens:     tokens,
 	}
+}
+
+type financeCashBook struct {
+	ledger finance.BillingCashLedger
+}
+
+func NewFinanceCashBook(db *gorm.DB) CashBook {
+	return financeCashBook{ledger: finance.NewBillingCashLedger(finance.NewRepository(db))}
+}
+
+func (b financeCashBook) Record(ctx context.Context, entry CashEntry) error {
+	return b.ledger.Record(ctx, finance.BillingCash{
+		PaymentID: entry.PaymentID,
+		Incoming:  entry.Incoming,
+		ProjectID: entry.ProjectID,
+		Date:      entry.Date,
+		Amount:    entry.Amount,
+		Note:      entry.Note,
+	})
 }
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {

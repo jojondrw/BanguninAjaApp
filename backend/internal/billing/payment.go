@@ -171,7 +171,10 @@ func settlePayment(ctx context.Context, repository Repository, parents paymentPa
 	if err := repository.CreatePayment(ctx, &payment); err != nil {
 		return paymentWriteErrors.Resolve(err)
 	}
-	return parents.save(ctx, repository)
+	if err := parents.save(ctx, repository); err != nil {
+		return err
+	}
+	return recordCash(ctx, repository, parents, payment)
 }
 
 func (p paymentParents) isLinked() bool {

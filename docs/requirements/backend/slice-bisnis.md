@@ -570,6 +570,35 @@ Respons riwayat berisi `invoiceNumber`, `receivableReference`, dan
 `createdByName` lewat join, supaya rincian faktur bisa menulis "Juga tercatat
 di piutang X" dan sebaliknya.
 
+### Pembayaran tercatat sebagai kas
+
+Setiap pembayaran di Tagihan, termasuk pembayaran on-chain, langsung menjadi
+satu transaksi kas di Keuangan dalam transaksi database yang sama. Kalau kasnya
+gagal dicatat, pembayarannya ikut dibatalkan, jadi sisa tagihan dan kas tidak
+pernah berbeda.
+
+| Pembayaran | Transaksi kas | Akun lawan | Jurnal |
+|---|---|---|---|
+| Faktur atau piutang (termasuk pasangan yang tertaut, tetap satu kas) | `in` | `1200` Piutang Usaha | Debit Kas, kredit Piutang Usaha |
+| Utang | `out` | `2100` Utang Usaha | Debit Utang Usaha, kredit Kas |
+
+- Tanggal kas sama dengan `paid_at`, nominal sama dengan pembayaran, dan
+  proyeknya diambil dari tagihan (untuk faktur tanpa proyek, dari piutang
+  tautannya). Keterangannya "Pembayaran faktur INV-...", "Pembayaran piutang
+  ...", atau "Pembayaran hutang ...".
+- `cash_transaction.billing_payment_id` menunjuk baris `billing_payment`, unik,
+  FK `ON DELETE CASCADE`. Kas seperti ini tidak bisa diubah atau dihapus dari
+  Keuangan (422 `cash_from_billing`); kalau pembayarannya terhapus, kas dan
+  jurnalnya ikut terhapus.
+- Akun lawan dicari lewat kode. Kalau `1200` atau `2100` tidak ada,
+  pembayaran ditolak dengan `billing_cash_account_not_found`.
+- Slice `billing` mendeklarasikan antarmuka `CashBook`; adapternya ke
+  `finance.BillingCashLedger` ada di `billing/module.go`. Repositori yang
+  dibuat dengan `NewRepository(db, nil)` (migrasi, ledger utang dari modul
+  Proyek) tidak mencatat kas.
+- Pembayaran yang dicatat sebelum fitur ini ada tidak diisi ulang ke kas,
+  karena kasnya mungkin sudah dicatat manual di Keuangan.
+
 ### Faktur dan piutang yang tertaut dibayar bersama
 
 Piutang yang mencatat faktur (`receivable.invoice_id`) dan fakturnya adalah

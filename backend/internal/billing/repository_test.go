@@ -49,7 +49,7 @@ func TestListReceivablesJoinsLinkedNamesAndFiltersByProjectAndContract(t *testin
 	settled := false
 	db, recorder := databasetest.Open(t, countResult, receivableResult(id, customerID, projectID, contractID, invoiceID, at))
 
-	rows, total, err := NewRepository(db).ListReceivables(context.Background(), ReceivableFilter{
+	rows, total, err := NewRepository(db, nil).ListReceivables(context.Background(), ReceivableFilter{
 		DueFilter:  DueFilter{Settled: &settled},
 		ProjectID:  &projectID,
 		ContractID: &contractID,
@@ -91,7 +91,7 @@ func TestListInvoicesCanHideInvoicesAlreadyRecordedAsReceivables(t *testing.T) {
 	recorded := false
 	db, recorder := databasetest.Open(t, countResult)
 
-	if _, _, err := NewRepository(db).ListInvoices(context.Background(), InvoiceFilter{Recorded: &recorded, PartyType: customerParty, Limit: 10}); err != nil {
+	if _, _, err := NewRepository(db, nil).ListInvoices(context.Background(), InvoiceFilter{Recorded: &recorded, PartyType: customerParty, Limit: 10}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	queries := recorder.Queries()
@@ -116,7 +116,7 @@ func TestFindInvoiceRowReportsTheReceivableItWasRecordedAs(t *testing.T) {
 		}},
 	})
 
-	row, err := NewRepository(db).FindInvoiceRow(context.Background(), id)
+	row, err := NewRepository(db, nil).FindInvoiceRow(context.Background(), id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestListPayablesJoinsPurchaseOrderAndFiltersByIt(t *testing.T) {
 	orderID, projectID := uuid.New(), uuid.New()
 	db, recorder := databasetest.Open(t, countResult)
 
-	if _, _, err := NewRepository(db).ListPayables(context.Background(), PayableFilter{PurchaseOrderID: &orderID, ProjectID: &projectID, Limit: 10}); err != nil {
+	if _, _, err := NewRepository(db, nil).ListPayables(context.Background(), PayableFilter{PurchaseOrderID: &orderID, ProjectID: &projectID, Limit: 10}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	queries := recorder.Queries()

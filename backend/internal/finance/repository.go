@@ -18,7 +18,7 @@ const (
 
 	cashColumns = "cash_transaction.id, cash_transaction.date, cash_transaction.type, cash_transaction.account_id, " +
 		"cash_transaction.project_id, cash_transaction.amount, cash_transaction.note, cash_transaction.created_at, " +
-		"cash_transaction.updated_at, journal_entry.id AS journal_entry_id, " +
+		"cash_transaction.updated_at, cash_transaction.billing_payment_id, journal_entry.id AS journal_entry_id, " +
 		"(SELECT account.code FROM account WHERE account.id = cash_transaction.account_id) AS account_code, " +
 		"(SELECT account.name FROM account WHERE account.id = cash_transaction.account_id) AS account_name, " +
 		"(SELECT project.name FROM project WHERE project.id = cash_transaction.project_id) AS project_name"
@@ -105,6 +105,8 @@ type CashTransactionRow struct {
 	ProjectName    string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+
+	BillingPaymentID *uuid.UUID
 }
 
 type CashFlowRow struct {

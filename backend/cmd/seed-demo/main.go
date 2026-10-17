@@ -133,7 +133,7 @@ func newServices(ctx context.Context, tx *gorm.DB, cfg config.Config) services {
 		sales:       sales.NewService(sales.NewRepository(tx)),
 		inventory:   inventory.NewService(inventory.NewRepository(tx)),
 		procurement: procurement.NewService(procurement.NewRepository(tx, newInventoryLedger)),
-		billing:     billing.NewService(billing.NewRepository(tx)),
+		billing:     billing.NewService(billing.NewRepository(tx, billing.NewFinanceCashBook)),
 		hr:          hr.NewService(hr.NewRepository(tx)),
 		assets:      asset.NewService(asset.NewRepository(tx)),
 		locations:   location.NewService(location.NewRepository(tx)),

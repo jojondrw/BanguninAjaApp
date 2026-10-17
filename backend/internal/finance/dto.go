@@ -67,6 +67,8 @@ type CashTransactionResponse struct {
 	JournalEntryID *uuid.UUID `json:"journalEntryId"`
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
+
+	BillingPaymentID *uuid.UUID `json:"billingPaymentId"`
 }
 
 type CashFlowQuery struct {
@@ -196,6 +198,8 @@ func newCashTransactionResponse(row CashTransactionRow) CashTransactionResponse 
 		JournalEntryID: row.JournalEntryID,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
+
+		BillingPaymentID: row.BillingPaymentID,
 	}
 }
 
