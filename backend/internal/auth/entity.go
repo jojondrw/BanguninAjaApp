@@ -43,7 +43,7 @@ func (Role) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Role{}, &User{}, &RefreshToken{}}
+	return []any{&Role{}, &User{}, &RefreshToken{}, &UserAudit{}}
 }
 
 func Indexes() []string {
@@ -59,5 +59,8 @@ func Constraints() []string {
 	return []string{
 		database.ForeignKey("users", "role_id", "role", database.DeleteSetNull),
 		database.ForeignKey("refresh_tokens", "user_id", "users", database.DeleteCascade),
+		database.ForeignKey("user_audit", "actor_id", "users", database.DeleteSetNull),
+		database.ForeignKey("user_audit", "user_id", "users", database.DeleteSetNull),
+		database.Check("user_audit", "action", "action IN ('role','active')"),
 	}
 }

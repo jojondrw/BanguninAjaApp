@@ -25,6 +25,7 @@ type memoryRepository struct {
 	keptSessions []string
 	locks        int
 	refreshSaved int
+	audit        []UserAudit
 }
 
 func newMemoryRepository() *memoryRepository {
@@ -57,6 +58,11 @@ func (m *memoryRepository) roleCodeOf(user *User) *string {
 			return &code
 		}
 	}
+	return nil
+}
+
+func (m *memoryRepository) CreateUserAudit(_ context.Context, entry *UserAudit) error {
+	m.audit = append(m.audit, *entry)
 	return nil
 }
 
@@ -249,7 +255,7 @@ func TestAdminCanGiveAPendingUserARole(t *testing.T) {
 	pendingID := repository.addUser("", true)
 	service, cache := newTestService(repository)
 
-	updated, err := service.ChangeRole(context.Background(), pendingID, ChangeRoleRequest{Role: access.RoleSales})
+	updated, err := service.ChangeRole(context.Background(), uuid.Nil, pendingID, ChangeRoleRequest{Role: access.RoleSales})
 
 	if err != nil {
 		t.Fatal(err)
@@ -340,7 +346,7 @@ func TestLastActiveAdminCannotBeDemoted(t *testing.T) {
 	repository.addUser(access.RoleAdmin, false)
 	service, cache := newTestService(repository)
 
-	_, err := service.ChangeRole(context.Background(), adminID, ChangeRoleRequest{Role: access.RoleObserver})
+	_, err := service.ChangeRole(context.Background(), uuid.Nil, adminID, ChangeRoleRequest{Role: access.RoleObserver})
 
 	assertAppError(t, err, http.StatusUnprocessableEntity, "last_admin")
 	if code := repository.roleCodeOf(repository.users[adminID]); *code != access.RoleAdmin {
@@ -356,7 +362,7 @@ func TestLastActiveAdminCannotBeDeactivated(t *testing.T) {
 	adminID := repository.addUser(access.RoleAdmin, true)
 	service, _ := newTestService(repository)
 
-	_, err := service.ChangeActive(context.Background(), adminID, ChangeActiveRequest{Active: boolPointer(false)})
+	_, err := service.ChangeActive(context.Background(), uuid.Nil, adminID, ChangeActiveRequest{Active: boolPointer(false)})
 
 	assertAppError(t, err, http.StatusUnprocessableEntity, "last_admin")
 	if !repository.users[adminID].Active || len(repository.revoked) != 0 {
@@ -370,7 +376,7 @@ func TestAdminCanStepDownWhenAnotherAdminIsActive(t *testing.T) {
 	repository.addUser(access.RoleAdmin, true)
 	service, cache := newTestService(repository)
 
-	updated, err := service.ChangeRole(context.Background(), adminID, ChangeRoleRequest{Role: access.RoleFinance})
+	updated, err := service.ChangeRole(context.Background(), uuid.Nil, adminID, ChangeRoleRequest{Role: access.RoleFinance})
 
 	if err != nil {
 		t.Fatal(err)
@@ -388,7 +394,7 @@ func TestKeepingAdminRoleIsAlwaysAllowed(t *testing.T) {
 	adminID := repository.addUser(access.RoleAdmin, true)
 	service, _ := newTestService(repository)
 
-	if _, err := service.ChangeRole(context.Background(), adminID, ChangeRoleRequest{Role: access.RoleAdmin}); err != nil {
+	if _, err := service.ChangeRole(context.Background(), uuid.Nil, adminID, ChangeRoleRequest{Role: access.RoleAdmin}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -399,7 +405,7 @@ func TestDeactivatingRevokesSessionsAndReactivatingRestores(t *testing.T) {
 	staffID := repository.addUser(access.RoleHR, true)
 	service, _ := newTestService(repository)
 
-	deactivated, err := service.ChangeActive(context.Background(), staffID, ChangeActiveRequest{Active: boolPointer(false)})
+	deactivated, err := service.ChangeActive(context.Background(), uuid.Nil, staffID, ChangeActiveRequest{Active: boolPointer(false)})
 	if err != nil || deactivated.Active {
 		t.Fatalf("got %+v, %v", deactivated, err)
 	}
@@ -407,7 +413,7 @@ func TestDeactivatingRevokesSessionsAndReactivatingRestores(t *testing.T) {
 		t.Fatalf("sessions not revoked: %v", repository.revoked)
 	}
 
-	reactivated, err := service.ChangeActive(context.Background(), staffID, ChangeActiveRequest{Active: boolPointer(true)})
+	reactivated, err := service.ChangeActive(context.Background(), uuid.Nil, staffID, ChangeActiveRequest{Active: boolPointer(true)})
 	if err != nil || !reactivated.Active {
 		t.Fatalf("got %+v, %v", reactivated, err)
 	}
@@ -417,9 +423,9 @@ func TestChangeRoleRejectsUnknownRoleAndUser(t *testing.T) {
 	repository := newMemoryRepository()
 	service, _ := newTestService(repository)
 
-	_, err := service.ChangeRole(context.Background(), uuid.New(), ChangeRoleRequest{Role: "tamu"})
+	_, err := service.ChangeRole(context.Background(), uuid.Nil, uuid.New(), ChangeRoleRequest{Role: "tamu"})
 	assertAppError(t, err, http.StatusUnprocessableEntity, "unknown_role")
 
-	_, err = service.ChangeRole(context.Background(), uuid.New(), ChangeRoleRequest{Role: access.RoleSales})
+	_, err = service.ChangeRole(context.Background(), uuid.Nil, uuid.New(), ChangeRoleRequest{Role: access.RoleSales})
 	assertAppError(t, err, http.StatusNotFound, "user_not_found")
 }

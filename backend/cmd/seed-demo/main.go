@@ -185,7 +185,7 @@ func resolveManager(ctx context.Context, finder lookup, accounts auth.Service) (
 		}
 		id = created.ID
 	}
-	if _, err := accounts.ChangeRole(ctx, id, auth.ChangeRoleRequest{Role: access.RoleProjectManager}); err != nil {
+	if _, err := accounts.ChangeRole(ctx, uuid.Nil, id, auth.ChangeRoleRequest{Role: access.RoleProjectManager}); err != nil {
 		return uuid.Nil, fmt.Errorf("make %s project manager: %w", demoManagerEmail, err)
 	}
 	return id, nil
@@ -196,7 +196,7 @@ type noSubjectCache struct{}
 func (noSubjectCache) Forget(uuid.UUID) {}
 
 func makeAdmin(ctx context.Context, accounts auth.Service, userID uuid.UUID) error {
-	if _, err := accounts.ChangeRole(ctx, userID, auth.ChangeRoleRequest{Role: access.RoleAdmin}); err != nil {
+	if _, err := accounts.ChangeRole(ctx, uuid.Nil, userID, auth.ChangeRoleRequest{Role: access.RoleAdmin}); err != nil {
 		return fmt.Errorf("make %s admin: %w", demoAccountEmail, err)
 	}
 	return nil

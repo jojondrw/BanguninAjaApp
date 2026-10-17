@@ -418,3 +418,31 @@ func TestRestrictedRolesSeeOnlyProjectsWhoseTeamTheyAreIn(t *testing.T) {
 		t.Fatalf("finance: %v", err)
 	}
 }
+
+func TestRoleChangeAuditNamesTheActorAndTheTarget(t *testing.T) {
+	ctx := context.Background()
+	accounts := auth.NewService(auth.NewRepository(db), nil, ignoreForget{})
+	admin := newUserWithRole(t, "admin")
+	staff := newUserWithRole(t, "penjualan")
+
+	if _, err := accounts.ChangeRole(ctx, admin, staff, auth.ChangeRoleRequest{Role: "pengadaan"}); err != nil {
+		t.Fatalf("change role: %v", err)
+	}
+	entries, err := accounts.ListUserAudit(ctx)
+	if err != nil {
+		t.Fatalf("list audit: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no audit entry recorded")
+	}
+	latest := entries[0]
+	if latest.Action != "role" || latest.OldValue != "penjualan" || latest.NewValue != "pengadaan" {
+		t.Fatalf("latest entry = %+v", latest)
+	}
+	if latest.ActorName == nil || latest.UserName == nil || latest.UserEmail == nil {
+		t.Fatalf("names not joined from users: %+v", latest)
+	}
+	if count(t, "SELECT COUNT(*) FROM user_audit WHERE actor_id = ? AND user_id = ?", admin, staff) != 1 {
+		t.Fatal("audit row does not reference both users")
+	}
+}
