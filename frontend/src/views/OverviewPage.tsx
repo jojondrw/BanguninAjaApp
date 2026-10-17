@@ -12,6 +12,7 @@ import { CHIP_CLASS } from './components/ListTools'
 import { CashFlowChart } from './components/CashFlowChart'
 import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
 import { AttentionList } from './overview/AttentionList'
+import { WelcomeBanner } from './overview/WelcomeBanner'
 
 const CHART_MONTHS = 12
 const FINANCE_ONLY = 'butuh akses Keuangan'
@@ -37,6 +38,8 @@ export function OverviewPage() {
 
   return (
     <AppShell title="Ringkasan" description={`Kondisi seluruh proyek per ${shortDate(todayDate())}`}>
+      <WelcomeBanner />
+
       <KpiRow>
         {canReadProjects ? (
           <Kpi
