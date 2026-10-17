@@ -2,8 +2,9 @@ import { Hourglass } from 'lucide-react'
 import { useState } from 'react'
 
 import { useCurrentUser } from '../../controllers/useAuth'
-import { useChangeUserActive, useChangeUserRole, useUsers } from '../../controllers/useUsers'
+import { useChangeUserActive, useChangeUserRole, useUserAudit, useUsers } from '../../controllers/useUsers'
 import {
+  auditSentence,
   type ManagedUser,
   PENDING_ROLE_FILTER,
   ROLE_OPTIONS,
@@ -12,9 +13,9 @@ import {
   type UserFilter,
 } from '../../models/user'
 import { errorMessage } from '../../shared/errorMessage'
-import { number, shortDate } from '../../shared/format'
+import { number, shortDate, shortDateTime } from '../../shared/format'
 import { AppShell } from '../components/AppShell'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
 import { BUTTON_BASE, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterSelect, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from '../hr/RowActions'
@@ -227,7 +228,33 @@ export function UsersPage() {
           </>
         ) : null}
       </Card>
+
+      <div className="mt-8">
+        <AuditCard />
+      </div>
     </AppShell>
+  )
+}
+
+function AuditCard() {
+  const audit = useUserAudit()
+
+  return (
+    <Card title="Riwayat perubahan akses" description="20 perubahan peran dan status akun terbaru, tercatat bersama perubahannya">
+      {audit.isPending ? <Loading /> : null}
+      {audit.isError ? <LoadFailed onRetry={() => audit.refetch()} /> : null}
+      {audit.data && audit.data.length === 0 ? <Empty message="Belum ada perubahan peran atau status akun." /> : null}
+      {audit.data && audit.data.length > 0 ? (
+        <ul className="divide-y divide-slate-100">
+          {audit.data.map((entry) => (
+            <li key={entry.id} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3 text-[13px]">
+              <span className="text-slate-800">{auditSentence(entry)}</span>
+              <span className="text-xs tabular-nums text-slate-500">{shortDateTime(entry.createdAt)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
   )
 }
 

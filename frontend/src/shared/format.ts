@@ -40,6 +40,16 @@ export function shortDate(iso: string | null): string {
   })
 }
 
+export function shortDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function dateRange(start: string | null, end: string | null): string {
   if (!start && !end) {
     return 'Jadwal belum diisi'

@@ -39,3 +39,15 @@ export function useChangeUserActive() {
     userApi.changeActive(user.id, active),
   )
 }
+
+// Kunci di bawah USERS_KEY, jadi setiap perubahan peran atau status ikut
+// menyegarkan riwayatnya.
+export function useUserAudit() {
+  return useQuery({
+    queryKey: [USERS_KEY, 'audit'],
+    queryFn: userApi.audit,
+    staleTime: 30_000,
+    retry: 0,
+  })
+}
+
