@@ -48,11 +48,11 @@ type payableSeed struct {
 
 func demoInvoices() []invoiceSeed {
 	return []invoiceSeed{
-		{"DEMO-INV-001", "Termin 3 pekerjaan struktur RSIA Cirebon", "customer", hospitalClient, projectHospital, -25, 2_500_000_000, []paymentSeed{
-			{2_500_000_000, -27, "transfer", "TRF-BJB-778120", "Pelunasan termin 3"},
+		{"DEMO-INV-001", "Pekerjaan tambah ruang NICU RSIA Cirebon", "customer", hospitalClient, projectHospital, -25, 2_500_000_000, []paymentSeed{
+			{2_500_000_000, -27, "transfer", "TRF-BJB-778120", "Pelunasan pekerjaan tambah ruang NICU"},
 		}},
-		{"DEMO-INV-002", "Termin 4 pekerjaan struktur RSIA Cirebon", "customer", hospitalClient, projectHospital, 14, 3_000_000_000, []paymentSeed{
-			{1_000_000_000, -3, "transfer", "TRF-BJB-781455", "Pembayaran sebagian termin 4"},
+		{"DEMO-INV-002", "Pekerjaan tambah instalasi gas medis RSIA Cirebon", "customer", hospitalClient, projectHospital, 14, 3_000_000_000, []paymentSeed{
+			{1_000_000_000, -3, "transfer", "TRF-BJB-781455", "Pembayaran sebagian pekerjaan tambah instalasi gas medis"},
 		}},
 		{"DEMO-INV-003", "Cicilan ke-5 unit DEMO-GAB-A01", "customer", installmentBuyer, projectGriyaAsri, -12, 48_500_000, nil},
 		{"DEMO-INV-004", "Klaim penggantian keramik pecah saat pengiriman", "vendor", vendorFinish, projectGriyaAsri, 21, 3_250_000, nil},

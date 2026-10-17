@@ -9,15 +9,12 @@ import (
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
-	"github.com/jojondrw/BanguninAjaApp/backend/internal/sales"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 )
 
-const hospitalOwner = "DEMO-YKIA-0001"
-
 type ownerSeed struct {
 	project   string
-	customer  sales.CustomerRequest
+	customer  string
 	number    string
 	value     int64
 	retention float64
@@ -27,10 +24,7 @@ type ownerSeed struct {
 
 func demoOwnerContracts() []ownerSeed {
 	return []ownerSeed{
-		{projectHospital, sales.CustomerRequest{
-			Name: "Yayasan Kesehatan Ibu dan Anak Cirebon", Contact: "0231-820-4410",
-			Email: "keuangan@ykia-cirebon.contoh.id", IdentityNumber: hospitalOwner, Address: "Jl. Kartini No. 12, Cirebon",
-		}, "DEMO-KTR-RSIA-01", 67_000_000_000, 5, 30, []termSeed{
+		{projectHospital, hospitalClient, "DEMO-KTR-RSIA-01", 67_000_000_000, 5, 30, []termSeed{
 			{0, 10, true}, {25, 20, true}, {50, 20, false}, {75, 25, false}, {100, 25, false},
 		}},
 	}
@@ -50,10 +44,7 @@ func (s *seeder) seedOwnerContract(seed ownerSeed) error {
 	if !known {
 		return nil
 	}
-	customerID, _, err := s.ensure("customer", map[string]any{"identity_number": seed.customer.IdentityNumber}, func() (uuid.UUID, error) {
-		response, err := s.services.sales.CreateCustomer(s.ctx, seed.customer)
-		return response.ID, err
-	})
+	customerID, err := s.known("customer", seed.customer)
 	if err != nil {
 		return err
 	}
@@ -119,7 +110,7 @@ func (s *seeder) claimOwnerTerm(projectID uuid.UUID, seed ownerSeed, termID uuid
 			Amount:    item.NetAmount,
 			PaidAt:    &paidAt,
 			Method:    "transfer",
-			Reference: fmt.Sprintf("TRF-YKIA-%d", position),
+			Reference: fmt.Sprintf("TRF-BJB-RSIA-%d", position),
 			Note:      fmt.Sprintf("Pembayaran tagihan termin %d dari pemberi kerja setelah dipotong retensi", position),
 		}, &s.owner)
 		if err != nil {
