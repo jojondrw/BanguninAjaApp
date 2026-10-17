@@ -39,9 +39,9 @@ export function ScoreCell({ value, isBest, isSimulated = false }: { value: numbe
   return (
     <div className="min-w-28">
       <ValueWithMark isBest={isBest}>{safe}</ValueWithMark>
-      <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-slate-100">
+      <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-[2px] bg-slate-100">
         <span
-          className={`block h-full rounded-full ${isBest ? 'bg-navy-700' : 'bg-navy-500/60'}`}
+          className={`block h-full rounded-[2px] ${isBest ? 'bar-fill' : 'bg-navy-500/45'}`}
           style={{ width: `${safe}%` }}
         />
       </span>

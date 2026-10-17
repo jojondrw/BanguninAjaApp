@@ -31,9 +31,9 @@ export function ProgressMeter({ percent, label, suffix = '%' }: {
         aria-valuenow={safe}
         aria-valuemin={0}
         aria-valuemax={FULL_PERCENT}
-        className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"
+        className="h-1.5 flex-1 overflow-hidden rounded-[2px] bg-slate-100"
       >
-        <div className="h-full rounded-full bg-navy-600" style={{ width: `${safe}%` }} />
+        <div className="bar-fill h-full rounded-[2px]" style={{ width: `${safe}%` }} />
       </div>
       <span className="w-10 text-right text-xs tabular-nums text-slate-600">
         {safe}
