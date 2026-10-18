@@ -136,8 +136,11 @@ func (s *seeder) sampleSite(seed siteSeed) (uuid.UUID, error) {
 		Latitude: &latitude, Longitude: &longitude, AreaSqm: seed.area, LandPricePerSqm: seed.landPrice,
 		Score: overall, FloodIndex: seed.flood, EarthquakeIndex: seed.quake, Note: sampleNote, DimensionScores: scores,
 	})
+	if err != nil {
+		return uuid.Nil, err
+	}
 	s.tally.add("saved_location (sample)")
-	return response.ID, err
+	return response.ID, s.patcher.markSimulated(s.ctx, response.ID)
 }
 
 func (s *seeder) sampleScores(values []int) ([]location.DimensionScoreRequest, int, error) {

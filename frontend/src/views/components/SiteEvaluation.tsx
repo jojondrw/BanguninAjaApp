@@ -9,6 +9,7 @@ import { useScopedCan } from '../../controllers/useAccess'
 import type { SavedLocation, SiteEvaluateResponse } from '../../models/erpApi'
 import { projectOptions } from '../../models/lookupApi'
 import { SiteReportPanel } from '../location/ReportDownload'
+import { SavedLocationPanel } from '../location/SavedLocationPanel'
 import { suggestedProfileCode, type Project } from '../../models/project'
 import { Button, CONTROL_CLASS, ErrorNote, Field } from './Form'
 import { Card, Empty, Kpi, KpiRow, Loading } from './Data'
@@ -73,6 +74,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
   const canEvaluate = useScopedCan('write')
 
   const [name, setName] = useState('')
+  const [openedSiteId, setOpenedSiteId] = useState<string | null>(null)
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
   const [chosenProfileId, setChosenProfileId] = useState('')
@@ -108,7 +110,12 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
         building_profile_id: buildingProfileId,
         project_id: projectId || undefined,
       },
-      { onSuccess: () => onFocus(target) },
+      {
+        onSuccess: () => {
+          setOpenedSiteId(null)
+          onFocus(target)
+        },
+      },
     )
   }
 
@@ -132,6 +139,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
                 sites={sites}
                 focus={focus}
                 onPick={handlePick}
+                onOpenSite={setOpenedSiteId}
               />
             </Suspense>
 
@@ -145,7 +153,7 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
 
             {savedLocations.data ? (
               <p role="status" className="text-xs text-slate-500">
-                {describeSites(sites.length, savedLocations.data.totalItems, projectId !== '')}
+                {describeSites(sites.length, savedLocations.data.totalItems, projectId !== '')}{sites.length > 0 ? ' Klik penanda lalu Lihat rincian untuk membuka hasilnya.' : ''}
               </p>
             ) : null}
 
@@ -272,6 +280,8 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
           <Loading label="Mengambil skor, regulasi, dan konteks berita..." />
         </Card>
       ) : null}
+
+      {openedSiteId ? <SavedLocationPanel id={openedSiteId} onClose={() => setOpenedSiteId(null)} /> : null}
 
       {result ? <EvaluationResult result={result} /> : null}
     </div>

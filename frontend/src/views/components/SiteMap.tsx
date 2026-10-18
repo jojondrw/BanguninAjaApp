@@ -60,9 +60,10 @@ interface SiteMapProps {
   sites: SavedLocation[]
   focus: MapPoint | null
   onPick: (point: MapPoint) => void
+  onOpenSite?: (id: string) => void
 }
 
-export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
+export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const hasFramedSitesRef = useRef(false)
@@ -166,7 +167,7 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
     if (!map) {
       return
     }
-    const markers = sites.map((site) => savedSiteMarker(site).addTo(map))
+    const markers = sites.map((site) => savedSiteMarker(site, onOpenSite).addTo(map))
     if (!hasFramedSitesRef.current && sites.length > 0) {
       hasFramedSitesRef.current = true
       const bounds = new LngLatBounds()
@@ -177,7 +178,7 @@ export function SiteMap({ picked, sites, focus, onPick }: SiteMapProps) {
     return () => {
       markers.forEach((marker) => marker.remove())
     }
-  }, [sites])
+  }, [sites, onOpenSite])
 
   useEffect(() => {
     const map = mapRef.current
@@ -264,13 +265,16 @@ function roundCoordinate(value: number): number {
   return Number(value.toFixed(COORDINATE_DIGITS))
 }
 
-function savedSiteMarker(site: SavedLocation): Marker {
-  return new Marker({ color: SAVED_COLOR, scale: 0.8 })
-    .setLngLat([site.longitude, site.latitude])
-    .setPopup(new Popup({ offset: 24 }).setDOMContent(savedSitePopup(site)))
+function savedSiteMarker(site: SavedLocation, onOpenSite?: (id: string) => void): Marker {
+  const popup = new Popup({ offset: 24 })
+  popup.setDOMContent(savedSitePopup(site, onOpenSite ? () => {
+    popup.remove()
+    onOpenSite(site.id)
+  } : undefined))
+  return new Marker({ color: SAVED_COLOR, scale: 0.8 }).setLngLat([site.longitude, site.latitude]).setPopup(popup)
 }
 
-function savedSitePopup(site: SavedLocation): HTMLElement {
+function savedSitePopup(site: SavedLocation, onOpen?: () => void): HTMLElement {
   const content = document.createElement('div')
   const name = document.createElement('p')
   const score = document.createElement('p')
@@ -280,5 +284,13 @@ function savedSitePopup(site: SavedLocation): HTMLElement {
   score.className = 'mt-0.5 text-xs text-slate-600'
   score.textContent = `Skor kelayakan ${site.score}`
   content.append(name, score)
+  if (onOpen) {
+    const open = document.createElement('button')
+    open.type = 'button'
+    open.className = 'mt-2 rounded-md bg-navy-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-700'
+    open.textContent = 'Lihat rincian'
+    open.addEventListener('click', onOpen)
+    content.append(open)
+  }
   return content
 }

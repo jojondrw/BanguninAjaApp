@@ -45,6 +45,7 @@ type services struct {
 
 type locationPatcher interface {
 	describeLocation(ctx context.Context, id uuid.UUID, patch locationDetails) error
+	markSimulated(ctx context.Context, id uuid.UUID) error
 }
 
 type locationDetails struct {
