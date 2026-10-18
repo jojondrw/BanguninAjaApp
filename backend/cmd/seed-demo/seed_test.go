@@ -306,3 +306,28 @@ func TestMonthDayNeverPointsToTheFuture(t *testing.T) {
 		t.Errorf("monthLabel(4) = %s", label)
 	}
 }
+
+func TestDemoSitePhotosAreEmbeddedAndLabelled(t *testing.T) {
+	covered := map[string]bool{}
+	for _, seed := range demoSitePhotos() {
+		content, err := demoPhotoFiles.ReadFile("photos/" + seed.file)
+		if err != nil || len(content) == 0 {
+			t.Fatalf("photo %s is not embedded: %v", seed.file, err)
+		}
+		if len(content) > project.SitePhotoMaxBytes {
+			t.Errorf("photo %s is %d bytes, over the upload limit", seed.file, len(content))
+		}
+		if seed.taken >= 0 {
+			t.Errorf("photo %s must be dated in the past", seed.file)
+		}
+		covered[seed.project] = true
+	}
+	for _, seed := range demoProjects() {
+		if !covered[seed.code] {
+			t.Errorf("project %s has no demo site photo", seed.code)
+		}
+	}
+	if !strings.HasPrefix(demoPhotoNote, "Ilustrasi") {
+		t.Errorf("demo photos must be labelled as illustrations")
+	}
+}

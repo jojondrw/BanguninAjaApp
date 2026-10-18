@@ -82,6 +82,7 @@ func (s *seeder) run() error {
 		{"project teams", s.seedProjectTeams},
 		{"progress history", s.seedProgressHistory},
 		{"daily reports", s.seedDailyReports},
+		{"site photos", s.seedSitePhotos},
 		{"finance", s.seedFinance},
 		{"sales", s.seedSales},
 		{"inventory", s.seedInventory},
