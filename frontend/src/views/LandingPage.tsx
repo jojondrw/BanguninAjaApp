@@ -45,7 +45,7 @@ const ROLES = ['Admin', 'Manajer Proyek', 'Keuangan', 'Pengadaan', 'Penjualan', 
 
 // Halaman depan untuk pengunjung yang belum masuk. Pengguna yang sudah masuk
 // langsung melihat Ringkasan di alamat yang sama. Foto proyek membawa suasana
-// konstruksi; maskot Bani hanya muncul kecil di ajakan penutup.
+// konstruksi; maskot Bani hadir sebagai aksen kecil di hero dan ajakan penutup.
 export function LandingPage() {
   useEffect(() => {
     document.title = 'BanguninAja · Dari memilih lahan sampai menyerahkan kunci'
@@ -88,7 +88,12 @@ export function LandingPage() {
               aria-hidden="true"
               className="absolute inset-0 bg-[linear-gradient(to_top,rgb(7_28_70/0.95)_0%,rgb(7_28_70/0.75)_40%,rgb(7_28_70/0.15)_80%)]"
             />
-            <div className="relative w-full px-6 pb-10 sm:px-12 sm:pb-14 motion-safe:animate-enter">
+            <img
+              src="/images/bani/pose-blueprint.webp"
+              alt="Bani, maskot BanguninAja, membawa gambar kerja"
+              className="absolute right-4 bottom-0 hidden h-auto w-44 drop-shadow-[0_12px_24px_rgb(0_0_0/0.35)] md:block lg:right-10 lg:w-56"
+            />
+            <div className="relative w-full px-6 pb-10 sm:px-12 sm:pb-14 md:pr-60 lg:pr-72 motion-safe:animate-enter">
               <p className="text-[13px] font-semibold text-[#FFD60A]">ERP untuk developer properti dan kontraktor</p>
               <h1 className="mt-3 max-w-3xl text-[40px] leading-[1.05] font-semibold tracking-[-0.035em] sm:text-[60px]">
                 Dari memilih lahan sampai menyerahkan kunci.
