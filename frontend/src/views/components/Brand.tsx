@@ -1,25 +1,7 @@
-export function BrandMark({ className = 'size-6' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <rect width="24" height="24" rx="6.5" fill="#0b2b6b" />
-      <path
-        d="M6 12.25 12 7l6 5.25"
-        fill="none"
-        stroke="#fbbb16"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.75 13.25V17h6.5v-3.75"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
+// Logo BanguninAja: pin lokasi dengan Bani berhelm proyek. Pin untuk analisis
+// lokasi, helm untuk konstruksi, berang-berang untuk pembangunnya.
+export function BrandMark({ className = 'h-7 w-auto' }: { className?: string }) {
+  return <img src="/brand/logo-128.webp" alt="" aria-hidden="true" width={102} height={128} draggable={false} className={className} />
 }
 
 export function BrandName({ className = '' }: { className?: string }) {
