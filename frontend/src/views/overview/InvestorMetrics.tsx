@@ -10,7 +10,7 @@ import { Sparkline } from '../components/Sparkline'
 
 const DASH = '—'
 
-// Metrik yang biasa ditanyakan investor: posisi kas dan runway, pendapatan,
+// Metrik keuangan utama: posisi kas dan runway, kas masuk,
 // belanja dan margin kas, modal kerja (piutang dan hutang), dan nilai kontrak.
 // Setiap kelompok hanya diambil kalau peran ini boleh membaca modulnya.
 export function InvestorMetrics({ cashFrom, cashTo }: { cashFrom: string; cashTo: string }) {
@@ -42,7 +42,7 @@ function CashTiles({ from, to }: { from: string; to: string }) {
     return (
       <>
         <Tile label="Saldo kas" value={flow.isError ? DASH : '...'} />
-        <Tile label="Pendapatan" value={flow.isError ? DASH : '...'} />
+        <Tile label="Kas masuk" value={flow.isError ? DASH : '...'} />
         <Tile label="Belanja (kas keluar)" value={flow.isError ? DASH : '...'} />
       </>
     )
@@ -61,7 +61,7 @@ function CashTiles({ from, to }: { from: string; to: string }) {
         chart={<Sparkline values={monthEndBalances(data.periods, data.balance)} />}
       />
       <Tile
-        label="Pendapatan (kas masuk)"
+        label="Kas masuk"
         value={<Money>{rupiahShort(data.totalIn)}</Money>}
         note={`rata-rata ${rupiahShort(Math.round(data.totalIn / months))} per bulan`}
         chart={<Sparkline values={data.periods.map((period) => period.cashIn)} />}

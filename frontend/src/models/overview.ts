@@ -37,16 +37,19 @@ export interface FunnelStage {
   value: number
 }
 
-// Unit yang ditahan (on_hold) belum dipasarkan, jadi tidak masuk funnel.
+// Unit yang ditahan (on_hold) belum dipasarkan, jadi tidak masuk funnel. Unit
+// baru berstatus terjual saat kontraknya lunas, jadi tahap terakhir memakai
+// status unit; tahap ketiga memakai kontrak yang sudah ditandatangani.
 export function unitFunnel(units: UnitStatusCount[], contracts: ContractSummary | undefined): FunnelStage[] {
   const count = (status: UnitStatusCount['status']) => units.find((unit) => unit.status === status)?.total ?? 0
   const sold = count('sold')
   const reserved = count('reserved')
+  const signed = contracts ? contracts.byStatus.active + contracts.byStatus.paid : 0
   return [
     { label: 'Unit dipasarkan', value: count('available') + reserved + sold },
-    { label: 'Dipesan atau terjual', value: reserved + sold },
-    { label: 'Terjual', value: sold },
-    { label: 'Kontrak lunas', value: contracts?.byStatus.paid ?? 0 },
+    { label: 'Dipesan', value: reserved + sold },
+    { label: 'Kontrak ditandatangani', value: signed },
+    { label: 'Lunas dan terjual', value: sold },
   ]
 }
 

@@ -180,9 +180,9 @@ function SalesBody() {
   const stages = units.data ? unitFunnel(units.data, contracts.data) : undefined
   return (
     <StageFigure
-      value={stages ? number(stages[2].value) : placeholder(units.isError)}
+      value={stages ? number(stages[3].value) : placeholder(units.isError)}
       unit="unit terjual"
-      visual={stages ? <Meter percent={percentOf(stages[2].value, stages[0].value)} /> : null}
+      visual={stages ? <Meter percent={percentOf(stages[3].value, stages[0].value)} /> : null}
       detail={contracts.data ? `nilai kontrak ${rupiahShort(contracts.data.totalValue)}` : undefined}
     />
   )

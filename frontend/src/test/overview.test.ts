@@ -35,7 +35,7 @@ describe('dashboard Ringkasan', () => {
       ],
       contracts,
     )
-    expect(funnel.map((stage) => stage.value)).toEqual([17, 7, 4, 4])
+    expect(funnel.map((stage) => stage.value)).toEqual([17, 7, 6, 4])
   })
 
   it('menghitung persen dengan aman', () => {

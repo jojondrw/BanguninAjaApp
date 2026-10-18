@@ -58,8 +58,8 @@ export function SalesFunnel() {
         ))}
       </ol>
       <p className="mt-4 text-xs text-slate-500">
-        <span className="font-semibold text-slate-900 tabular-nums">{overall}%</span> unit yang dipasarkan sudah menjadi
-        kontrak lunas. Unit yang ditahan tidak dihitung.
+        <span className="font-semibold text-slate-900 tabular-nums">{overall}%</span> unit yang dipasarkan sudah lunas dan
+        terjual. Unit yang ditahan tidak dihitung.
       </p>
     </div>
   )

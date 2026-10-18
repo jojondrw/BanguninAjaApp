@@ -48,7 +48,8 @@ describe('SalesFunnel', () => {
     expect(screen.getByText('17')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
     expect(screen.getByText('konversi 41%')).toBeInTheDocument()
-    expect(screen.getByText('konversi 57%')).toBeInTheDocument()
+    expect(screen.getByText('konversi 86%')).toBeInTheDocument()
+    expect(screen.getByText('konversi 67%')).toBeInTheDocument()
     expect(screen.getByText('24%')).toBeInTheDocument()
   })
 
