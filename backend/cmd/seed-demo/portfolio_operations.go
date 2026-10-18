@@ -53,7 +53,7 @@ func portfolioActivity() []activeProject {
 
 func portfolioOneOffCash() []cashSeed {
 	return []cashSeed{
-		{ledgerMonths, 4, cashIn, "3100", "", 95_000_000_000, "Setoran modal pemegang saham untuk ekspansi portofolio"},
+		{30, 4, cashIn, "3100", "", 150_000_000_000, "Setoran modal pemegang saham untuk ekspansi portofolio"},
 		{ledgerMonths - 2, 15, cashIn, "2300", projectSkyGarden, 45_000_000_000, "Pencairan kredit konstruksi bank untuk Sky Garden"},
 		{ledgerMonths - 9, 11, cashIn, "2300", projectTembalang, 12_000_000_000, "Pencairan kredit konstruksi bank untuk Townhouse Tembalang"},
 		{3, 9, cashIn, "2300", projectOffice, 22_000_000_000, "Pencairan kredit konstruksi bank untuk Kantor Bekasi Square"},

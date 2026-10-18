@@ -72,6 +72,9 @@ func (s *seeder) seedOwnerContract(seed ownerSeed) error {
 		}
 		return uuid.Nil, nil
 	})
+	if projectClosed(err) {
+		return nil
+	}
 	if err != nil || !created {
 		return err
 	}
@@ -89,7 +92,7 @@ func (s *seeder) seedOwnerContract(seed ownerSeed) error {
 
 func (s *seeder) claimOwnerTerm(projectID uuid.UUID, seed ownerSeed, termID uuid.UUID, position int) error {
 	schedule, err := s.services.projects.ClaimOwnerTerm(s.ctx, projectID, termID, s.owner)
-	if progressNotReached(err) {
+	if progressNotReached(err) || projectClosed(err) {
 		return nil
 	}
 	if err != nil {

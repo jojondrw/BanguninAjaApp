@@ -353,3 +353,15 @@ func generatedLeads() []leadSeed {
 	}
 	return leads
 }
+
+func generatedLoans() []cashSeed {
+	loans := []cashSeed{}
+	for index, seed := range generatedSeeds() {
+		if !running(seed) {
+			continue
+		}
+		monthsAgo := min(-seed.start, ledgerMonths-1)
+		loans = append(loans, cashSeed{monthsAgo, 10 + index%15, cashIn, "2300", generatedCode(seed), seed.value * 40 / 100, "Pencairan kredit konstruksi bank untuk " + seed.name})
+	}
+	return loans
+}

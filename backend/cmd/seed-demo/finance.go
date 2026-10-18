@@ -61,6 +61,7 @@ func (s *seeder) cashSchedule() []cashSeed {
 		{1, 14, cashOut, "5300", projectRuko, 142_500_000, "Biaya retribusi PBG Ruko Sentra Makassar"},
 	}
 	schedule = append(schedule, portfolioOneOffCash()...)
+	schedule = append(schedule, generatedLoans()...)
 	for monthsAgo := ledgerMonths - 1; monthsAgo >= 0; monthsAgo-- {
 		schedule = append(schedule, s.monthlyCash(monthsAgo)...)
 		schedule = append(schedule, s.portfolioMonthlyCash(monthsAgo)...)
