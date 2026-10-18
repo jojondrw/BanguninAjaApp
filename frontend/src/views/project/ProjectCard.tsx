@@ -63,7 +63,10 @@ export function ProjectCard({ project }: { project: Project }) {
       <div className="space-y-3 px-4 pb-4 text-white">
         <div className="min-w-0">
           <p className="truncate text-[11px] font-medium text-white/70">{project.code}</p>
-          <p className="mt-0.5 line-clamp-2 text-[17px] leading-[22px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_8px_rgb(0_0_0/0.25)]">
+          <p
+            title={project.name}
+            className="mt-0.5 line-clamp-2 min-h-[44px] text-[17px] leading-[22px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_8px_rgb(0_0_0/0.25)]"
+          >
             {project.name}
           </p>
         </div>
