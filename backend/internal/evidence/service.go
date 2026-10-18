@@ -597,3 +597,16 @@ func (s *Service) Approve(ctx context.Context, token, signature string) (ClaimSt
 	}
 	return claimStatus(link, root), nil
 }
+
+func (s *Service) SubjectStatus(ctx context.Context, projectID uuid.UUID, kind string, subjectID uuid.UUID) (Item, error) {
+	items, _, _, err := s.evaluate(ctx, &projectID)
+	if err != nil {
+		return Item{}, err
+	}
+	for _, item := range items {
+		if item.Kind == kind && item.SubjectID == subjectID {
+			return item, nil
+		}
+	}
+	return Item{Kind: kind, SubjectID: subjectID, Status: StatusPending}, nil
+}

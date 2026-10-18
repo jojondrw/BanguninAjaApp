@@ -186,3 +186,19 @@ func (f EvidenceFeed) OwnerClaim(ctx context.Context, projectID, termID uuid.UUI
 	}
 	return OwnerClaim{}, errTermNotFound
 }
+
+type ProjectPlace struct {
+	Code       string
+	Name       string
+	RegionCode string
+	RegionName string
+}
+
+func (f EvidenceFeed) Place(ctx context.Context, projectID uuid.UUID) (ProjectPlace, error) {
+	var place ProjectPlace
+	err := f.db.WithContext(ctx).Table("project AS p").
+		Select("p.code, p.name, COALESCE(r.code, '') AS region_code, COALESCE(r.name, '') AS region_name").
+		Joins("LEFT JOIN region r ON r.id = p.region_id").
+		Where("p.id = ?", projectID).Take(&place).Error
+	return place, database.Translate(err)
+}

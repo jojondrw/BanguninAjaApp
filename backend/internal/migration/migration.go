@@ -24,6 +24,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/scoring"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/wageproof"
 )
 
 type slice struct {
@@ -50,6 +51,7 @@ func registeredSlices() []slice {
 		{"regulation", regulation.Entities(), regulation.Indexes(), regulation.Constraints()},
 		{"reporting", reporting.Entities(), reporting.Indexes(), reporting.Constraints()},
 		{"evidence", evidence.Entities(), evidence.Indexes(), evidence.Constraints()},
+		{"wageproof", wageproof.Entities(), wageproof.Indexes(), wageproof.Constraints()},
 	}
 }
 

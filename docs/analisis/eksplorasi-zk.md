@@ -25,7 +25,7 @@ ZK membuktikan sebuah pernyataan tentang data tanpa membuka datanya. Jadi kasusn
 
 ### Masalahnya nyata
 
-- Kontraktor wajib membayar pekerja paling sedikit upah minimum kabupaten/kota (UMK) yang ditetapkan tiap tahun (PP 36/2021 tentang Pengupahan).
+- Kontraktor wajib membayar pekerja paling sedikit upah minimum kabupaten/kota (UMK) yang ditetapkan tiap tahun (PP 36/2021 tentang Pengupahan, terakhir diubah PP 49/2025).
 - Pemberi kerja seperti yayasan rumah sakit di demo RSIA Cirebon punya kepentingan memastikannya, karena pelanggaran upah di proyeknya ikut mencoreng nama mereka.
 - Tapi gaji tiap pekerja adalah data pribadi (UU 27/2022 tentang Pelindungan Data Pribadi), dan pengembang juga tidak ingin struktur upahnya terbuka ke pemberi kerja. Hari ini pilihannya hanya membuka slip gaji atau tidak sama sekali.
 
@@ -55,8 +55,31 @@ Masalahnya juga nyata: pembeli unit membayar uang muka dan cicilan sebelum rumah
 
 Tapi pernyataan ini butuh definisi akuntansi yang disepakati (kas mana yang dihitung milik proyek, biaya mana yang sah) dan sirkuit penjumlahan atas ratusan transaksi. Ini lebih tepat setelah bukti upah minimum berjalan.
 
+## Status: prototipe sudah berjalan (18 Oktober 2026)
+
+Slice `internal/wageproof`, kartu **Bukti upah minimum** di tab Keuangan proyek, halaman publik `/verifikasi-upah/:token` (pemberi kerja) dan `/kuitansi-upah/:token` (pekerja).
+
+| Bagian | Isi |
+|---|---|
+| Sirkuit | gnark v0.16, Groth16 di kurva BN254, paling banyak 16 pekerja per bukti. Publik: akar Merkle, UMK, jumlah pekerja. Rahasia: tiap upah, hari kerja, kunci pekerja, salt |
+| Aturan yang dibuktikan | `upah × 25 ≥ UMK × hari kerja` untuk tiap pekerja (bulanan dihitung 25 hari, harian memakai hari hadir dari absensi), hari kerja 1–31 |
+| Akar Merkle | MiMC (ramah sirkuit), 16 daun, kedalaman 4. Akar ikut dicatat ke blockchain sebagai bukti jenis "Akar penggajian" |
+| Kuitansi | Tiap pekerja dapat tautan berisi upahnya, salt, dan jalur Merkle; server memeriksa jalurnya sampai ke akar |
+| Data UMK 2026 | Kota Bandung Rp4.737.678, Kota Cirebon Rp2.878.646 (Kepgub Jabar 561/Kep.862-Kesra/2025); Kota Depok dan Kota Makassar memakai angka yang lebih tinggi dari dua sumber yang berbeda, supaya tidak ada proyek yang lolos karena salah ketik |
+
+Hasil di data demo:
+
+- RSIA Cirebon September 2026: bukti dibuat untuk 3 pekerja (ukuran bukti 164 byte) dan terverifikasi.
+- Griya Asri Bandung: **ditolak**. Satu pekerja harian dibayar Rp3.795.000 untuk 23 hari, padahal UMK mewajibkan paling sedikit Rp4.358.664. Hanya pengembang yang melihat nama dan angkanya.
+
+Batasan prototipe:
+
+- **Trusted setup.** Kunci Groth16 dibuat sekali oleh server pengembang dan disimpan di database. Siapa pun yang memegang sisa acak dari proses itu secara teori bisa memalsukan bukti, dan di prototipe itu adalah pengembang sendiri. Untuk dipakai sungguhan, kunci harus dibuat lewat upacara multi-pihak (MPC), misalnya dengan pemberi kerja ikut berkontribusi, atau beralih ke PLONK dengan SRS publik.
+- Verifikasi dijalankan di server. Data bukti dan kunci verifikasi ditampilkan di halaman supaya bisa diperiksa mandiri, tetapi verifikasi di browser atau lewat kontrak di Sepolia belum dibuat.
+- Kuitansi dibagikan pengembang. Kalau pengembang tidak memberikan kuitansi ke pekerja, perlindungan dari pekerja tidak berjalan.
+
 ## Langkah berikutnya
 
-1. Mencatat penggajian ke jejak bukti (daun dengan salt), termasuk halaman kuitansi untuk pekerja.
-2. Prototipe sirkuit gnark "semua upah ≥ UMK" untuk satu proyek demo, dengan verifikasi di server.
-3. Menampilkan hasil verifikasi di halaman verifikasi pemberi kerja.
+1. Kunci dari upacara multi-pihak atau PLONK dengan SRS publik.
+2. Verifikasi di browser atau kontrak Sepolia, supaya tidak bergantung pada server pengembang.
+3. Kandidat kedua: dana pembeli mencukupi penyelesaian proyek.

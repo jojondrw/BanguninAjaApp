@@ -36,6 +36,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/middleware"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/token"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/site"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/wageproof"
 )
 
 const (
@@ -116,7 +117,9 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	sales.NewModule(db, tokens).RegisterRoutes(api)
 	finance.NewModule(db, tokens).RegisterRoutes(api)
 	billing.NewModule(db, tokens, cfg.Onchain).RegisterRoutes(api)
-	evidence.NewModule(db, tokens, cfg.Onchain).RegisterRoutes(api)
+	evidenceModule := evidence.NewModule(db, tokens, cfg.Onchain, wageproof.NewEvidenceSource(db))
+	evidenceModule.RegisterRoutes(api)
+	wageproof.NewModule(db, tokens, evidenceModule.Service()).RegisterRoutes(api)
 	hr.NewModule(db, tokens).RegisterRoutes(api)
 	scoring.NewModule(db, tokens).RegisterRoutes(api)
 	location.NewModule(db, tokens).RegisterRoutes(api)

@@ -2,7 +2,7 @@
 // termin, dan pembayaran (semua metode) dicatat ke blockchain sebagai satu
 // akar Merkle per kumpulan. Bentuknya mengikuti internal/evidence di backend.
 
-export type EvidenceKind = 'daily_report' | 'site_photo' | 'progress' | 'owner_claim' | 'payment'
+export type EvidenceKind = 'daily_report' | 'site_photo' | 'progress' | 'owner_claim' | 'payment' | 'wage_root'
 export type EvidenceStatus = 'anchored' | 'pending' | 'changed' | 'deleted'
 
 export interface EvidenceItem {
@@ -91,6 +91,7 @@ export const EVIDENCE_KIND_LABEL: Record<EvidenceKind, string> = {
   progress: 'Progres proyek',
   owner_claim: 'Tagihan termin',
   payment: 'Pembayaran',
+  wage_root: 'Akar penggajian',
 }
 
 export const EVIDENCE_STATUS_LABEL: Record<EvidenceStatus, string> = {
