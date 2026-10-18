@@ -6,6 +6,7 @@ import { useSession, useSessionRestore } from './controllers/useAuth'
 import { RouteAccess } from './views/access/RouteAccess'
 import { BaniScreen } from './views/components/BaniLoader'
 import { ErrorBoundary } from './views/components/ErrorBoundary'
+import { LandingPage } from './views/LandingPage'
 import { LoginPage } from './views/LoginPage'
 import { RegisterPage } from './views/RegisterPage'
 
@@ -44,7 +45,7 @@ export default function App() {
                 <Route path="/masuk" element={<GuestOnly><LoginPage /></GuestOnly>} />
                 <Route path="/bayar/:token" element={<PayPage />} />
                 <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
-                <Route path="/" element={<RequireSession><OverviewPage /></RequireSession>} />
+                <Route path="/" element={<HomeRoute />} />
                 <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
                 <Route path="/proyek/:id" element={<RequireSession><ProjectWorkspacePage /></RequireSession>} />
                 <Route path="/keuangan" element={<RequireSession><FinancialPage /></RequireSession>} />
@@ -99,6 +100,18 @@ function RequireSession({ children }: { children: ReactNode }) {
   }
 
   return <RouteAccess>{children}</RouteAccess>
+}
+
+// Pengunjung yang belum masuk melihat halaman depan; yang sudah masuk langsung
+// melihat Ringkasan di alamat yang sama.
+function HomeRoute() {
+  const { accessToken } = useSession()
+
+  if (accessToken === null) {
+    return <LandingPage />
+  }
+
+  return <RouteAccess><OverviewPage /></RouteAccess>
 }
 
 function GuestOnly({ children }: { children: ReactNode }) {
