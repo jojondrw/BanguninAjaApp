@@ -106,3 +106,7 @@ func (p gormLocationPatcher) describeLocation(ctx context.Context, id uuid.UUID,
 		"area_sqm":  details.areaSqm,
 	}).Error
 }
+
+func (p gormLocationPatcher) markSimulated(ctx context.Context, id uuid.UUID) error {
+	return p.db.WithContext(ctx).Model(&location.SavedLocation{}).Where("id = ?", id).Update("score_simulated", true).Error
+}
