@@ -24,7 +24,7 @@ Dokumen kebutuhan dan aturan kode ada di [`docs/requirements`](../requirements).
 
 | Bagian | Teknologi | Peran |
 |---|---|---|
-| Frontend | React 19, Vite, TypeScript, Tailwind v4, TanStack Query, MapLibre GL | 17 halaman ERP dan analisis lokasi |
+| Frontend | React 19, Vite, TypeScript, Tailwind v4, TanStack Query, Leaflet | 17 halaman ERP dan analisis lokasi |
 | Backend | Go, Gin, GORM, 16 slice dalam satu proses | 224 endpoint REST, hak akses per peran |
 | Database | PostgreSQL 18 + PostGIS 3.6 | Data ERP dan titik lokasi |
 | Layanan penilaian | Python, FastAPI, rasterio, geopandas, scikit-learn | Skor kelayakan 5 dimensi dari data GIS nasional |

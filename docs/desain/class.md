@@ -194,7 +194,7 @@ classDiagram
 
     class LocationPage {
         <<view>>
-        SiteMap (MapLibre GL)
+        SiteMap (Leaflet)
         panel skor dan konteks
     }
     class useSiteEvaluate {

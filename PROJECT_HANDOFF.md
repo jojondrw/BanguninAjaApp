@@ -38,7 +38,7 @@
 - `GET /tiles/{bahaya|banjir|gempabumi|longsor|penduduk|harga_tanah}/{z}/{x}/{y}.png` → XYZ tiles from the bundle (min zoom 7, land price 10).
 - Reads the **data bundle** (`BUNDLE_DIR`), built once by `build_bundle.py`. Trained on 1,489 sites. See `scoring/README.md`.
 
-### Frontend (React / Vite / Tailwind / MapLibre)
+### Frontend (React / Vite / Tailwind / Leaflet)
 | Route | Page |
 |---|---|
 | `/` | Overview: KPIs, 12-month cash-flow chart, "Perlu perhatian", projects |
