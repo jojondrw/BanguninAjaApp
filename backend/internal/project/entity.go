@@ -95,7 +95,7 @@ func (ProjectMember) TableName() string {
 }
 
 func Entities() []any {
-	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &ContractChange{}, &Permit{}, &ProjectMember{}, &OwnerContract{}, &OwnerTerm{}}
+	return []any{&Project{}, &ProjectPhase{}, &BudgetItem{}, &ProgressSnapshot{}, &DailyReport{}, &ConstructionContract{}, &PaymentTerm{}, &ContractChange{}, &Permit{}, &ProjectMember{}, &OwnerContract{}, &OwnerTerm{}, &SitePhoto{}}
 }
 
 func Indexes() []string {
@@ -117,6 +117,8 @@ func Constraints() []string {
 		database.ForeignKey("project_progress", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("daily_report", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("daily_report", "created_by", "users", database.DeleteSetNull),
+		database.ForeignKey("site_photo", "project_id", "project", database.DeleteCascade),
+		database.ForeignKey("site_photo", "created_by", "users", database.DeleteSetNull),
 		database.ForeignKey("construction_contract", "project_id", "project", database.DeleteCascade),
 		database.ForeignKey("construction_contract", "vendor_id", "vendor", database.DeleteRestrict),
 		database.ForeignKey("payment_term", "project_id", "project", database.DeleteCascade),

@@ -110,6 +110,11 @@ type Repository interface {
 	ListProjectIDs(ctx context.Context) ([]uuid.UUID, error)
 	ListProgressSnapshots(ctx context.Context, projectID uuid.UUID) ([]ProgressSnapshot, error)
 	ListDailyReports(ctx context.Context, filter DailyReportFilter) ([]DailyReport, int64, error)
+	ListSitePhotos(ctx context.Context, projectID uuid.UUID, limit int) ([]SitePhoto, error)
+	LatestSitePhotos(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+	FindSitePhoto(ctx context.Context, projectID, id uuid.UUID) (SitePhoto, error)
+	CreateSitePhoto(ctx context.Context, photo *SitePhoto) error
+	DeleteSitePhoto(ctx context.Context, projectID, id uuid.UUID) error
 	CountRecentDailyReports(ctx context.Context, projectID uuid.UUID, since time.Time) (int64, int64, error)
 	FindDailyReport(ctx context.Context, projectID, id uuid.UUID) (DailyReport, error)
 	CreateDailyReport(ctx context.Context, report *DailyReport) error

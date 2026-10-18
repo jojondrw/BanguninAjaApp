@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
-import { ChevronRight, Plus, X } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Plus, X } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 import { useCan } from '../controllers/useAccess'
 import { useSessionStore } from '../controllers/sessionStore'
@@ -18,13 +18,12 @@ import {
   type ProjectStatus,
 } from '../models/project'
 import { errorMessage } from '../shared/errorMessage'
-import { rupiah, rupiahShort, shortDate } from '../shared/format'
+import { rupiah } from '../shared/format'
 import { PHOTOS } from '../shared/photos'
 import { AppShell } from './components/AppShell'
-import { Card, LoadFailed, Loading, Table } from './components/Data'
+import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
-import { StatusChip } from './project/StatusChip'
-import { ProgressMeter } from './project/parts'
+import { ProjectCard } from './project/ProjectCard'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
 
@@ -60,10 +59,6 @@ function projectsDescription(total: number | undefined, teamOnly: boolean): stri
   }
   return teamOnly ? `${total} proyek yang timnya memuat Anda` : `${total} proyek`
 }
-
-const OPEN_LINK_CLASS =
-  'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap text-navy-600 ' +
-  'transition-[background-color,transform] hover:bg-navy-50 motion-safe:active:scale-95'
 
 function contractValueHint(value: string): string {
   const amount = Number(value)
@@ -267,45 +262,17 @@ export function ProjectsPage() {
         {projects.isPending ? <Loading /> : null}
         {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
         {projects.data ? (
-          <Table
-            rows={projects.data.items}
-            emptyMessage={emptyListMessage(onlyMine, teamOnly)}
-            emptyPhoto={PHOTOS.konstruksi}
-            columns={[
-              { header: 'Kode', cell: (row) => row.code },
-              {
-                header: 'Nama',
-                cell: (row) => (
-                  <Link to={`/proyek/${row.id}`} className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline">
-                    {row.name}
-                  </Link>
-                ),
-              },
-              { header: 'Jenis', cell: (row) => row.type },
-              { header: 'Status', cell: (row) => <StatusChip project={row} /> },
-              { header: 'Mulai', cell: (row) => shortDate(row.startDate) },
-              { header: 'Target', cell: (row) => shortDate(row.targetEndDate) },
-              { header: 'Nilai', align: 'right', cell: (row) => rupiahShort(row.contractValue) },
-              {
-                header: 'Progres',
-                cell: (row) => (
-                  <div className="w-32">
-                    <ProgressMeter percent={row.progress} label={`Progres ${row.name}`} />
-                  </div>
-                ),
-              },
-              {
-                header: 'Aksi',
-                align: 'right',
-                cell: (row) => (
-                  <Link to={`/proyek/${row.id}`} className={OPEN_LINK_CLASS} aria-label={`Buka ruang kerja ${row.name}`}>
-                    Buka ruang kerja
-                    <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-                  </Link>
-                ),
-              },
-            ]}
-          />
+          projects.data.items.length === 0 ? (
+            <Empty message={emptyListMessage(onlyMine, teamOnly)} photo={PHOTOS.konstruksi} />
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {projects.data.items.map((project) => (
+                <li key={project.id} className="min-w-0">
+                  <ProjectCard project={project} />
+                </li>
+              ))}
+            </ul>
+          )
         ) : null}
       </Card>
     </AppShell>
