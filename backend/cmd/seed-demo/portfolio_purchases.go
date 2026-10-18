@@ -50,7 +50,7 @@ func generatedPurchases() []generatedPurchase {
 			case 0, 1:
 				payments = []paymentSeed{{total, min(due-2, -1), "transfer", "TRF-" + number, "Pelunasan " + order.number}}
 			case 2:
-				payments = []paymentSeed{{total / 2, min(due-5, -1), "giro", "GIRO-" + number, "Pembayaran sebagian " + order.number}}
+				payments = []paymentSeed{{total / 2, min(due-5, -1), "cek", "GIRO-" + number, "Pembayaran sebagian " + order.number}}
 			}
 			payable := payableSeed{"DEMO-HUT-" + number, order.vendor, code, order.number, due, total, payments}
 			purchases = append(purchases, generatedPurchase{request, order, receipt, payable})

@@ -183,7 +183,7 @@ func portfolioPayables() []payableSeed {
 			{1_056_000_000, -126, "transfer", "TRF-BNI-310442", "Pelunasan baja WF"},
 		}},
 		{"DEMO-HUT-104", vendorMakassar, projectWarehouse, "DEMO-PO-104", -16, 127_200_000, []paymentSeed{
-			{60_000_000, -18, "giro", "GIRO-BRI-77120", "Pembayaran sebagian floor hardener"},
+			{60_000_000, -18, "cek", "GIRO-BRI-77120", "Pembayaran sebagian floor hardener"},
 		}},
 		{"DEMO-HUT-105", vendorBuilding, projectSchool, "DEMO-PO-105", 4, 89_030_000, nil},
 		{"DEMO-HUT-106", vendorSteel, projectOffice, "DEMO-PO-106", 21, 134_400_000, nil},
