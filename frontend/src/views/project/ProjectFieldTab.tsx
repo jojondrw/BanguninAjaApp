@@ -32,6 +32,7 @@ import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle, Pager } from '../components/RecordControls'
 import { TextAreaField } from '../procurement/parts'
 import { FormSection, InlineConfirm } from './parts'
+import { SitePhotosCard } from './SitePhotosCard'
 
 const PAGE_SIZE = 14
 
@@ -97,57 +98,60 @@ export function ProjectFieldTab({ project }: { project: Project }) {
   }
 
   return (
-    <Card
-      title="Laporan harian"
-      description={reports.data ? recentSummary(reports.data) : 'Cuaca, tenaga kerja, pekerjaan, dan kendala di lokasi setiap hari'}
-      action={
-        canWrite ? (
-          <FormToggle
-            isOpen={isWriting}
-            openLabel="Tulis laporan"
-            onToggle={() => {
-              setEditingId(null)
-              setIsWriting((open) => !open)
-            }}
-          />
-        ) : undefined
-      }
-    >
-      {isWriting && canWrite ? (
-        <FormPanel>
-          <NewReportForm projectId={project.id} onDone={() => setIsWriting(false)} />
-        </FormPanel>
-      ) : null}
+    <div className="space-y-8">
+      <SitePhotosCard project={project} />
+      <Card
+        title="Laporan harian"
+        description={reports.data ? recentSummary(reports.data) : 'Cuaca, tenaga kerja, pekerjaan, dan kendala di lokasi setiap hari'}
+        action={
+          canWrite ? (
+            <FormToggle
+              isOpen={isWriting}
+              openLabel="Tulis laporan"
+              onToggle={() => {
+                setEditingId(null)
+                setIsWriting((open) => !open)
+              }}
+            />
+          ) : undefined
+        }
+      >
+        {isWriting && canWrite ? (
+          <FormPanel>
+            <NewReportForm projectId={project.id} onDone={() => setIsWriting(false)} />
+          </FormPanel>
+        ) : null}
 
-      {deleteReport.isError ? (
-        <div className="mb-4">
-          <ErrorNote message={errorMessage(deleteReport.error)} />
-        </div>
-      ) : null}
+        {deleteReport.isError ? (
+          <div className="mb-4">
+            <ErrorNote message={errorMessage(deleteReport.error)} />
+          </div>
+        ) : null}
 
-      {reports.isPending ? <Loading /> : null}
-      {reports.isError ? <LoadFailed onRetry={() => reports.refetch()} /> : null}
-      {reports.data ? (
-        <>
-          <Table
-            rows={reports.data.items}
-            columns={columns}
-            emptyMessage="Belum ada laporan harian. Laporan pertama biasanya ditulis mandor atau pengawas di akhir hari kerja."
-          />
-          <Pager
-            page={reports.data.page}
-            totalPages={reports.data.totalPages}
-            totalItems={reports.data.totalItems}
-            unit="laporan"
-            onChange={setPage}
-          />
-        </>
-      ) : null}
+        {reports.isPending ? <Loading /> : null}
+        {reports.isError ? <LoadFailed onRetry={() => reports.refetch()} /> : null}
+        {reports.data ? (
+          <>
+            <Table
+              rows={reports.data.items}
+              columns={columns}
+              emptyMessage="Belum ada laporan harian. Laporan pertama biasanya ditulis mandor atau pengawas di akhir hari kerja."
+            />
+            <Pager
+              page={reports.data.page}
+              totalPages={reports.data.totalPages}
+              totalItems={reports.data.totalItems}
+              unit="laporan"
+              onChange={setPage}
+            />
+          </>
+        ) : null}
 
-      {editing && canWrite ? (
-        <EditReportForm key={editing.id} report={editing} update={updateReport} onDone={() => setEditingId(null)} />
-      ) : null}
-    </Card>
+        {editing && canWrite ? (
+          <EditReportForm key={editing.id} report={editing} update={updateReport} onDone={() => setEditingId(null)} />
+        ) : null}
+      </Card>
+    </div>
   )
 }
 

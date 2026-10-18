@@ -56,6 +56,7 @@ type ProjectResponse struct {
 	StartDate     *time.Time `json:"startDate"`
 	TargetEndDate *time.Time `json:"targetEndDate"`
 	ContractValue int64      `json:"contractValue"`
+	CoverPhotoID  *uuid.UUID `json:"coverPhotoId"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
 }

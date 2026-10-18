@@ -13,6 +13,7 @@ export interface Project {
   startDate: string | null
   targetEndDate: string | null
   contractValue: number
+  coverPhotoId?: string | null
   createdAt: string
   updatedAt: string
 }

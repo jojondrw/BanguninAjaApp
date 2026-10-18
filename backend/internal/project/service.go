@@ -89,6 +89,10 @@ type Service interface {
 	CreateDailyReport(ctx context.Context, projectID, actorID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
 	UpdateDailyReport(ctx context.Context, projectID, reportID uuid.UUID, request DailyReportRequest) (DailyReportResponse, error)
 	DeleteDailyReport(ctx context.Context, projectID, reportID uuid.UUID) error
+	ListSitePhotos(ctx context.Context, projectID uuid.UUID) ([]SitePhotoResponse, error)
+	CreateSitePhoto(ctx context.Context, projectID, actorID uuid.UUID, upload SitePhotoUpload) (SitePhotoResponse, error)
+	SitePhotoFile(ctx context.Context, projectID, photoID uuid.UUID) (SitePhotoFile, error)
+	DeleteSitePhoto(ctx context.Context, projectID, photoID uuid.UUID) error
 	PaymentSchedule(ctx context.Context, projectID uuid.UUID) (PaymentScheduleResponse, error)
 	SaveContract(ctx context.Context, projectID uuid.UUID, request ContractRequest) (PaymentScheduleResponse, error)
 	CreatePaymentTerm(ctx context.Context, projectID uuid.UUID, request PaymentTermRequest) (PaymentScheduleResponse, error)
@@ -147,7 +151,11 @@ func (s *service) ListProjects(ctx context.Context, viewerID uuid.UUID, role str
 	if err != nil {
 		return pagination.Page[ProjectResponse]{}, apperror.Internal(err)
 	}
-	return pagination.New(pagination.Map(projects, newProjectResponse), query.Query, total), nil
+	responses, err := s.withCoverPhotos(ctx, pagination.Map(projects, newProjectResponse))
+	if err != nil {
+		return pagination.Page[ProjectResponse]{}, err
+	}
+	return pagination.New(responses, query.Query, total), nil
 }
 
 func (s *service) SummarizeProjects(ctx context.Context, viewerID uuid.UUID, role string) (ProjectSummaryResponse, error) {
@@ -163,7 +171,11 @@ func (s *service) GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse
 	if err != nil {
 		return ProjectResponse{}, projectReadErrors.Resolve(err)
 	}
-	return newProjectResponse(project), nil
+	responses, err := s.withCoverPhotos(ctx, []ProjectResponse{newProjectResponse(project)})
+	if err != nil {
+		return ProjectResponse{}, err
+	}
+	return responses[0], nil
 }
 
 func (s *service) CreateProject(ctx context.Context, creatorID uuid.UUID, role string, request ProjectRequest) (ProjectResponse, error) {
