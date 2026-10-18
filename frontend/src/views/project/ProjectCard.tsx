@@ -51,9 +51,9 @@ export function ProjectCard({ project }: { project: Project }) {
         <StatusChip project={project} />
       </div>
 
-      <div className="m-2 space-y-3 rounded-xl bg-white/70 p-3.5 shadow-[0_1px_2px_rgb(0_0_0/0.06)] ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150">
+      <div className="space-y-3 border-t border-white/40 bg-white/40 px-4 pt-3.5 pb-4 backdrop-blur-2xl backdrop-saturate-150">
         <div className="min-w-0">
-          <p className="truncate text-[11px] font-medium text-slate-600">{project.code}</p>
+          <p className="truncate text-[11px] font-medium text-slate-700">{project.code}</p>
           <p className="mt-0.5 line-clamp-2 text-[15px] leading-5 font-semibold text-slate-900">{project.name}</p>
         </div>
         <div className="space-y-2">
@@ -70,7 +70,7 @@ export function ProjectCard({ project }: { project: Project }) {
             </span>
             <span className="w-9 text-right text-xs font-medium text-slate-800 tabular-nums">{progress}%</span>
           </div>
-          <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
+          <div className="flex items-center justify-between gap-2 text-xs text-slate-700">
             <span>Target {shortDate(project.targetEndDate)}</span>
             <Money>{rupiahShort(project.contractValue)}</Money>
           </div>
