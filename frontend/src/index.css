@@ -39,6 +39,8 @@
   --animate-fade: fade 160ms ease-out both;
   --animate-draw: draw 900ms var(--ease-fluid) both;
   --animate-grow: grow 520ms var(--ease-fluid) both;
+  --animate-bani-work: bani-work 1.1s ease-in-out infinite;
+  --animate-brick: brick 4.2s var(--ease-fluid) infinite both;
 
   @keyframes enter {
     from {
@@ -62,6 +64,33 @@
   @keyframes grow {
     from {
       transform: scaleY(0);
+    }
+  }
+
+  @keyframes bani-work {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-5%) rotate(-3deg);
+    }
+  }
+
+  @keyframes brick {
+    0% {
+      opacity: 0;
+      transform: translateY(-14px);
+    }
+    7%,
+    84% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    94%,
+    100% {
+      opacity: 0;
+      transform: translateY(0);
     }
   }
 }
