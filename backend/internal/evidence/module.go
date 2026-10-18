@@ -16,15 +16,21 @@ import (
 )
 
 type Module struct {
+	service    *Service
 	controller *Controller
 	projects   *project.Controller
 	tokens     *token.Manager
 }
 
-func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain) *Module {
-	sources := feedSources{projects: project.NewEvidenceFeed(db), payments: billing.NewPaymentFeed(db)}
+type FactSource interface {
+	Facts(ctx context.Context, projectID *uuid.UUID) ([]Fact, error)
+}
+
+func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain, extra ...FactSource) *Module {
+	sources := feedSources{projects: project.NewEvidenceFeed(db), payments: billing.NewPaymentFeed(db), extra: extra}
 	service := NewService(NewRepository(db), sources, ethereum.NewClient(onchain.RPCURL), onchain)
 	return &Module{
+		service:    service,
 		controller: NewController(service),
 		projects:   project.NewController(project.NewService(project.NewRepository(db, nil))),
 		tokens:     tokens,
@@ -34,6 +40,7 @@ func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain) *Modu
 type feedSources struct {
 	projects project.EvidenceFeed
 	payments billing.PaymentFeed
+	extra    []FactSource
 }
 
 func (s feedSources) ProjectFacts(ctx context.Context, projectID *uuid.UUID) ([]Fact, error) {
@@ -45,6 +52,13 @@ func (s feedSources) ProjectFacts(ctx context.Context, projectID *uuid.UUID) ([]
 	for index, fact := range found {
 		owner := fact.ProjectID
 		facts[index] = Fact{Kind: fact.Kind, SubjectID: fact.SubjectID, ProjectID: &owner, Date: fact.Date, Label: fact.Label, Fields: fact.Fields}
+	}
+	for _, source := range s.extra {
+		more, err := source.Facts(ctx, projectID)
+		if err != nil {
+			return nil, err
+		}
+		facts = append(facts, more...)
 	}
 	return facts, nil
 }
@@ -77,6 +91,10 @@ func (s feedSources) OwnerClaim(ctx context.Context, projectID, termID uuid.UUID
 		ContractNumber: claim.ContractNumber, OwnerName: claim.OwnerName, Label: claim.Label, Progress: claim.Progress,
 		GrossAmount: claim.GrossAmount, RetentionAmount: claim.RetentionAmount, NetAmount: claim.NetAmount, ClaimedOn: claim.ClaimedOn,
 	}, nil
+}
+
+func (m *Module) Service() *Service {
+	return m.service
 }
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {

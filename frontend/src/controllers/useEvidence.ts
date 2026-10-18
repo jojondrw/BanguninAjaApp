@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { evidenceApi, verifyApi } from '../models/evidenceApi'
+import { wageProofApi } from '../models/wageProof'
 import { DATA_QUERY } from './useErp'
 
 const EVIDENCE_KEY = 'evidence'
@@ -60,4 +61,30 @@ export function useApproveClaim(token: string) {
     mutationFn: (signature: string) => verifyApi.approve(token, signature),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [EVIDENCE_KEY, 'public', token] }),
   })
+}
+
+const WAGE_KEY = 'wage-proofs'
+
+export function useWageProofs(projectId: string) {
+  return useQuery({
+    queryKey: [EVIDENCE_KEY, WAGE_KEY, projectId],
+    queryFn: () => wageProofApi.list(projectId),
+    ...DATA_QUERY,
+  })
+}
+
+export function useCreateWageProof(projectId: string) {
+  const invalidate = useInvalidateEvidence()
+  return useMutation({
+    mutationFn: (period: string) => wageProofApi.create(projectId, period),
+    onSuccess: (result) => (result.proof ? invalidate() : undefined),
+  })
+}
+
+export function usePublicWageProof(token: string) {
+  return useQuery({ queryKey: [EVIDENCE_KEY, 'public-wage', token], queryFn: () => wageProofApi.publicProof(token), retry: false })
+}
+
+export function usePublicReceipt(token: string) {
+  return useQuery({ queryKey: [EVIDENCE_KEY, 'receipt', token], queryFn: () => wageProofApi.publicReceipt(token), retry: false })
 }

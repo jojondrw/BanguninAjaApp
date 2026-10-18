@@ -29,6 +29,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection } from './parts'
 import { ContractChangesCard } from './ContractChangesCard'
 import { ClaimApprovalCard } from './ClaimApprovalCard'
+import { WageProofCard } from './WageProofCard'
 import { OwnerBillingCard } from './OwnerBillingCard'
 import { PaymentTermsCard } from './PaymentTermsCard'
 import { MoneyText } from '../components/Money'
@@ -100,6 +101,7 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
 
       <OwnerBillingCard project={project} />
       <ClaimApprovalCard project={project} />
+      <WageProofCard project={project} />
 
       <PaymentTermsCard project={project} />
 
