@@ -23,7 +23,7 @@ import { PHOTOS } from '../shared/photos'
 import { AppShell } from './components/AppShell'
 import { Card, LoadFailed, Loading, Table } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
-import { StatusChip } from './OverviewPage'
+import { StatusChip } from './project/StatusChip'
 import { ProgressMeter } from './project/parts'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
