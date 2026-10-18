@@ -78,18 +78,26 @@ gantt
 Pembagian peran mengikuti rencana 21 September di `PROJECT_HANDOFF.md`
 repositori data, dilengkapi bagian yang dikerjakan sejak itu.
 
-| Anggota | Peran dan fokus kerja |
-|---|---|
-| Derick | Pemilik produk; layanan penilaian lokasi, peta, ruang kerja proyek, layar ERP, CI, dokumentasi |
-| Jonathan Andrew Saleh | Pengumpulan data, auth, skema database, Docker, kerangka frontend ERP, konteks deskriptif lokasi |
-| Moses | Pipeline layanan penilaian, lapisan service dan controller backend |
-| Ian | Site intelligence: regulasi, berita, evaluasi lokasi, halaman Analisis Lokasi |
-| Erick | Frontend ERP |
+| Anggota | Peran dan fokus kerja | Bukti (per 18 Oktober) |
+|---|---|---|
+| Derick | Pemilik produk; layanan penilaian lokasi, peta, ruang kerja proyek, layar ERP, CI, dokumentasi | Repositori aplikasi: 85 PR (#4 sampai #97). Repositori data: 15 commit |
+| Jonathan Andrew Saleh | Pengumpulan data, auth, skema database, Docker, kerangka frontend ERP, konteks deskriptif lokasi | Repositori data: 21 commit pengumpulan data. Repositori aplikasi: 12 commit 17 sampai 25 September (init proyek, slice auth #1, entity dan constraint semua slice, Docker dev dan prod, layar auth, kerangka ERP) |
+| Moses | Pipeline layanan penilaian, lapisan service dan controller backend | Repositori aplikasi: 2 PR, termasuk lapisan service dan controller semua slice (23 September) |
+| Ian | Site intelligence: regulasi, berita, evaluasi lokasi, halaman Analisis Lokasi | Repositori aplikasi: 6 commit 23 sampai 26 September (integrasi RDTR, konteks berita, endpoint evaluasi lokasi, konteks deskriptif) |
+| Erick | Frontend ERP | Belum ada commit di repositori aplikasi maupun data |
 
 Sisa pekerjaan dilacak sebagai issue di milestone
 [AoL akhir](https://github.com/jojondrw/BanguninAjaApp/milestone/1) (#78 sampai
-#85). Setiap anggota mengambil issue, mengerjakannya lewat branch dan PR
-sendiri, dan setiap PR ditinjau minimal satu anggota lain.
+#85, lalu #98 sampai #102). Setiap anggota mengambil issue, mengerjakannya lewat
+branch dan PR sendiri, dan setiap PR ditinjau minimal satu anggota lain.
+
+| Issue | Anggota | Isi |
+|---|---|---|
+| #98 | Ian | Hapus komentar di slice `site`, rapikan format `regulation/service.go` |
+| #99 | Jonathan | Hapus komentar di `config.go` dan data seed |
+| #100 | Erick | Hapus tiga ekspor frontend yang tidak terpakai |
+| #101 | Moses | Test kasus tepi untuk API layanan penilaian |
+| #102 | Semua | Ulang skenario acceptance dan isi kolom Disetujui |
 
 ## 4. Aktivitas per minggu
 
