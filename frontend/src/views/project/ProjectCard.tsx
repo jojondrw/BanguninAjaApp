@@ -21,7 +21,7 @@ export function ProjectCard({ project }: { project: Project }) {
       className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-hairline transition-shadow
                  hover:shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_10px_28px_rgb(15_23_42/0.10)]"
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+      <div className="relative aspect-[16/10] overflow-hidden bg-white">
         {photoUrl ? (
           <img
             src={photoUrl}
@@ -41,6 +41,10 @@ export function ProjectCard({ project }: { project: Project }) {
             </div>
           </div>
         )}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-b from-white/0 via-white/60 to-white"
+        />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-medium text-slate-800 shadow-sm backdrop-blur">
             <ProjectTypeIcon type={project.type} className="size-3.5 shrink-0 text-navy-600" />
