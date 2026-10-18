@@ -16,6 +16,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/evidence"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/finance"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/hr"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
@@ -115,6 +116,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	sales.NewModule(db, tokens).RegisterRoutes(api)
 	finance.NewModule(db, tokens).RegisterRoutes(api)
 	billing.NewModule(db, tokens, cfg.Onchain).RegisterRoutes(api)
+	evidence.NewModule(db, tokens, cfg.Onchain).RegisterRoutes(api)
 	hr.NewModule(db, tokens).RegisterRoutes(api)
 	scoring.NewModule(db, tokens).RegisterRoutes(api)
 	location.NewModule(db, tokens).RegisterRoutes(api)

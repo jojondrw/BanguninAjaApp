@@ -823,6 +823,35 @@ Aturan yang sama dipakai untuk cicilan di slice `sales`.
 | Permintaan bayar on-chain hanya untuk faktur pelanggan dan piutang yang masih bersisa, nominal tidak melebihi sisa, satu yang aktif per tagihan, dan fitur harus aktif (503) | `onchain_vendor_invoice`, `onchain_nothing_outstanding`, `onchain_amount_exceeds_outstanding`, `onchain_request_active`, `onchain_disabled` |
 | Verifikasi transaksi on-chain (lihat tabel di atas) | `onchain_*`, `chain_unavailable`, `chain_mismatch` |
 
+## Evidence (jejak bukti blockchain)
+
+Slice `internal/evidence`. Masalahnya: tagihan termin dibayar berdasarkan progres, dan buktinya (laporan harian, foto lapangan, progres, pembayaran) disimpan di database pengembang sendiri. Pemberi kerja, bank, dan pembeli tidak bisa memastikan bukti itu tidak diubah setelah tagihan diajukan.
+
+### Sidik jari dan pencatatan
+
+- Sumber bukti dibaca lewat adapter, mengikuti pola lintas slice: `project.EvidenceFeed` (laporan harian, foto lapangan dengan SHA-256 isi berkasnya, riwayat progres, termin pemberi kerja yang sudah ditagih) dan `billing.PaymentFeed` (semua pembayaran tagihan, **apa pun metodenya**: transfer, tunai, cek, on-chain).
+- Tiap bukti diberi sidik jari SHA-256 dari JSON isinya. Versi baru (isi berubah) menjadi `evidence_record` baru, jadi riwayatnya tidak hilang.
+- `POST /evidence/batches` mengumpulkan semua sidik jari yang belum tercatat menjadi satu akar Merkle (keccak256, daun diurutkan supaya deterministik). Kumpulan yang belum tercatat diganti kalau dibuat ulang.
+- Pengguna mengirim **transaksi 0 ETH ke alamat sendiri dari dompetnya** dengan data `0x424e474e` ("BNGN") + akar. Server tidak memegang kunci privat.
+- `POST /evidence/batches/:id/anchor` memeriksa transaksi di Sepolia: data harus sama persis, receipt sukses, jaringan benar, jumlah konfirmasi cukup. Belum terlihat atau belum terkonfirmasi dijawab `waiting`.
+
+### Status bukti
+
+| Status | Arti |
+|---|---|
+| Tercatat, utuh | Sidik jari saat ini sama dengan yang tercatat di blockchain |
+| Belum dicatat | Bukti baru, belum masuk transaksi apa pun |
+| Berubah setelah dicatat | Isi sekarang berbeda dari yang tercatat |
+| Dihapus setelah dicatat | Pernah tercatat, sekarang tidak ada |
+
+### Persetujuan pemberi kerja (EIP-712)
+
+- Alamat dompet pemberi kerja didaftarkan per proyek (`PUT /evidence/projects/:id/approver`, divalidasi EIP-55).
+- Tiap termin yang sudah ditagih bisa diberi tautan verifikasi publik `/verifikasi/:token` (segmen API `verify` terbuka seperti `pay`).
+- Pemberi kerja melihat tagihan dan status semua bukti, lalu menandatangani `OwnerClaimApproval(project, contract, term, progress, amount, claimedOn, evidenceRoot)` dengan `eth_signTypedData_v4`. Gratis, tanpa transaksi.
+- Server memulihkan alamat penanda tangan (secp256k1) dan hanya menerima alamat yang terdaftar. Tanda tangan mengikat nilai tagihan **dan** akar sidik jari bukti proyek saat itu; kalau bukti berubah sesudahnya, persetujuan ditandai "bukti berubah sejak disetujui".
+- Pengodean EIP-712 diuji terhadap vektor resmi di spesifikasi EIP-712 (contoh "Mail").
+
 ## HR
 
 Semua di bawah `/api/hr`.

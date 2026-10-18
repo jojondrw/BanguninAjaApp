@@ -29,7 +29,7 @@ interface Envelope<T> {
 
 // Halaman bayar dibuka pembeli tanpa akun, jadi dipanggil dengan fetch biasa:
 // tanpa token, tanpa cookie, dan tanpa percobaan refresh sesi.
-async function publicCall<T>(path: string, body?: unknown): Promise<T> {
+export async function publicCall<T>(path: string, body?: unknown): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {

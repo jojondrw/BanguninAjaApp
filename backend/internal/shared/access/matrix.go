@@ -67,6 +67,7 @@ var moduleNames = map[Module]string{
 
 var routeModules = map[string]Module{
 	"projects":    ModuleProjects,
+	"evidence":    ModuleProjects,
 	"locations":   ModuleLocations,
 	"site":        ModuleLocations,
 	"scoring":     ModuleLocations,
@@ -86,8 +87,9 @@ var routeModules = map[string]Module{
 }
 
 var openSegments = map[string]bool{
-	"auth": true,
-	"pay":  true,
+	"auth":   true,
+	"pay":    true,
+	"verify": true,
 }
 
 var roles = []Role{

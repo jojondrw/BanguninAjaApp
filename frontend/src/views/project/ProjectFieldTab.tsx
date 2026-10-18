@@ -32,6 +32,7 @@ import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle, Pager } from '../components/RecordControls'
 import { TextAreaField } from '../procurement/parts'
 import { FormSection, InlineConfirm } from './parts'
+import { EvidenceCard } from './EvidenceCard'
 import { SitePhotosCard } from './SitePhotosCard'
 
 const PAGE_SIZE = 14
@@ -100,6 +101,7 @@ export function ProjectFieldTab({ project }: { project: Project }) {
   return (
     <div className="space-y-8">
       <SitePhotosCard project={project} />
+      <EvidenceCard project={project} />
       <Card
         title="Laporan harian"
         description={reports.data ? recentSummary(reports.data) : 'Cuaca, tenaga kerja, pekerjaan, dan kendala di lokasi setiap hari'}

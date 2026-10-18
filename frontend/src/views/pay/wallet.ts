@@ -83,6 +83,38 @@ export async function payWithWallet(wallet: Eip1193Provider, transfer: WalletTra
   return hash
 }
 
+async function connect(wallet: Eip1193Provider, chainId: number): Promise<string> {
+  const accounts = (await wallet.request({ method: 'eth_requestAccounts' })) as string[]
+  const from = accounts[0]
+  if (!from) {
+    throw new Error('Dompet tidak memberikan akun. Buka kunci MetaMask lalu coba lagi.')
+  }
+  await switchChain(wallet, chainId)
+  return from
+}
+
+// Mencatat sidik jari bukti: transaksi 0 ETH ke alamat sendiri yang membawa
+// data (akar Merkle). Tidak ada dana yang berpindah, hanya biaya gas jaringan uji.
+export async function sendCalldata(wallet: Eip1193Provider, chainId: number, data: string): Promise<string> {
+  const from = await connect(wallet, chainId)
+  const hash = await wallet.request({ method: 'eth_sendTransaction', params: [{ from, to: from, value: '0x0', data }] })
+  if (typeof hash !== 'string') {
+    throw new Error('Dompet tidak mengembalikan hash transaksi.')
+  }
+  return hash
+}
+
+// Tanda tangan EIP-712: gratis, tanpa transaksi. Dompet menampilkan isi
+// persetujuan apa adanya sebelum ditandatangani.
+export async function signTypedData(wallet: Eip1193Provider, typedData: { domain: { chainId: number } }): Promise<string> {
+  const from = await connect(wallet, typedData.domain.chainId)
+  const signature = await wallet.request({ method: 'eth_signTypedData_v4', params: [from, JSON.stringify(typedData)] })
+  if (typeof signature !== 'string') {
+    throw new Error('Dompet tidak mengembalikan tanda tangan.')
+  }
+  return signature
+}
+
 export function walletErrorMessage(error: unknown): string {
   const code = errorCode(error)
   const text = errorText(error)
