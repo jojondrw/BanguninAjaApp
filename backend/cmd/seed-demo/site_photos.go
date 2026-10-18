@@ -21,7 +21,7 @@ type sitePhotoSeed struct {
 }
 
 func demoSitePhotos() []sitePhotoSeed {
-	return []sitePhotoSeed{
+	return append([]sitePhotoSeed{
 		{projectGriyaAsri, "gab_1.jpg", -120, "galian dan pondasi rumah Blok A"},
 		{projectGriyaAsri, "gab_2.jpg", -6, "dinding bata Blok A sampai ring balok"},
 		{projectHospital, "rsia_1.jpg", -75, "bekisting dan pengecoran kolom lantai 2"},
@@ -30,7 +30,7 @@ func demoSitePhotos() []sitePhotoSeed {
 		{projectRuko, "rsm_2.jpg", -10, "uji sondir tanah"},
 		{projectCluster, "cld_1.jpg", -150, "pengecatan fasad dan paving jalan cluster"},
 		{projectCluster, "cld_2.jpg", -100, "cluster selesai, siap serah terima"},
-	}
+	}, append(portfolioSitePhotos(), generatedSitePhotos()...)...)
 }
 
 func (s *seeder) seedSitePhotos() error {

@@ -20,13 +20,18 @@ type ownerSeed struct {
 	retention float64
 	days      int
 	terms     []termSeed
+	late      bool
 }
 
 func demoOwnerContracts() []ownerSeed {
+	return append(append(coreOwnerContracts(), portfolioOwnerContracts()...), generatedOwnerContracts()...)
+}
+
+func coreOwnerContracts() []ownerSeed {
 	return []ownerSeed{
 		{projectHospital, hospitalClient, "DEMO-KTR-RSIA-01", 67_000_000_000, 5, 30, []termSeed{
 			{0, 10, true}, {25, 20, true}, {50, 20, false}, {75, 25, false}, {100, 25, false},
-		}},
+		}, false},
 	}
 }
 
@@ -84,6 +89,9 @@ func (s *seeder) seedOwnerContract(seed ownerSeed) error {
 
 func (s *seeder) claimOwnerTerm(projectID uuid.UUID, seed ownerSeed, termID uuid.UUID, position int) error {
 	schedule, err := s.services.projects.ClaimOwnerTerm(s.ctx, projectID, termID, s.owner)
+	if progressNotReached(err) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("bill term %d: %w", position, err)
 	}
@@ -97,7 +105,7 @@ func (s *seeder) claimOwnerTerm(projectID uuid.UUID, seed ownerSeed, termID uuid
 	if err := s.terms.backdateOwnerClaim(s.ctx, termID, claimedOn, progress, due, duedate.Status(due, false, s.today)); err != nil {
 		return err
 	}
-	if !due.Before(s.today) {
+	if !due.Before(s.today) || seed.late {
 		return nil
 	}
 
@@ -110,7 +118,7 @@ func (s *seeder) claimOwnerTerm(projectID uuid.UUID, seed ownerSeed, termID uuid
 			Amount:    item.NetAmount,
 			PaidAt:    &paidAt,
 			Method:    "transfer",
-			Reference: fmt.Sprintf("TRF-BJB-RSIA-%d", position),
+			Reference: ownerReference(seed.number, position),
 			Note:      fmt.Sprintf("Pembayaran tagihan termin %d dari pemberi kerja setelah dipotong retensi", position),
 		}, &s.owner)
 		if err != nil {

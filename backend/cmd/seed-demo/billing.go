@@ -71,6 +71,10 @@ func demoReceivables() []receivableSeed {
 }
 
 func demoPayables() []payableSeed {
+	return append(append(corePayables(), portfolioPayables()...), generatedPayables()...)
+}
+
+func corePayables() []payableSeed {
 	return []payableSeed{
 		{"DEMO-HUT-001", vendorBuilding, projectGriyaAsri, orderCement, -180, 58_200_000, []paymentSeed{
 			{30_000_000, -190, "transfer", "TRF-BCA-120044", "Pembayaran pertama"},

@@ -24,7 +24,13 @@ func demoPurges(today time.Time) []purge {
 	demoWarehouses := gorm.Expr("SELECT id FROM warehouse WHERE code LIKE ?", demoPattern)
 	demoTermPayables := gorm.Expr("SELECT payable_id FROM payment_term WHERE payable_id IS NOT NULL AND project_id IN (?)", demoProjects)
 	demoOwnerReceivables := gorm.Expr("SELECT receivable_id FROM owner_term WHERE receivable_id IS NOT NULL AND project_id IN (?)", demoProjects)
+	demoProofs := gorm.Expr("SELECT id FROM wage_proof WHERE project_id IN (?)", demoProjects)
 	return []purge{
+		{"wage_receipt", "proof_id IN (?)", []any{demoProofs}},
+		{"wage_proof", "project_id IN (?)", []any{demoProjects}},
+		{"evidence_claim", "project_id IN (?)", []any{demoProjects}},
+		{"evidence_approver", "project_id IN (?)", []any{demoProjects}},
+		{"evidence_record", "project_id IN (?)", []any{demoProjects}},
 		{"comparison", "name = ?", []any{comparisonName}},
 		{"saved_location", "name IN ?", []any{demoSiteNames()}},
 		{"receivable", "reference LIKE ? OR id IN (?)", []any{demoPattern, demoOwnerReceivables}},

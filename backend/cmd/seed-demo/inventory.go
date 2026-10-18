@@ -50,6 +50,10 @@ type movementSeed struct {
 }
 
 func demoMaterials() []materialSeed {
+	return append(coreMaterials(), portfolioMaterials()...)
+}
+
+func coreMaterials() []materialSeed {
 	return []materialSeed{
 		{materialCement, "Semen Portland 50 kg", "Material struktur", "sak", 400, 72_000},
 		{materialRebar10, "Besi beton ulir D10", "Material struktur", "batang", 300, 98_000},
@@ -66,6 +70,10 @@ func demoMaterials() []materialSeed {
 }
 
 func demoWarehouses() []warehouseSeed {
+	return append(coreWarehouses(), portfolioWarehouses()...)
+}
+
+func coreWarehouses() []warehouseSeed {
 	return []warehouseSeed{
 		{warehouseCentral, "Gudang Pusat Cikarang", ""},
 		{warehouseGriya, "Gudang Proyek Griya Asri", projectGriyaAsri},
@@ -74,6 +82,10 @@ func demoWarehouses() []warehouseSeed {
 }
 
 func demoMovements() []movementSeed {
+	return append(coreMovements(), portfolioMovements()...)
+}
+
+func coreMovements() []movementSeed {
 	opening := []movementSeed{
 		{"DEMO-MUT-001", -300, "in", materialCement, 600, "", warehouseCentral},
 		{"DEMO-MUT-002", -300, "in", materialRebar10, 500, "", warehouseCentral},

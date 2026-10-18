@@ -90,6 +90,10 @@ var requestStatusPath = map[string][]string{
 }
 
 func demoVendors() []vendorSeed {
+	return append(coreVendors(), portfolioVendors()...)
+}
+
+func coreVendors() []vendorSeed {
 	return []vendorSeed{
 		{vendorBuilding, "CV Sumber Bangunan Jaya", "Material bangunan", "022-7310-445", "01.234.567.8-421.000", 30, "good", true},
 		{vendorSteel, "PT Baja Prima Nusantara", "Besi & baja", "021-8990-1270", "02.345.678.9-431.000", 45, "good", true},
@@ -103,6 +107,10 @@ func demoVendors() []vendorSeed {
 }
 
 func demoRequests() []requestSeed {
+	return append(append(coreRequests(), portfolioRequests()...), generatedRequests()...)
+}
+
+func coreRequests() []requestSeed {
 	return []requestSeed{
 		{"DEMO-PR-001", projectGriyaAsri, -215, "completed", "Kebutuhan pengecoran Blok A", []lineSeed{{materialCement, 400, 0}, {materialRebar10, 300, 0}}},
 		{"DEMO-PR-002", projectHospital, -45, "approved", "Pengecoran pelat lantai 3 RSIA", []lineSeed{{materialReadymix, 120, 0}, {materialRebar13, 200, 0}}},
@@ -114,6 +122,10 @@ func demoRequests() []requestSeed {
 }
 
 func demoOrders() []orderSeed {
+	return append(append(coreOrders(), portfolioOrders()...), generatedOrders()...)
+}
+
+func coreOrders() []orderSeed {
 	return []orderSeed{
 		{orderCement, vendorBuilding, projectGriyaAsri, "DEMO-PR-001", -210, 30, true, []lineSeed{{materialCement, 400, 72_000}, {materialRebar10, 300, 98_000}}},
 		{orderConcrete, vendorConcrete, projectHospital, "DEMO-PR-002", -40, 30, true, []lineSeed{{materialReadymix, 120, 1_150_000}}},
@@ -124,6 +136,10 @@ func demoOrders() []orderSeed {
 }
 
 func demoReceipts() []receiptSeed {
+	return append(append(coreReceipts(), portfolioReceipts()...), generatedReceipts()...)
+}
+
+func coreReceipts() []receiptSeed {
 	return []receiptSeed{
 		{"DEMO-GR-001", orderCement, warehouseGriya, -200, "good", "Pengiriman pertama, lengkap", []receiptLineSeed{{materialCement, 250, 0}, {materialRebar10, 300, 0}}},
 		{"DEMO-GR-002", orderCement, warehouseGriya, -185, "good", "Sisa semen diterima", []receiptLineSeed{{materialCement, 150, 0}}},

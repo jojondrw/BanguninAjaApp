@@ -12,7 +12,7 @@ import (
 const (
 	cashIn              = "in"
 	cashOut             = "out"
-	ledgerMonths        = 10
+	ledgerMonths        = 18
 	resetLookbackMonths = 36
 
 	openingCapitalNote = "Setoran modal awal pemegang saham"
@@ -40,6 +40,11 @@ type budgetSeed struct {
 
 func companyCashNotes(today time.Time) []string {
 	notes := []string{openingCapitalNote}
+	for _, seed := range portfolioOneOffCash() {
+		if seed.project == "" {
+			notes = append(notes, seed.note)
+		}
+	}
 	for monthsAgo := 0; monthsAgo <= resetLookbackMonths; monthsAgo++ {
 		label := monthLabelOf(today, monthsAgo)
 		notes = append(notes, salaryNote+label, officeNote+label)
@@ -55,8 +60,10 @@ func (s *seeder) cashSchedule() []cashSeed {
 		{3, 22, cashOut, "5300", projectRuko, 185_000_000, "Biaya pengurusan PKKPR Ruko Sentra Makassar"},
 		{1, 14, cashOut, "5300", projectRuko, 142_500_000, "Biaya retribusi PBG Ruko Sentra Makassar"},
 	}
+	schedule = append(schedule, portfolioOneOffCash()...)
 	for monthsAgo := ledgerMonths - 1; monthsAgo >= 0; monthsAgo-- {
 		schedule = append(schedule, s.monthlyCash(monthsAgo)...)
+		schedule = append(schedule, s.portfolioMonthlyCash(monthsAgo)...)
 	}
 	return schedule
 }
@@ -79,7 +86,7 @@ func (s *seeder) monthlyCash(monthsAgo int) []cashSeed {
 }
 
 func (s *seeder) demoBudgets() []budgetSeed {
-	return []budgetSeed{
+	return append([]budgetSeed{
 		{projectGriyaAsri, -1, 14_500_000_000, "Anggaran tahap pematangan lahan & infrastruktur"},
 		{projectGriyaAsri, 0, 21_800_000_000, "Anggaran pembangunan unit Blok A & B"},
 		{projectHospital, -1, 9_500_000_000, "Anggaran pekerjaan persiapan & pondasi"},
@@ -87,7 +94,7 @@ func (s *seeder) demoBudgets() []budgetSeed {
 		{projectRuko, 0, 6_200_000_000, "Anggaran pembelian lahan & perizinan"},
 		{projectRuko, 1, 15_400_000_000, "Anggaran konstruksi ruko"},
 		{projectCluster, -1, 7_800_000_000, "Anggaran penyelesaian unit & serah terima"},
-	}
+	}, portfolioBudgets()...)
 }
 
 func (s *seeder) seedFinance() error {

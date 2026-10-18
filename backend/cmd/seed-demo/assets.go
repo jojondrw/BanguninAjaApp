@@ -31,6 +31,10 @@ func serviceIn(days int) *int {
 }
 
 func demoAssets() []assetSeed {
+	return append(coreAssets(), portfolioAssets()...)
+}
+
+func coreAssets() []assetSeed {
 	return []assetSeed{
 		{"DEMO-AST-001", "Excavator 20 ton", "Alat berat", -30, 1_850_000_000, 96, "in_use"},
 		{"DEMO-AST-002", "Dump truck 8 m³", "Kendaraan", -24, 620_000_000, 60, "in_use"},
@@ -43,6 +47,10 @@ func demoAssets() []assetSeed {
 }
 
 func demoEquipment() []equipmentSeed {
+	return append(coreEquipment(), portfolioEquipment()...)
+}
+
+func coreEquipment() []equipmentSeed {
 	return []equipmentSeed{
 		{"DEMO-EQP-001", "Excavator unit 1", "DEMO-AST-001", projectGriyaAsri, 3_420, serviceIn(12), "operating"},
 		{"DEMO-EQP-002", "Dump truck D 9123 KX", "DEMO-AST-002", projectGriyaAsri, 2_180, serviceIn(30), "operating"},
