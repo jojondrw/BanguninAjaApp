@@ -2,6 +2,7 @@ import { Inbox } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import type { StockPhoto } from '../../shared/photos'
+import { BaniLoop } from './BaniLoader'
 import { Button, ErrorNote } from './Form'
 import { MoneyText } from './Money'
 
@@ -48,19 +49,7 @@ export function KpiRow({ children }: { children: ReactNode }) {
 }
 
 export function Loading({ label = 'Mengambil data...' }: { label?: string }) {
-  return (
-    <div role="status" className="flex flex-col gap-2.5 py-4">
-      <span className="sr-only">{label}</span>
-      {[92, 76, 84].map((width) => (
-        <span
-          key={width}
-          aria-hidden="true"
-          className="h-3 rounded-full bg-slate-100 motion-safe:animate-pulse"
-          style={{ width: `${width}%` }}
-        />
-      ))}
-    </div>
-  )
+  return <BaniLoop label={label} />
 }
 
 export function LoadFailed({ onRetry }: { onRetry: () => void }) {

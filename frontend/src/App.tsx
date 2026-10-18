@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 
 import { useSession, useSessionRestore } from './controllers/useAuth'
 import { RouteAccess } from './views/access/RouteAccess'
-import { BrandMark } from './views/components/Brand'
+import { BaniScreen } from './views/components/BaniLoader'
 import { ErrorBoundary } from './views/components/ErrorBoundary'
 import { LoginPage } from './views/LoginPage'
 import { RegisterPage } from './views/RegisterPage'
@@ -75,10 +75,7 @@ function RouteBoundary({ children }: { children: ReactNode }) {
 
 function PageFallback() {
   return (
-    <div role="status" className="flex min-h-screen items-center justify-center bg-slate-100">
-      <BrandMark className="size-8 motion-safe:animate-pulse" />
-      <span className="sr-only">Memuat halaman...</span>
-    </div>
+    <BaniScreen label="Memuat halaman..." />
   )
 }
 
@@ -87,10 +84,7 @@ function SessionGate({ children }: { children: ReactNode }) {
 
   if (!isRestored) {
     return (
-      <div role="status" className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-100">
-        <BrandMark className="size-9 motion-safe:animate-pulse" />
-        <p className="text-[13px] text-slate-500">Memeriksa sesi...</p>
-      </div>
+      <BaniScreen label="Memeriksa sesi..." />
     )
   }
 
