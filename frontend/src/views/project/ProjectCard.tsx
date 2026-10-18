@@ -8,8 +8,9 @@ import { Money } from '../components/Money'
 import { ProjectTypeIcon } from './ProjectTypeIcon'
 import { StatusChip } from './StatusChip'
 
-// Kartu proyek dengan foto lapangan terbaru memenuhi seluruh kartu. Teksnya ada
-// di panel kaca buram di bagian bawah, jadi tetap terbaca di atas foto apa pun.
+// Kartu proyek dengan foto lapangan terbaru memenuhi seluruh kartu. Bagian
+// bawahnya memudar halus ke gelap (blur bertahap dan gradasi, tanpa garis tepi),
+// dan teks putih di atasnya tetap terbaca di atas foto apa pun.
 // Proyek tanpa foto memakai ikon jenisnya supaya tetap mudah dibedakan.
 export function ProjectCard({ project }: { project: Project }) {
   const photoUrl = useSitePhotoUrl(project.id, project.coverPhotoId)
@@ -18,7 +19,7 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       to={`/proyek/${project.id}`}
-      className="group relative isolate flex aspect-[4/5] min-h-[300px] flex-col justify-between overflow-hidden rounded-2xl bg-slate-100
+      className="group relative isolate flex aspect-[4/5] min-h-[300px] flex-col justify-between overflow-hidden rounded-2xl bg-navy-900
                  shadow-hairline transition-shadow hover:shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_10px_28px_rgb(15_23_42/0.14)]"
     >
       <div className="absolute inset-0 -z-10">
@@ -31,16 +32,24 @@ export function ProjectCard({ project }: { project: Project }) {
         ) : project.coverPhotoId ? (
           <div aria-hidden="true" className="size-full animate-pulse bg-slate-200" />
         ) : (
-          <div className="grid size-full place-items-center bg-gradient-to-br from-navy-50 via-white to-slate-100 pb-28">
-            <div className="flex flex-col items-center gap-2 text-navy-600/80">
+          <div className="grid size-full place-items-center bg-gradient-to-br from-navy-600 via-navy-700 to-navy-900 pb-32">
+            <div className="flex flex-col items-center gap-2 text-white/85">
               <ProjectTypeIcon type={project.type} className="size-10" />
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+              <span className="inline-flex items-center gap-1 text-[11px] text-white/65">
                 <Camera aria-hidden="true" className="size-3" strokeWidth={1.75} />
                 Belum ada foto lapangan
               </span>
             </div>
           </div>
         )}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-3/5 backdrop-blur-xl [mask-image:linear-gradient(to_bottom,transparent,black_55%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-b from-transparent via-black/35 to-black/75"
+        />
       </div>
 
       <div className="flex items-start justify-between gap-2 p-3">
@@ -51,10 +60,12 @@ export function ProjectCard({ project }: { project: Project }) {
         <StatusChip project={project} />
       </div>
 
-      <div className="space-y-3 border-t border-white/40 bg-white/40 px-4 pt-3.5 pb-4 backdrop-blur-2xl backdrop-saturate-150">
+      <div className="space-y-3 px-4 pb-4 text-white">
         <div className="min-w-0">
-          <p className="truncate text-[11px] font-medium text-slate-700">{project.code}</p>
-          <p className="mt-0.5 line-clamp-2 text-[15px] leading-5 font-semibold text-slate-900">{project.name}</p>
+          <p className="truncate text-[11px] font-medium text-white/70">{project.code}</p>
+          <p className="mt-0.5 line-clamp-2 text-[17px] leading-[22px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_8px_rgb(0_0_0/0.25)]">
+            {project.name}
+          </p>
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
@@ -64,13 +75,13 @@ export function ProjectCard({ project }: { project: Project }) {
               aria-valuenow={progress}
               aria-valuemin={0}
               aria-valuemax={100}
-              className="block h-1.5 flex-1 overflow-hidden rounded-[2px] bg-slate-900/10"
+              className="block h-1.5 flex-1 overflow-hidden rounded-[2px] bg-white/25"
             >
-              <span className="bar-fill block h-full rounded-[2px]" style={{ width: `${progress}%` }} />
+              <span className="block h-full rounded-[2px] bg-white" style={{ width: `${progress}%` }} />
             </span>
-            <span className="w-9 text-right text-xs font-medium text-slate-800 tabular-nums">{progress}%</span>
+            <span className="w-9 text-right text-xs font-medium tabular-nums">{progress}%</span>
           </div>
-          <div className="flex items-center justify-between gap-2 text-xs text-slate-700">
+          <div className="flex items-center justify-between gap-2 text-xs text-white/75">
             <span>Target {shortDate(project.targetEndDate)}</span>
             <Money>{rupiahShort(project.contractValue)}</Money>
           </div>
