@@ -10,6 +10,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/auth"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/evidence"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/finance"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/hr"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/inventory"
@@ -48,6 +49,7 @@ func registeredSlices() []slice {
 		{"location", location.Entities(), location.Indexes(), location.Constraints()},
 		{"regulation", regulation.Entities(), regulation.Indexes(), regulation.Constraints()},
 		{"reporting", reporting.Entities(), reporting.Indexes(), reporting.Constraints()},
+		{"evidence", evidence.Entities(), evidence.Indexes(), evidence.Constraints()},
 	}
 }
 

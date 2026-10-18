@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -34,6 +35,7 @@ type Transaction struct {
 	ChainID     *big.Int
 	BlockNumber *uint64
 	BlockTime   *time.Time
+	Input       string
 }
 
 type Receipt struct {
@@ -76,6 +78,7 @@ type rawTransaction struct {
 	ChainID        *string `json:"chainId"`
 	BlockNumber    *string `json:"blockNumber"`
 	BlockTimestamp *string `json:"blockTimestamp"`
+	Input          string  `json:"input"`
 }
 
 type rawReceipt struct {
@@ -186,7 +189,7 @@ func (r rawTransaction) decode() (Transaction, error) {
 	if err != nil {
 		return Transaction{}, err
 	}
-	transaction := Transaction{Hash: r.Hash, From: r.From, Value: value}
+	transaction := Transaction{Hash: r.Hash, From: r.From, Value: value, Input: strings.ToLower(r.Input)}
 	if r.To != nil {
 		transaction.To = *r.To
 	}

@@ -21,6 +21,7 @@ const MasterDataPage = lazy(() => import('./views/master/MasterDataPage').then((
 const LocationPage = lazy(() => import('./views/LocationPage').then((module) => ({ default: module.LocationPage })))
 const OverviewPage = lazy(() => import('./views/OverviewPage').then((module) => ({ default: module.OverviewPage })))
 const PayPage = lazy(() => import('./views/pay/PayPage').then((module) => ({ default: module.PayPage })))
+const VerifyClaimPage = lazy(() => import('./views/verify/VerifyClaimPage').then((module) => ({ default: module.VerifyClaimPage })))
 const ProcurementPage = lazy(() => import('./views/ProcurementPage').then((module) => ({ default: module.ProcurementPage })))
 const ProjectsPage = lazy(() => import('./views/ProjectsPage').then((module) => ({ default: module.ProjectsPage })))
 const ProjectWorkspacePage = lazy(() => import('./views/ProjectWorkspacePage').then((module) => ({ default: module.ProjectWorkspacePage })))
@@ -44,6 +45,7 @@ export default function App() {
               <Routes>
                 <Route path="/masuk" element={<GuestOnly><LoginPage /></GuestOnly>} />
                 <Route path="/bayar/:token" element={<PayPage />} />
+                <Route path="/verifikasi/:token" element={<VerifyClaimPage />} />
                 <Route path="/daftar" element={<GuestOnly><RegisterPage /></GuestOnly>} />
                 <Route path="/" element={<HomeRoute />} />
                 <Route path="/proyek" element={<RequireSession><ProjectsPage /></RequireSession>} />
