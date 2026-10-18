@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Project } from '../models/project'
 import { SITE_PHOTO_MAX_BYTES, sitePhotoProblem } from '../models/sitePhoto'
 import { ProjectCard } from '../views/project/ProjectCard'
+import { ProjectRow } from '../views/project/ProjectRow'
 import { renderWithProviders } from './render'
 
 const PROJECT: Project = {
@@ -55,5 +56,18 @@ describe('foto lapangan', () => {
     const image = await screen.findByRole('img', { name: /Kondisi lapangan/ })
     expect(image).toHaveAttribute('src', 'blob:sampul')
     expect(String(fetchMock.mock.calls[0][0])).toContain('/projects/p-1/site-photos/f-1/file')
+  })
+
+  it('baris tampilan daftar memuat foto di kiri dan keterangan proyek di kanan', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:sampul')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('x', { status: 200, headers: { 'Content-Type': 'image/jpeg' } })))
+    renderWithProviders(<ProjectRow project={{ ...PROJECT, coverPhotoId: 'f-1' }} />)
+
+    const link = screen.getByRole('link')
+    const image = await screen.findByRole('img', { name: /Kondisi lapangan/ })
+    expect(link).toHaveAttribute('href', '/proyek/p-1')
+    expect(link.firstElementChild).toContainElement(image)
+    expect(screen.getByText('Rumah Sakit Ibu & Anak Cirebon')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: /Progres Rumah Sakit/ })).toHaveAttribute('aria-valuenow', '46')
   })
 })
