@@ -61,7 +61,8 @@ describe('OverviewPage', () => {
     renderWithProviders(<OverviewPage />)
 
     await waitFor(() => expect(requestedSegments()).toEqual(['hr', 'projects']))
-    expect(screen.getAllByText('butuh akses Keuangan')).toHaveLength(2)
+    expect(screen.getAllByText(/^butuh akses Keuangan$/i)).toHaveLength(4)
+    expect(screen.getAllByText(/^butuh akses Tagihan$/i)).toHaveLength(2)
   })
 
   it('skips project requests for a role without project access', async () => {
@@ -70,6 +71,7 @@ describe('OverviewPage', () => {
     renderWithProviders(<OverviewPage />)
 
     await waitFor(() => expect(requestedSegments()).toEqual(['finance']))
-    expect(screen.getAllByText('butuh akses Proyek')).toHaveLength(2)
+    expect(screen.getAllByText(/^butuh akses Proyek$/i)).toHaveLength(3)
+    expect(screen.queryByRole('link', { name: /Buka Proyek/ })).not.toBeInTheDocument()
   })
 })

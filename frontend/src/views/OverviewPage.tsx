@@ -2,21 +2,21 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useCan } from '../controllers/useAccess'
-import { useBudgetSummary, useCashFlow, useProjects, useProjectSummary } from '../controllers/useErp'
-import { number, rupiahShort, shortDate } from '../shared/format'
-import { kpiText } from '../shared/kpiText'
+import { useCashFlow, useProjects } from '../controllers/useErp'
+import { shortDate } from '../shared/format'
 import { todayDate } from '../shared/localDate'
-import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, type Project } from '../models/project'
 import { AppShell } from './components/AppShell'
-import { CHIP_CLASS } from './components/ListTools'
 import { CashFlowChart } from './components/CashFlowChart'
-import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from './components/Data'
+import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { AttentionList } from './overview/AttentionList'
+import { BusinessFlow } from './overview/BusinessFlow'
+import { BusinessHealth } from './overview/BusinessHealth'
+import { InvestorMetrics } from './overview/InvestorMetrics'
+import { ProjectCards } from './overview/ProjectCards'
+import { SalesFunnel } from './overview/SalesFunnel'
 import { WelcomeBanner } from './overview/WelcomeBanner'
 
 const CHART_MONTHS = 12
-const FINANCE_ONLY = 'butuh akses Keuangan'
-const PROJECTS_ONLY = 'butuh akses Proyek'
 const RECENT_PROJECTS = 8
 
 export function OverviewPage() {
@@ -24,60 +24,42 @@ export function OverviewPage() {
   // supaya tidak ada permintaan 403 di latar belakang.
   const canReadProjects = useCan('projects', 'read')
   const canReadFinance = useCan('finance', 'read')
-  const summary = useProjectSummary({ enabled: canReadProjects })
+  const canReadSales = useCan('sales', 'read')
+  const cashFrom = monthsAgo(CHART_MONTHS - 1)
+  const cashTo = todayDate()
   const projects = useProjects({ pageSize: RECENT_PROJECTS }, { enabled: canReadProjects })
-  const budgets = useBudgetSummary(undefined, { enabled: canReadFinance })
-  const cashFlow = useCashFlow({}, { enabled: canReadFinance })
-  const yearFlow = useCashFlow({ dateFrom: monthsAgo(CHART_MONTHS - 1), dateTo: todayDate() }, { enabled: canReadFinance })
-
-  const items = projects.data?.items ?? []
-
-  const budgetTotal = budgets.data?.budget ?? 0
-  const realizedTotal = budgets.data?.realized ?? 0
-  const absorption = budgetTotal > 0 ? Math.round((realizedTotal / budgetTotal) * 100) : 0
+  const yearFlow = useCashFlow({ dateFrom: cashFrom, dateTo: cashTo }, { enabled: canReadFinance })
 
   return (
-    <AppShell title="Ringkasan" description={`Kondisi seluruh proyek per ${shortDate(todayDate())}`}>
+    <AppShell title="Ringkasan" description={`Kondisi bisnis per ${shortDate(cashTo)}`}>
       <WelcomeBanner />
 
-      <KpiRow>
-        {canReadProjects ? (
-          <Kpi
-            label="Proyek berjalan"
-            value={kpiText(summary, (data) => number(data.byStatus.ongoing))}
-            note={summary.data ? `dari ${number(summary.data.count)} proyek terdaftar` : undefined}
-          />
-        ) : (
-          <Kpi label="Proyek berjalan" value="—" note={PROJECTS_ONLY} />
-        )}
-        {canReadProjects ? (
-          <Kpi
-            label="Nilai kontrak"
-            value={kpiText(summary, (data) => rupiahShort(data.contractValue))}
-            note={summary.data ? `seluruh proyek, rata-rata progres ${summary.data.averageProgress}%` : undefined}
-          />
-        ) : (
-          <Kpi label="Nilai kontrak" value="—" note={PROJECTS_ONLY} />
-        )}
-        {canReadFinance ? (
-          <Kpi
-            label="Saldo kas"
-            value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)}
-            note={cashFlow.data ? `masuk ${rupiahShort(cashFlow.data.totalIn)}, keluar ${rupiahShort(cashFlow.data.totalOut)}` : undefined}
-          />
-        ) : (
-          <Kpi label="Saldo kas" value="—" note={FINANCE_ONLY} />
-        )}
-        {canReadFinance ? (
-          <Kpi
-            label="Serapan anggaran"
-            value={serapan(budgets.isPending, budgets.isError, absorption)}
-            note={serapanNote(budgets.isError, budgetTotal, realizedTotal)}
-          />
-        ) : (
-          <Kpi label="Serapan anggaran" value="—" note={FINANCE_ONLY} />
-        )}
-      </KpiRow>
+      <div className="mt-8">
+        <InvestorMetrics cashFrom={cashFrom} cashTo={cashTo} />
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        <Card title="Kesehatan bisnis" description="Empat rasio yang paling cepat menunjukkan bisnis berjalan baik">
+          <BusinessHealth />
+        </Card>
+        <Card
+          title="Funnel penjualan unit"
+          description="Dari unit yang dipasarkan sampai kontrak lunas"
+          action={canReadSales ? <CardLink to="/penjualan" label="Buka penjualan" /> : undefined}
+        >
+          {canReadSales ? <SalesFunnel /> : <Empty message="Funnel hanya tampil untuk peran yang punya akses Penjualan." />}
+        </Card>
+      </div>
+
+      <section aria-labelledby="business-flow" className="mt-8 space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="business-flow" className="text-[15px] font-semibold text-slate-900">
+            Alur bisnis
+          </h2>
+          <p className="text-xs text-slate-500">Dari lahan yang dinilai sampai unit yang terjual</p>
+        </div>
+        <BusinessFlow />
+      </section>
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card
@@ -105,39 +87,18 @@ export function OverviewPage() {
       <div className="mt-8">
         <Card
           title="Proyek"
-          description="Status, target, dan progres tiap proyek"
+          description="Progres, status, dan nilai kontrak tiap proyek"
           action={canReadProjects ? <CardLink to="/proyek" label="Semua proyek" /> : undefined}
         >
           {canReadProjects ? null : <Empty message="Daftar proyek hanya tampil untuk peran yang punya akses Proyek." />}
           {canReadProjects && projects.isPending ? <Loading /> : null}
           {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
           {projects.data ? (
-            <Table
-              rows={items}
-              emptyMessage="Belum ada proyek. Buat proyek pertama dari halaman Proyek."
-              columns={[
-                { header: 'Kode', cell: (row: Project) => row.code },
-                {
-                  header: 'Nama',
-                  cell: (row: Project) => (
-                    <Link
-                      to={`/proyek/${row.id}`}
-                      className="font-medium text-slate-900 underline-offset-4 hover:text-navy-600 hover:underline"
-                    >
-                      {row.name}
-                    </Link>
-                  ),
-                },
-                { header: 'Status', cell: (row: Project) => <StatusChip project={row} /> },
-                { header: 'Target selesai', cell: (row: Project) => shortDate(row.targetEndDate) },
-                {
-                  header: 'Nilai',
-                  align: 'right',
-                  cell: (row: Project) => rupiahShort(row.contractValue),
-                },
-                { header: 'Progres', align: 'right', cell: (row: Project) => <Bar percent={row.progress} /> },
-              ]}
-            />
+            projects.data.items.length === 0 ? (
+              <Empty message="Belum ada proyek. Buat proyek pertama dari halaman Proyek." />
+            ) : (
+              <ProjectCards projects={projects.data.items} />
+            )
           ) : null}
         </Card>
       </div>
@@ -162,29 +123,4 @@ function monthsAgo(count: number): string {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth() - count, 1)
   return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function serapan(isPending: boolean, isError: boolean, absorption: number): string {
-  if (isError) {
-    return '—'
-  }
-  return isPending ? '...' : `${absorption}%`
-}
-
-function serapanNote(isError: boolean, budgetTotal: number, realizedTotal: number): string {
-  if (isError) {
-    return 'Data anggaran gagal dimuat'
-  }
-  if (budgetTotal === 0) {
-    return 'anggaran belum diisi'
-  }
-  return `${rupiahShort(realizedTotal)} dari ${rupiahShort(budgetTotal)}`
-}
-
-export function StatusChip({ project }: { project: Project }) {
-  return (
-    <span className={`${CHIP_CLASS} ${PROJECT_STATUS_TONE[project.status]}`}>
-      {PROJECT_STATUS_LABEL[project.status]}
-    </span>
-  )
 }
