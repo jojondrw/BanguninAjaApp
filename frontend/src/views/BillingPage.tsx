@@ -34,13 +34,15 @@ export function BillingPage() {
   }
 
   return (
-    <AppShell title="Tagihan" description="Faktur, piutang pelanggan, dan utang ke vendor beserta pembayarannya">
+    <AppShell
+      title="Tagihan"
+      description="Faktur, piutang pelanggan, dan utang ke vendor beserta pembayarannya"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian tagihan" />}
+    >
       <BillingKpis />
       <ReconciliationBanner />
 
-      <div className="mt-8 mb-6">
-        <SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian tagihan" />
-      </div>
+      <div className="mb-6" />
 
       {tab === 'invoices' ? <InvoicesSection today={today} onRecordReceivable={recordReceivable} /> : null}
       {tab === 'receivables' ? <ReceivablesSection today={today} draftInvoice={draftInvoice} /> : null}

@@ -25,11 +25,9 @@ export function MasterDataPage() {
     <AppShell
       title="Data Master"
       description="Bagan akun, wilayah, dan satuan yang dipakai keuangan, proyek, inventaris, dan pengadaan"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian data master" />}
     >
       <AccessScope module="master">
-        <div className="mb-4">
-          <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian data master" />
-        </div>
 
         {tab === 'accounts' ? <AccountsSection /> : null}
         {tab === 'regions' ? <RegionsSection /> : null}

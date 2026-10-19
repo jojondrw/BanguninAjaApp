@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { SiteEvaluation } from './components/SiteEvaluation'
 import type { MapPoint } from './components/SiteMap'
-import { Tabs, type TabItem } from './components/Tabs'
+import { TabList, TabPanel, type TabItem } from './components/Tabs'
 import { LocationCompare } from './location/LocationCompare'
 
 type LocationTab = 'evaluasi' | 'bandingkan'
@@ -36,11 +36,12 @@ export function LocationPage() {
     <AppShell
       title="Analisis Lokasi"
       description="Evaluasi kelayakan lokasi, lalu bandingkan kandidat sebelum memilih"
+      tabs={<TabList idPrefix="lokasi" label="Bagian analisis lokasi" tabs={TABS} active={tab} onChange={changeTab} />}
     >
-      <Tabs idPrefix="lokasi" label="Bagian analisis lokasi" tabs={TABS} active={tab} onChange={changeTab}>
+      <TabPanel idPrefix="lokasi" active={tab}>
         {tab === 'evaluasi' ? <SiteEvaluation focus={focus} onFocus={setFocus} /> : null}
         {tab === 'bandingkan' ? <LocationCompare onEvaluate={() => changeTab('evaluasi')} /> : null}
-      </Tabs>
+      </TabPanel>
     </AppShell>
   )
 }

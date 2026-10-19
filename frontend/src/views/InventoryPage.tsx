@@ -38,7 +38,11 @@ export function InventoryPage() {
   const lowStockCount = lowStock.data?.totalItems ?? 0
 
   return (
-    <AppShell title="Inventaris" description="Material, gudang, stok, mutasi barang, aset, dan alat">
+    <AppShell
+      title="Inventaris"
+      description="Material, gudang, stok, mutasi barang, aset, dan alat"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian inventaris" />}
+    >
       <KpiRow>
         <Kpi
           label="Jenis material"
@@ -62,9 +66,7 @@ export function InventoryPage() {
         />
       </KpiRow>
 
-      <div className="mt-8 mb-6">
-        <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian inventaris" />
-      </div>
+      <div className="mb-6" />
 
       {tab === 'stock' ? (
         <div className="grid gap-8">
