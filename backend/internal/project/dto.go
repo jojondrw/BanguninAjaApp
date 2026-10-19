@@ -300,3 +300,24 @@ func newMemberResponse(row MemberRow) MemberResponse {
 func newMemberCandidateResponse(candidate MemberCandidate) MemberCandidateResponse {
 	return MemberCandidateResponse{ID: candidate.ID, Name: candidate.Name, Email: candidate.Email}
 }
+
+type PortfolioProjectResponse struct {
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	Type          string    `json:"type"`
+	Status        string    `json:"status"`
+	Progress      int       `json:"progress"`
+	Planned       *int      `json:"planned"`
+	ContractValue int64     `json:"contractValue"`
+}
+
+type PortfolioTypeResponse struct {
+	Type          string `json:"type"`
+	Count         int64  `json:"count"`
+	ContractValue int64  `json:"contractValue"`
+}
+
+type PortfolioResponse struct {
+	Projects []PortfolioProjectResponse `json:"projects"`
+	ByType   []PortfolioTypeResponse    `json:"byType"`
+}

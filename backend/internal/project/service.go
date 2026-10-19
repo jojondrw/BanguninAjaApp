@@ -67,6 +67,7 @@ var (
 
 type Service interface {
 	ListProjects(ctx context.Context, viewerID uuid.UUID, role string, query ProjectQuery) (pagination.Page[ProjectResponse], error)
+	Portfolio(ctx context.Context, viewerID uuid.UUID, role string) (PortfolioResponse, error)
 	SummarizeProjects(ctx context.Context, viewerID uuid.UUID, role string) (ProjectSummaryResponse, error)
 	EnsureProjectAccess(ctx context.Context, projectID, viewerID uuid.UUID, role string) error
 	GetProject(ctx context.Context, id uuid.UUID) (ProjectResponse, error)
@@ -690,4 +691,61 @@ func applyPermitRequest(permit *Permit, request PermitRequest) {
 	permit.IssuedDate = request.IssuedDate
 	permit.ValidUntil = request.ValidUntil
 	permit.Status = request.Status
+}
+
+const portfolioLimit = 500
+
+func (s *service) Portfolio(ctx context.Context, viewerID uuid.UUID, role string) (PortfolioResponse, error) {
+	projects, _, err := s.repository.ListProjects(ctx, ProjectFilter{MemberID: memberScope(viewerID, role), Limit: portfolioLimit})
+	if err != nil {
+		return PortfolioResponse{}, apperror.Internal(err)
+	}
+	today := s.today()
+	rows := make([]PortfolioProjectResponse, 0, len(projects))
+	for _, project := range projects {
+		row := PortfolioProjectResponse{
+			ID: project.ID, Name: project.Name, Type: project.Type, Status: project.Status,
+			Progress: project.Progress, ContractValue: project.ContractValue,
+		}
+		if project.Status == statusOngoing || project.Status == statusOnHold {
+			planned, err := s.plannedToday(ctx, project.ID, today)
+			if err != nil {
+				return PortfolioResponse{}, err
+			}
+			row.Planned = &planned
+		}
+		rows = append(rows, row)
+	}
+	return newPortfolio(rows), nil
+}
+
+func (s *service) plannedToday(ctx context.Context, projectID uuid.UUID, today time.Time) (int, error) {
+	phases, err := s.repository.ListPhases(ctx, projectID)
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+	budget, err := s.repository.SumBudgetByPhase(ctx, projectID)
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+	return int(math.Round(plannedProgress(phases, weighPhases(phases, budget), today))), nil
+}
+
+func newPortfolio(rows []PortfolioProjectResponse) PortfolioResponse {
+	portfolio := PortfolioResponse{Projects: rows, ByType: []PortfolioTypeResponse{}}
+	positions := map[string]int{}
+	for _, row := range rows {
+		if row.Status == statusCancelled {
+			continue
+		}
+		position, known := positions[row.Type]
+		if !known {
+			position = len(portfolio.ByType)
+			positions[row.Type] = position
+			portfolio.ByType = append(portfolio.ByType, PortfolioTypeResponse{Type: row.Type})
+		}
+		portfolio.ByType[position].Count++
+		portfolio.ByType[position].ContractValue += row.ContractValue
+	}
+	return portfolio
 }

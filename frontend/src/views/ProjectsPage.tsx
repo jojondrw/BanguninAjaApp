@@ -23,11 +23,22 @@ import { PHOTOS } from '../shared/photos'
 import { AppShell } from './components/AppShell'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
+import { SectionTabs } from './components/ListTools'
+import { PortfolioOverview } from './project/PortfolioOverview'
 import { ProjectCard } from './project/ProjectCard'
 import { ProjectRow } from './project/ProjectRow'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
 const VIEW_PARAM = 'tampilan'
+const SECTION_PARAM = 'bagian'
+const LIST_SECTION = 'daftar'
+
+type ProjectsSection = 'ringkasan' | 'daftar'
+
+const SECTIONS: { value: ProjectsSection; label: string }[] = [
+  { value: 'ringkasan', label: 'Ringkasan' },
+  { value: LIST_SECTION, label: 'Daftar' },
+]
 const LIST_VIEW = 'daftar'
 
 const VIEWS = [
@@ -211,6 +222,20 @@ export function ProjectsPage() {
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const isList = searchParams.get(VIEW_PARAM) === LIST_VIEW
+  const section: ProjectsSection = searchParams.get(SECTION_PARAM) === LIST_SECTION ? LIST_SECTION : 'ringkasan'
+  const changeSection = (next: ProjectsSection) =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current)
+        if (next === LIST_SECTION) {
+          params.set(SECTION_PARAM, LIST_SECTION)
+        } else {
+          params.delete(SECTION_PARAM)
+        }
+        return params
+      },
+      { replace: true },
+    )
   const changeView = (list: boolean) =>
     setSearchParams(
       (current) => {
@@ -251,6 +276,7 @@ export function ProjectsPage() {
           </Button>
         ) : undefined
       }
+      tabs={<SectionTabs tabs={SECTIONS} active={section} onChange={changeSection} label="Bagian proyek" />}
     >
       {isFormOpen && canCreate ? (
         <div className="mb-6">
@@ -264,78 +290,82 @@ export function ProjectsPage() {
         </div>
       ) : null}
 
-      <section aria-label="Daftar proyek">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <label htmlFor="cari" className="sr-only">
-            Cari proyek
-          </label>
-          <input
-            id="cari"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari nama proyek"
-            className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
-          />
-          {teamOnly ? null : (
-            <>
-              <button
-                type="button"
-                onClick={() => setOnlyMine((current) => !current)}
-                aria-pressed={onlyMine}
-                className={filterChipClass(onlyMine)}
-              >
-                Proyek saya
-              </button>
-              <span aria-hidden="true" className="h-5 w-px bg-slate-200" />
-            </>
-          )}
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Saring menurut status">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.label}
-                type="button"
-                onClick={() => setStatus(filter.value)}
-                aria-pressed={status === filter.value}
-                className={filterChipClass(status === filter.value)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            {projects.data ? (
-              <span className="text-[13px] text-slate-500 tabular-nums">
-                {projectsDescription(projects.data.totalItems, teamOnly)}
-              </span>
-            ) : null}
-            <ViewToggle isList={isList} onChange={changeView} />
-          </div>
-        </div>
+      {section === 'ringkasan' ? <PortfolioOverview onOpenList={() => changeSection(LIST_SECTION)} /> : null}
 
-        {projects.isPending ? <Loading /> : null}
-        {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
-        {projects.data ? (
-          projects.data.items.length === 0 ? (
-            <Empty message={emptyListMessage(onlyMine, teamOnly)} photo={PHOTOS.konstruksi} />
-          ) : isList ? (
-            <ul className="space-y-2.5">
-              {projects.data.items.map((project) => (
-                <li key={project.id} className="min-w-0">
-                  <ProjectRow project={project} />
-                </li>
+      {section === LIST_SECTION ? (
+        <section aria-label="Daftar proyek">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <label htmlFor="cari" className="sr-only">
+              Cari proyek
+            </label>
+            <input
+              id="cari"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Cari nama proyek"
+              className={`${CONTROL_CLASS} h-8 w-56 px-3 text-[13px]`}
+            />
+            {teamOnly ? null : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setOnlyMine((current) => !current)}
+                  aria-pressed={onlyMine}
+                  className={filterChipClass(onlyMine)}
+                >
+                  Proyek saya
+                </button>
+                <span aria-hidden="true" className="h-5 w-px bg-slate-200" />
+              </>
+            )}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Saring menurut status">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.label}
+                  type="button"
+                  onClick={() => setStatus(filter.value)}
+                  aria-pressed={status === filter.value}
+                  className={filterChipClass(status === filter.value)}
+                >
+                  {filter.label}
+                </button>
               ))}
-            </ul>
-          ) : (
-            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {projects.data.items.map((project) => (
-                <li key={project.id} className="min-w-0">
-                  <ProjectCard project={project} />
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
-      </section>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              {projects.data ? (
+                <span className="text-[13px] text-slate-500 tabular-nums">
+                  {projectsDescription(projects.data.totalItems, teamOnly)}
+                </span>
+              ) : null}
+              <ViewToggle isList={isList} onChange={changeView} />
+            </div>
+          </div>
+
+          {projects.isPending ? <Loading /> : null}
+          {projects.isError ? <LoadFailed onRetry={() => projects.refetch()} /> : null}
+          {projects.data ? (
+            projects.data.items.length === 0 ? (
+              <Empty message={emptyListMessage(onlyMine, teamOnly)} photo={PHOTOS.konstruksi} />
+            ) : isList ? (
+              <ul className="space-y-2.5">
+                {projects.data.items.map((project) => (
+                  <li key={project.id} className="min-w-0">
+                    <ProjectRow project={project} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {projects.data.items.map((project) => (
+                  <li key={project.id} className="min-w-0">
+                    <ProjectCard project={project} />
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+        </section>
+      ) : null}
     </AppShell>
   )
 }

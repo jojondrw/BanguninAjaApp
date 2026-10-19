@@ -621,3 +621,14 @@ func (c *Controller) DeleteContractChange(ctx *gin.Context) {
 	schedule, err := c.service.DeleteContractChange(ctx.Request.Context(), projectID, changeID)
 	httpresponse.Respond(ctx, schedule, err)
 }
+
+func (c *Controller) Portfolio(ctx *gin.Context) {
+	viewerID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	role, _ := middleware.AuthenticatedRole(ctx)
+	portfolio, err := c.service.Portfolio(ctx.Request.Context(), viewerID, role)
+	httpresponse.Respond(ctx, portfolio, err)
+}

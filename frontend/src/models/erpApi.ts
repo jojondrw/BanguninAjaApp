@@ -18,6 +18,7 @@ import type {
   ProjectFilter,
   ProjectPhase,
   ProjectRequest,
+  Portfolio,
   ProjectSummary,
 } from './project'
 
@@ -28,6 +29,7 @@ export const projectApi = {
     request<Page<Project>>(`/projects${toQueryString({ ...filter })}`),
 
   summary: () => request<ProjectSummary>('/projects/summary'),
+  portfolio: () => request<Portfolio>('/projects/portfolio'),
 
   get: (id: string) => request<Project>(`/projects/${id}`),
 
