@@ -23,12 +23,13 @@ const PAGE_SIZE = 10
 
 // draftInvoice datang dari tombol "Catat sebagai piutang" di rincian faktur.
 // Formulir langsung terbuka dengan isian dari faktur itu.
-export function ReceivablesSection({ today, draftInvoice }: {
+export function ReceivablesSection({ today, draftInvoice, initialStatus = '' }: {
   today: string
   draftInvoice: Invoice | null
+  initialStatus?: BillingStatus | ''
 }) {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<BillingStatus | ''>('')
+  const [status, setStatus] = useState<BillingStatus | ''>(initialStatus)
   const [customerId, setCustomerId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [page, setPage] = useState(1)

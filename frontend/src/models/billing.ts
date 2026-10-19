@@ -476,3 +476,28 @@ export interface ReconciliationPair {
   customerName: string | null
   difference: number
 }
+
+export type AgingBucket = 'current' | 'days_30' | 'days_60' | 'days_90' | 'days_over_90'
+
+// Ringkasan sisa piutang atau utang dari server: per umur keterlambatan dan
+// pihak dengan sisa terbesar.
+export interface BalanceSummary {
+  outstanding: number
+  overdue: number
+  openCount: number
+  buckets: { bucket: AgingBucket; count: number; amount: number }[]
+  largest: { name: string; count: number; amount: number }[]
+}
+
+export interface BillingSummary {
+  receivables: BalanceSummary
+  payables: BalanceSummary
+}
+
+export const AGING_LABEL: Record<AgingBucket, string> = {
+  current: 'Belum jatuh tempo',
+  days_30: 'Terlambat 1 sampai 30 hari',
+  days_60: 'Terlambat 31 sampai 60 hari',
+  days_90: 'Terlambat 61 sampai 90 hari',
+  days_over_90: 'Terlambat lebih dari 90 hari',
+}

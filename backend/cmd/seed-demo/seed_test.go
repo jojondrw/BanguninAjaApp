@@ -351,3 +351,13 @@ func TestDemoReportsCoverEveryTypeAndAreFoundByReset(t *testing.T) {
 		}
 	}
 }
+
+func TestGeneratedOwnersHaveUniqueReadableNames(t *testing.T) {
+	seen := map[string]bool{}
+	for _, client := range generatedClients() {
+		if strings.Contains(client.Name, "Pemilik") || seen[client.Name] {
+			t.Errorf("owner name %q is a placeholder or duplicate", client.Name)
+		}
+		seen[client.Name] = true
+	}
+}

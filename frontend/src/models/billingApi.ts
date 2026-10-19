@@ -5,6 +5,7 @@ import type {
   BillingPayment,
   BillingRecordOf,
   BillingRequestOf,
+  BillingSummary,
   PaymentRequest,
   ReconciliationPair,
 } from './billing'
@@ -22,6 +23,8 @@ function billingQuery(filter: Record<string, string | number | boolean | undefin
 // Faktur, piutang, dan utang memakai bentuk endpoint yang sama di bawah
 // /billing/<kind>, jadi satu set pemanggil cukup untuk ketiganya.
 export const billingApi = {
+  summary: () => request<BillingSummary>('/billing/summary'),
+
   list: <K extends BillingKind>(kind: K, filter: BillingFilterOf[K] = {}) =>
     request<Page<BillingRecordOf[K]>>(`/billing/${kind}${billingQuery({ ...filter })}`),
 

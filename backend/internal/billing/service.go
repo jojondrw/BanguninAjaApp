@@ -20,7 +20,14 @@ const (
 	vendorParty   = "vendor"
 
 	invoiceRecordedCode = "invoice_already_recorded"
+
+	sideReceivable = "receivable"
+	sidePayable    = "payable"
+
+	largestParties = 5
 )
+
+var agingBuckets = []string{"current", "days_30", "days_60", "days_90", "days_over_90"}
 
 var (
 	errInvoiceNotFound      = apperror.NotFound("invoice_not_found", "Tagihan tidak ditemukan")
@@ -79,6 +86,7 @@ func invoiceLockedByReceivable(reference string) *apperror.Error {
 }
 
 type Service interface {
+	Summarize(ctx context.Context) (BillingSummaryResponse, error)
 	ListInvoices(ctx context.Context, query InvoiceQuery) (pagination.Page[InvoiceResponse], error)
 	GetInvoice(ctx context.Context, id uuid.UUID) (InvoiceResponse, error)
 	CreateInvoice(ctx context.Context, request InvoiceRequest) (InvoiceResponse, error)
@@ -693,4 +701,49 @@ func applyPayableRequest(payable *Payable, request PayableRequest, today time.Ti
 	payable.DueDate = request.DueDate
 	payable.Amount = request.Amount
 	payable.Status = storedStatus(request.DueDate, request.Amount, payable.PaidAmount, today)
+}
+
+func (s *service) Summarize(ctx context.Context) (BillingSummaryResponse, error) {
+	receivables, err := s.summarizeSide(ctx, sideReceivable)
+	if err != nil {
+		return BillingSummaryResponse{}, err
+	}
+	payables, err := s.summarizeSide(ctx, sidePayable)
+	if err != nil {
+		return BillingSummaryResponse{}, err
+	}
+	return BillingSummaryResponse{Receivables: receivables, Payables: payables}, nil
+}
+
+func (s *service) summarizeSide(ctx context.Context, side string) (BalanceSummaryResponse, error) {
+	aging, err := s.repository.AgeOpenBalances(ctx, side, s.today())
+	if err != nil {
+		return BalanceSummaryResponse{}, apperror.Internal(err)
+	}
+	parties, err := s.repository.LargestOpenBalances(ctx, side, largestParties)
+	if err != nil {
+		return BalanceSummaryResponse{}, apperror.Internal(err)
+	}
+	return balanceSummary(aging, parties), nil
+}
+
+func balanceSummary(aging []AgingRow, parties []PartyBalanceRow) BalanceSummaryResponse {
+	byBucket := map[string]AgingRow{}
+	for _, row := range aging {
+		byBucket[row.Bucket] = row
+	}
+	summary := BalanceSummaryResponse{Buckets: make([]AgingBucketResponse, len(agingBuckets)), Largest: []PartyBalanceResponse{}}
+	for index, bucket := range agingBuckets {
+		row := byBucket[bucket]
+		summary.Buckets[index] = AgingBucketResponse{Bucket: bucket, Count: row.Count, Amount: row.Amount}
+		summary.Outstanding += row.Amount
+		summary.OpenCount += row.Count
+		if bucket != agingBuckets[0] {
+			summary.Overdue += row.Amount
+		}
+	}
+	for _, party := range parties {
+		summary.Largest = append(summary.Largest, PartyBalanceResponse{Name: party.Name, Count: party.Count, Amount: party.Amount})
+	}
+	return summary
 }

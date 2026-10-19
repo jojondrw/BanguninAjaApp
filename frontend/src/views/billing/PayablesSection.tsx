@@ -21,9 +21,9 @@ import { allVendorOptions } from './billingLookups'
 
 const PAGE_SIZE = 10
 
-export function PayablesSection({ today }: { today: string }) {
+export function PayablesSection({ today, initialStatus = '' }: { today: string; initialStatus?: BillingStatus | '' }) {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<BillingStatus | ''>('')
+  const [status, setStatus] = useState<BillingStatus | ''>(initialStatus)
   const [vendorId, setVendorId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [page, setPage] = useState(1)

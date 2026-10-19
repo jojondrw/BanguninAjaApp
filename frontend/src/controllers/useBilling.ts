@@ -67,7 +67,15 @@ export function useBillingReconciliation(page: number, pageSize: number) {
   })
 }
 
-// Backend belum punya endpoint ringkasan, jadi KPI dihitung dari 100 catatan
+export function useBillingSummary() {
+  return useQuery({
+    queryKey: [BILLING_KEY, 'summary'],
+    queryFn: () => billingApi.summary(),
+    ...DATA_QUERY,
+  })
+}
+
+// KPI di atas halaman dihitung dari 100 catatan
 // pertama tiap jenis. Urutan backend menurut jatuh tempo terlama dulu, jadi
 // yang paling mendesak selalu ikut terhitung.
 export function useBillingTotals(kind: BillingKind) {
