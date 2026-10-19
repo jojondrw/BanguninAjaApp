@@ -39,6 +39,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	warehouses.DELETE("/:id", m.controller.DeleteWarehouse)
 
 	routes.GET("/stocks", m.controller.ListStocks)
+	routes.GET("/overview", m.controller.Overview)
 
 	movements := routes.Group("/stock-movements")
 	movements.GET("", m.controller.ListStockMovements)

@@ -175,3 +175,8 @@ func (c *Controller) RecordStockMovement(ctx *gin.Context) {
 	movement, err := c.service.RecordStockMovement(ctx.Request.Context(), request)
 	httpresponse.RespondCreated(ctx, movement, err)
 }
+
+func (c *Controller) Overview(ctx *gin.Context) {
+	overview, err := c.service.Overview(ctx.Request.Context())
+	httpresponse.Respond(ctx, overview, err)
+}

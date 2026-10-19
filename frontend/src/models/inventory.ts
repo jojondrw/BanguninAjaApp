@@ -498,3 +498,20 @@ export function toStockMovementRequest(values: MovementFormValues): StockMovemen
     reference: values.reference.trim(),
   }
 }
+
+// Ringkasan inventaris dan aset dari server untuk tab Ringkasan.
+export interface InventoryOverview {
+  stockValue: number
+  lowStock: number
+  warehouses: { name: string; value: number; items: number }[]
+  weeks: { week: string; inValue: number; outValue: number }[]
+}
+
+export interface AssetOverview {
+  bookValue: number
+  categories: { category: string; count: number; bookValue: number }[]
+  equipmentStatus: Partial<Record<EquipmentStatus, number>>
+  serviceOverdue: number
+  serviceSoon: number
+  serviceWindow: number
+}

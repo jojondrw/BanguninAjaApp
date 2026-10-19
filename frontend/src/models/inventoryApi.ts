@@ -4,10 +4,12 @@ import type {
   Asset,
   AssetFilter,
   AssetPage,
+  AssetOverview,
   AssetRequest,
   Equipment,
   EquipmentFilter,
   EquipmentRequest,
+  InventoryOverview,
   LowStockMaterial,
   Material,
   MaterialFilter,
@@ -29,6 +31,8 @@ interface PageQuery {
 }
 
 export const inventoryApi = {
+  overview: () => request<InventoryOverview>('/inventory/overview'),
+
   materials: (filter: MaterialFilter = {}) =>
     request<Page<Material>>(`/inventory/materials${toQueryString({ ...filter })}`),
 
@@ -70,6 +74,8 @@ export const unitOfMeasureApi = {
 }
 
 export const assetApi = {
+  overview: () => request<AssetOverview>('/assets/overview'),
+
   assets: (filter: AssetFilter = {}) => request<AssetPage>(`/assets${toQueryString({ ...filter })}`),
 
   createAsset: (body: AssetRequest) => request<Asset>('/assets', { method: 'POST', body }),

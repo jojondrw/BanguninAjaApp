@@ -196,3 +196,22 @@ func newStockMovementResponse(row StockMovementRow) StockMovementResponse {
 		CreatedAt:           row.CreatedAt,
 	}
 }
+
+type WarehouseValueResponse struct {
+	Name  string `json:"name"`
+	Value int64  `json:"value"`
+	Items int64  `json:"items"`
+}
+
+type WeeklyMovementResponse struct {
+	Week     string `json:"week"`
+	InValue  int64  `json:"inValue"`
+	OutValue int64  `json:"outValue"`
+}
+
+type InventoryOverviewResponse struct {
+	StockValue int64                    `json:"stockValue"`
+	LowStock   int64                    `json:"lowStock"`
+	Warehouses []WarehouseValueResponse `json:"warehouses"`
+	Weeks      []WeeklyMovementResponse `json:"weeks"`
+}

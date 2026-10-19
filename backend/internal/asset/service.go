@@ -14,6 +14,7 @@ import (
 const (
 	assetDisposed      = "disposed"
 	equipmentOperating = "operating"
+	serviceWindowDays  = 14
 )
 
 var (
@@ -38,6 +39,7 @@ var (
 )
 
 type Service interface {
+	Overview(ctx context.Context) (AssetOverviewResponse, error)
 	ListAssets(ctx context.Context, query AssetQuery) (AssetPage, error)
 	GetAsset(ctx context.Context, id uuid.UUID) (AssetResponse, error)
 	CreateAsset(ctx context.Context, request AssetRequest) (AssetResponse, error)
@@ -238,4 +240,38 @@ func applyEquipmentRequest(equipment *Equipment, request EquipmentRequest) {
 	equipment.OperatingHours = request.OperatingHours
 	equipment.NextServiceDate = request.NextServiceDate
 	equipment.Status = request.Status
+}
+
+func (s *service) Overview(ctx context.Context) (AssetOverviewResponse, error) {
+	categories, err := s.repository.ValueAssetsByCategory(ctx)
+	if err != nil {
+		return AssetOverviewResponse{}, apperror.Internal(err)
+	}
+	statuses, err := s.repository.CountEquipmentByStatus(ctx)
+	if err != nil {
+		return AssetOverviewResponse{}, apperror.Internal(err)
+	}
+	due, err := s.repository.CountServiceDue(ctx, serviceWindowDays)
+	if err != nil {
+		return AssetOverviewResponse{}, apperror.Internal(err)
+	}
+	return newAssetOverview(categories, statuses, due), nil
+}
+
+func newAssetOverview(categories []CategoryValue, statuses []EquipmentHealth, due ServiceDue) AssetOverviewResponse {
+	overview := AssetOverviewResponse{
+		Categories:      make([]CategoryValueResponse, len(categories)),
+		EquipmentStatus: map[string]int64{},
+		ServiceOverdue:  due.Overdue,
+		ServiceSoon:     due.Soon,
+		ServiceWindow:   serviceWindowDays,
+	}
+	for index, category := range categories {
+		overview.Categories[index] = CategoryValueResponse{Category: category.Category, Count: category.Count, BookValue: category.BookValue}
+		overview.BookValue += category.BookValue
+	}
+	for _, status := range statuses {
+		overview.EquipmentStatus[status.Status] += status.Count
+	}
+	return overview
 }

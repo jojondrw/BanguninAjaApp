@@ -113,3 +113,18 @@ func newEquipmentResponse(equipment Equipment) EquipmentResponse {
 		UpdatedAt:       equipment.UpdatedAt,
 	}
 }
+
+type CategoryValueResponse struct {
+	Category  string `json:"category"`
+	Count     int64  `json:"count"`
+	BookValue int64  `json:"bookValue"`
+}
+
+type AssetOverviewResponse struct {
+	BookValue       int64                   `json:"bookValue"`
+	Categories      []CategoryValueResponse `json:"categories"`
+	EquipmentStatus map[string]int64        `json:"equipmentStatus"`
+	ServiceOverdue  int64                   `json:"serviceOverdue"`
+	ServiceSoon     int64                   `json:"serviceSoon"`
+	ServiceWindow   int                     `json:"serviceWindow"`
+}

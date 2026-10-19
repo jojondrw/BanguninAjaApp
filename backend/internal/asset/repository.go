@@ -33,7 +33,26 @@ type AssetTotals struct {
 	AccumulatedDepreciation int64
 }
 
+type CategoryValue struct {
+	Category  string
+	Count     int64
+	BookValue int64
+}
+
+type EquipmentHealth struct {
+	Status string
+	Count  int64
+}
+
+type ServiceDue struct {
+	Overdue int64
+	Soon    int64
+}
+
 type Repository interface {
+	ValueAssetsByCategory(ctx context.Context) ([]CategoryValue, error)
+	CountEquipmentByStatus(ctx context.Context) ([]EquipmentHealth, error)
+	CountServiceDue(ctx context.Context, withinDays int) (ServiceDue, error)
 	ListAssets(ctx context.Context, filter AssetFilter) ([]Asset, int64, error)
 	SumAssets(ctx context.Context, filter AssetFilter) (AssetTotals, error)
 	FindAsset(ctx context.Context, id uuid.UUID) (Asset, error)
@@ -164,4 +183,30 @@ func (f EquipmentFilter) apply(db *gorm.DB) *gorm.DB {
 		db = db.Where("next_service_date <= ?", *f.ServiceDueBefore)
 	}
 	return db
+}
+
+func (r *gormRepository) ValueAssetsByCategory(ctx context.Context) ([]CategoryValue, error) {
+	var rows []CategoryValue
+	err := r.db.WithContext(ctx).Model(&Asset{}).
+		Select("category, COUNT(*) AS count, SUM(acquisition_value - accumulated_depreciation) AS book_value").
+		Where("status <> ?", assetDisposed).
+		Group("category").
+		Order("book_value DESC").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) CountEquipmentByStatus(ctx context.Context) ([]EquipmentHealth, error) {
+	var rows []EquipmentHealth
+	err := r.db.WithContext(ctx).Model(&Equipment{}).Select("status, COUNT(*) AS count").Group("status").Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) CountServiceDue(ctx context.Context, withinDays int) (ServiceDue, error) {
+	var due ServiceDue
+	err := r.db.WithContext(ctx).Model(&Equipment{}).
+		Select("COUNT(*) FILTER (WHERE next_service_date < CURRENT_DATE) AS overdue, "+
+			"COUNT(*) FILTER (WHERE next_service_date >= CURRENT_DATE AND next_service_date <= CURRENT_DATE + ?::int) AS soon", withinDays).
+		Scan(&due).Error
+	return due, database.Translate(err)
 }
