@@ -79,7 +79,7 @@ export function DonutChart({ slices, colors, caption, format = rupiahShort }: {
             className={`flex items-start gap-2 rounded-md px-1.5 py-1 text-[13px] ${active === index ? 'bg-slate-50' : ''}`}
           >
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
-            <span className="min-w-0 flex-1 text-slate-700">{slice.label}</span>
+            <span className="min-w-0 flex-1 truncate text-slate-700" title={slice.label}>{slice.label}</span>
             <span className="shrink-0 text-slate-900 tabular-nums">
               <Money>{format(slice.value)}</Money>
               <span className="ml-1.5 inline-block w-8 text-right text-xs text-slate-400">

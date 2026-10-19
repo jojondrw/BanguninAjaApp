@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { useBudgets, useCashByAccount, useCashFlow, useCashTransactions } from '../../controllers/useErp'
 import { busiestBudgets, topAccounts, type Budget, type CashAccountTotal, type CashFlow } from '../../models/finance'
+import { monthEndBalances } from '../../models/overview'
 import { number, rupiahShort, shortDate } from '../../shared/format'
 import { monthsAgo, todayDate } from '../../shared/localDate'
 import { CashFlowChart } from '../components/CashFlowChart'
@@ -9,6 +10,7 @@ import { DonutChart } from '../components/DonutChart'
 import { LinkButton } from '../components/LinkButton'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { Money, MoneyText } from '../components/Money'
+import { Sparkline } from '../components/Sparkline'
 import type { FinanceTab } from './financeTabs'
 import { SignedAmount } from './parts'
 
@@ -30,15 +32,22 @@ function AccountDonut({ accounts, type, colors, caption }: {
   return <DonutChart slices={items.map((item) => ({ label: item.label, value: item.total }))} colors={colors} caption={caption} />
 }
 
-function Total({ label, value, note }: { label: string; value: string; note: string }) {
+function Total({ label, value, note, trend, tone = 'navy' }: {
+  label: string
+  value: string
+  note: string
+  trend: number[]
+  tone?: 'navy' | 'red'
+}) {
   return (
-    <div className="flex min-w-0 flex-col justify-between gap-4 bg-white px-5 py-4 sm:px-6 sm:py-5">
+    <div className="flex min-w-0 flex-col bg-white px-5 pt-4 pb-3 sm:px-6 sm:pt-5">
       <p className="text-[13px] font-medium text-slate-500">{label}</p>
-      <div>
-        <p className="text-[26px] leading-8 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums">
-          <MoneyText>{value}</MoneyText>
-        </p>
-        <p className="mt-1 text-xs text-slate-500">{note}</p>
+      <p className="mt-1.5 truncate text-[22px] leading-7 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums">
+        <MoneyText>{value}</MoneyText>
+      </p>
+      <p className="mt-0.5 text-xs text-slate-500">{note}</p>
+      <div className="mt-auto pt-4">
+        <Sparkline values={trend} tone={tone} />
       </div>
     </div>
   )
@@ -46,12 +55,34 @@ function Total({ label, value, note }: { label: string; value: string; note: str
 
 function CashTotals({ cashFlow }: { cashFlow: CashFlow | undefined }) {
   const value = (amount: number | undefined) => (cashFlow ? rupiahShort(amount ?? 0) : '...')
+  const periods = cashFlow?.periods ?? []
   return (
     <div className="grid h-full grid-cols-2 gap-px overflow-hidden rounded-2xl bg-slate-200/70 shadow-hairline">
-      <Total label="Kas masuk" value={value(cashFlow?.totalIn)} note="12 bulan terakhir" />
-      <Total label="Kas keluar" value={value(cashFlow?.totalOut)} note="12 bulan terakhir" />
-      <Total label="Selisih" value={value(cashFlow?.net)} note="masuk dikurangi keluar" />
-      <Total label="Saldo" value={value(cashFlow?.balance)} note="per hari ini" />
+      <Total
+        label="Kas masuk"
+        value={value(cashFlow?.totalIn)}
+        note="12 bulan terakhir"
+        trend={periods.map((period) => period.cashIn)}
+      />
+      <Total
+        label="Kas keluar"
+        value={value(cashFlow?.totalOut)}
+        note="12 bulan terakhir"
+        trend={periods.map((period) => period.cashOut)}
+      />
+      <Total
+        label="Selisih"
+        value={value(cashFlow?.net)}
+        note="masuk dikurangi keluar"
+        trend={periods.map((period) => period.net)}
+        tone={(cashFlow?.net ?? 0) < 0 ? 'red' : 'navy'}
+      />
+      <Total
+        label="Saldo"
+        value={value(cashFlow?.balance)}
+        note="per hari ini"
+        trend={cashFlow ? monthEndBalances(periods, cashFlow.balance) : []}
+      />
     </div>
   )
 }
@@ -102,7 +133,6 @@ export function FinanceSummaryTab({ onOpenTab }: { onOpenTab: (tab: FinanceTab) 
   const accounts = useCashByAccount({ dateFrom: from, dateTo: to })
   const budgets = useBudgets()
   const transactions = useCashTransactions(RECENT)
-  const ledger = <LinkButton label="Buku besar" onClick={() => onOpenTab('buku-besar')} />
 
   function accountDonut(type: 'in' | 'out') {
     if (accounts.isPending) {
@@ -124,10 +154,10 @@ export function FinanceSummaryTab({ onOpenTab }: { onOpenTab: (tab: FinanceTab) 
         <div className="lg:col-span-2 xl:col-span-1">
           <CashTotals cashFlow={cashFlow.data} />
         </div>
-        <Card title="Masuk dari" description="Kas masuk per akun, 12 bulan" action={ledger}>
+        <Card title="Masuk dari" description="Kas masuk per akun, 12 bulan">
           {accountDonut('in')}
         </Card>
-        <Card title="Keluar untuk" description="Kas keluar per akun, 12 bulan" action={ledger}>
+        <Card title="Keluar untuk" description="Kas keluar per akun, 12 bulan">
           {accountDonut('out')}
         </Card>
       </div>
