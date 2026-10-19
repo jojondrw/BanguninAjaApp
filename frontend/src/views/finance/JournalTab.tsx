@@ -24,6 +24,7 @@ import { JOURNAL_PARAM, cashLink, ledgerLink, useSearchParam } from './financeTa
 import { JournalForm } from './JournalForm'
 import { DateRangeFilter, RowActions, RowLink } from './parts'
 import { Money } from '../components/Money'
+import { SidePanel } from '../components/SidePanel'
 
 const ALL_ACCOUNTS = accountOptions()
 const PAGE_SIZE = 20
@@ -263,7 +264,9 @@ export function JournalTab() {
       </Card>
 
       {selectedId !== '' ? (
-        <JournalDetailCard id={selectedId} onClose={() => setSelectedId('')} />
+        <SidePanel label="Rincian jurnal" onClose={() => setSelectedId('')}>
+          <JournalDetailCard id={selectedId} onClose={() => setSelectedId('')} />
+        </SidePanel>
       ) : null}
     </div>
   )

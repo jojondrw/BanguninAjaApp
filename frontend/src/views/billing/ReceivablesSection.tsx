@@ -18,6 +18,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { ReceivableForm } from './BillingForms'
+import { SidePanel } from '../components/SidePanel'
 
 const PAGE_SIZE = 10
 
@@ -193,32 +194,34 @@ export function ReceivablesSection({ today, draftInvoice, initialStatus = '' }: 
       </Card>
 
       {selectedId ? (
-        <BillingDetail
-          key={selectedId}
-          kind="receivables"
-          id={selectedId}
-          today={today}
-          heading={(receivable) => `piutang ${receivable.reference}`}
-          fields={(receivable) => [
-            { label: 'Referensi', value: receivable.reference },
-            { label: 'Pelanggan', value: receivable.customerName },
-            { label: 'Proyek', value: receivable.projectName ?? 'Tanpa proyek' },
-            { label: 'Kontrak penjualan', value: receivable.contractNumber ?? 'Tidak ditautkan' },
-            { label: 'Faktur', value: receivable.invoiceNumber ?? 'Tidak ditautkan' },
-          ]}
-          linkedTo={(receivable) => (receivable.invoiceNumber ? `faktur ${receivable.invoiceNumber}` : null)}
-          renderEdit={(receivable, controls) => (
-            <ReceivableForm
-              record={receivable}
-              onSaved={controls.onSaved}
-              onCancel={controls.onCancel}
-            />
-          )}
-          onDeleted={(message) => {
-            setSelectedId(null)
-            setNotice(message)
-          }}
-        />
+        <SidePanel label="Rincian piutang" onClose={() => setSelectedId(null)}>
+          <BillingDetail
+            key={selectedId}
+            kind="receivables"
+            id={selectedId}
+            today={today}
+            heading={(receivable) => `piutang ${receivable.reference}`}
+            fields={(receivable) => [
+              { label: 'Referensi', value: receivable.reference },
+              { label: 'Pelanggan', value: receivable.customerName },
+              { label: 'Proyek', value: receivable.projectName ?? 'Tanpa proyek' },
+              { label: 'Kontrak penjualan', value: receivable.contractNumber ?? 'Tidak ditautkan' },
+              { label: 'Faktur', value: receivable.invoiceNumber ?? 'Tidak ditautkan' },
+            ]}
+            linkedTo={(receivable) => (receivable.invoiceNumber ? `faktur ${receivable.invoiceNumber}` : null)}
+            renderEdit={(receivable, controls) => (
+              <ReceivableForm
+                record={receivable}
+                onSaved={controls.onSaved}
+                onCancel={controls.onCancel}
+              />
+            )}
+            onDeleted={(message) => {
+              setSelectedId(null)
+              setNotice(message)
+            }}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )

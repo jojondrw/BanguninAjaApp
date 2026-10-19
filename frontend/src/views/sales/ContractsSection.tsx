@@ -17,6 +17,7 @@ import { Chip, FilterSelect, FormToggle, Pager, Toolbar, ToolbarInput } from '..
 import { ContractDetailCard } from './ContractDetail'
 import { ContractForm } from './ContractForm'
 import { PAGE_SIZE } from './salesShared'
+import { SidePanel } from '../components/SidePanel'
 
 const CONTRACT_STATUSES: ContractStatus[] = ['draft', 'active', 'paid', 'cancelled']
 
@@ -149,12 +150,14 @@ export function ContractsSection({ initialStatus = '' }: { initialStatus?: Contr
       </Card>
 
       {selectedId ? (
-        <ContractDetailCard
-          key={selectedId}
-          contractId={selectedId}
-          deletion={deleteContract}
-          onDelete={deleteDraft}
-        />
+        <SidePanel label="Rincian kontrak" onClose={() => setSelectedId(null)}>
+          <ContractDetailCard
+            key={selectedId}
+            contractId={selectedId}
+            deletion={deleteContract}
+            onDelete={deleteDraft}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )

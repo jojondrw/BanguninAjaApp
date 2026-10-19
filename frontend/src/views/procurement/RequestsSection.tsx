@@ -36,6 +36,7 @@ import { useLookupLabel } from '../components/searchSelectLogic'
 import { MaterialLinesEditor } from './MaterialLines'
 import { PAGE_SIZE, useMaterialLookups } from './lookup'
 import { ConfirmAction, Facts, TextAreaField } from './parts'
+import { SidePanel } from '../components/SidePanel'
 
 const REQUEST_FILTERS: { value: PurchaseRequestStatus | ''; label: string }[] = [
   { value: '', label: 'Semua' },
@@ -512,15 +513,17 @@ export function RequestsSection({ onCreateOrder, initialStatus = '' }: {
       </Card>
 
       {selectedId ? (
-        <PurchaseRequestDetailCard
-          key={selectedId}
-          id={selectedId}
-          onDeleted={(deletedNumber) => {
-            setSelectedId(null)
-            setNotice(`Permintaan ${deletedNumber} dihapus.`)
-          }}
-          onCreateOrder={onCreateOrder}
-        />
+        <SidePanel label="Rincian permintaan pembelian" onClose={() => setSelectedId(null)}>
+          <PurchaseRequestDetailCard
+            key={selectedId}
+            id={selectedId}
+            onDeleted={(deletedNumber) => {
+              setSelectedId(null)
+              setNotice(`Permintaan ${deletedNumber} dihapus.`)
+            }}
+            onCreateOrder={onCreateOrder}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )
