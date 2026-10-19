@@ -18,6 +18,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { PAGE_SIZE } from './lookup'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
 import { ReceiveGoodsForm } from './ReceiveGoodsForm'
+import { SidePanel } from '../components/SidePanel'
 
 const ALL_ORDERS = purchaseOrderOptions()
 const ALL_WAREHOUSES = warehouseOptions()
@@ -221,7 +222,11 @@ export function ReceiptsSection() {
         ) : null}
       </Card>
 
-      {selectedId ? <ReceiptDetailCard key={selectedId} id={selectedId} onClose={() => setSelectedId(null)} /> : null}
+      {selectedId ? (
+        <SidePanel label="Rincian penerimaan barang" onClose={() => setSelectedId(null)}>
+          <ReceiptDetailCard key={selectedId} id={selectedId} onClose={() => setSelectedId(null)} />
+        </SidePanel>
+      ) : null}
     </div>
   )
 }

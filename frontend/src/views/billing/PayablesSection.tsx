@@ -18,6 +18,7 @@ import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCe
 import { BillingDetail } from './BillingDetail'
 import { PayableForm } from './BillingForms'
 import { allVendorOptions } from './billingLookups'
+import { SidePanel } from '../components/SidePanel'
 
 const PAGE_SIZE = 10
 
@@ -163,30 +164,32 @@ export function PayablesSection({ today, initialStatus = '' }: { today: string; 
       </Card>
 
       {selectedId ? (
-        <BillingDetail
-          key={selectedId}
-          kind="payables"
-          id={selectedId}
-          today={today}
-          heading={(payable) => `utang ${payable.reference}`}
-          fields={(payable) => [
-            { label: 'Referensi', value: payable.reference },
-            { label: 'Vendor', value: payable.vendorName },
-            { label: 'Proyek', value: payable.projectName ?? 'Tanpa proyek' },
-            { label: 'Pesanan pembelian', value: payable.purchaseOrderNumber ?? 'Tidak ditautkan' },
-          ]}
-          renderEdit={(payable, controls) => (
-            <PayableForm
-              record={payable}
-              onSaved={controls.onSaved}
-              onCancel={controls.onCancel}
-            />
-          )}
-          onDeleted={(message) => {
-            setSelectedId(null)
-            setNotice(message)
-          }}
-        />
+        <SidePanel label="Rincian utang" onClose={() => setSelectedId(null)}>
+          <BillingDetail
+            key={selectedId}
+            kind="payables"
+            id={selectedId}
+            today={today}
+            heading={(payable) => `utang ${payable.reference}`}
+            fields={(payable) => [
+              { label: 'Referensi', value: payable.reference },
+              { label: 'Vendor', value: payable.vendorName },
+              { label: 'Proyek', value: payable.projectName ?? 'Tanpa proyek' },
+              { label: 'Pesanan pembelian', value: payable.purchaseOrderNumber ?? 'Tidak ditautkan' },
+            ]}
+            renderEdit={(payable, controls) => (
+              <PayableForm
+                record={payable}
+                onSaved={controls.onSaved}
+                onCancel={controls.onCancel}
+              />
+            )}
+            onDeleted={(message) => {
+              setSelectedId(null)
+              setNotice(message)
+            }}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )

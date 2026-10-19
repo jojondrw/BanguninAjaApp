@@ -34,6 +34,7 @@ import { PurchaseOrderFormCard } from './PurchaseOrderForm'
 import { ReceiptDetailCard } from './ReceiptDetailCard'
 import { ReceiveGoodsForm } from './ReceiveGoodsForm'
 import { Money } from '../components/Money'
+import { SidePanel } from '../components/SidePanel'
 
 const ORDER_FILTERS: { value: PurchaseOrderStatus | ''; label: string }[] = [
   { value: '', label: 'Semua' },
@@ -443,14 +444,16 @@ export function OrdersSection({ prefill, initialStatus = '' }: {
       </Card>
 
       {selectedId ? (
-        <PurchaseOrderDetailCard
-          key={selectedId}
-          id={selectedId}
-          onDeleted={(deletedNumber) => {
-            setSelectedId(null)
-            setNotice(`Pesanan ${deletedNumber} dihapus.`)
-          }}
-        />
+        <SidePanel label="Rincian pesanan pembelian" onClose={() => setSelectedId(null)}>
+          <PurchaseOrderDetailCard
+            key={selectedId}
+            id={selectedId}
+            onDeleted={(deletedNumber) => {
+              setSelectedId(null)
+              setNotice(`Pesanan ${deletedNumber} dihapus.`)
+            }}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )

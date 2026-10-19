@@ -21,6 +21,7 @@ import { SearchSelect } from '../components/SearchSelect'
 import { BalanceCell, DueDateCell, ReferenceCell, StatusChip } from './BillingCells'
 import { BillingDetail } from './BillingDetail'
 import { InvoiceForm } from './BillingForms'
+import { SidePanel } from '../components/SidePanel'
 
 const PAGE_SIZE = 10
 const NO_PROJECT = 'Tanpa proyek'
@@ -207,35 +208,37 @@ export function InvoicesSection({ today, onRecordReceivable }: {
       </Card>
 
       {selectedId ? (
-        <BillingDetail
-          key={selectedId}
-          kind="invoices"
-          id={selectedId}
-          today={today}
-          heading={(invoice) => `faktur ${invoice.number}`}
-          fields={(invoice) => [
-            { label: 'Nomor faktur', value: invoice.number },
-            {
-              label: 'Ditagihkan kepada',
-              value: `${invoice.partyName ?? '-'} (${PARTY_TYPE_LABEL[invoice.partyType].toLowerCase()})`,
-            },
-            { label: 'Proyek', value: invoice.projectName ?? NO_PROJECT },
-            { label: 'Catatan', value: invoice.note || '-' },
-            { label: 'Piutang', value: <ReceivableStatus invoice={invoice} onRecord={onRecordReceivable} /> },
-          ]}
-          linkedTo={(invoice) => (invoice.receivableReference ? `piutang ${invoice.receivableReference}` : null)}
-          renderEdit={(invoice, controls) => (
-            <InvoiceForm
-              record={invoice}
-              onSaved={controls.onSaved}
-              onCancel={controls.onCancel}
-            />
-          )}
-          onDeleted={(message) => {
-            setSelectedId(null)
-            setNotice(message)
-          }}
-        />
+        <SidePanel label="Rincian faktur" onClose={() => setSelectedId(null)}>
+          <BillingDetail
+            key={selectedId}
+            kind="invoices"
+            id={selectedId}
+            today={today}
+            heading={(invoice) => `faktur ${invoice.number}`}
+            fields={(invoice) => [
+              { label: 'Nomor faktur', value: invoice.number },
+              {
+                label: 'Ditagihkan kepada',
+                value: `${invoice.partyName ?? '-'} (${PARTY_TYPE_LABEL[invoice.partyType].toLowerCase()})`,
+              },
+              { label: 'Proyek', value: invoice.projectName ?? NO_PROJECT },
+              { label: 'Catatan', value: invoice.note || '-' },
+              { label: 'Piutang', value: <ReceivableStatus invoice={invoice} onRecord={onRecordReceivable} /> },
+            ]}
+            linkedTo={(invoice) => (invoice.receivableReference ? `piutang ${invoice.receivableReference}` : null)}
+            renderEdit={(invoice, controls) => (
+              <InvoiceForm
+                record={invoice}
+                onSaved={controls.onSaved}
+                onCancel={controls.onCancel}
+              />
+            )}
+            onDeleted={(message) => {
+              setSelectedId(null)
+              setNotice(message)
+            }}
+          />
+        </SidePanel>
       ) : null}
     </div>
   )
