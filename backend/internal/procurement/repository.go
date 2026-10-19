@@ -129,7 +129,34 @@ type MaterialStockUnit struct {
 	UnitOfMeasureID uuid.UUID
 }
 
+type StatusCount struct {
+	Status string
+	Count  int64
+}
+
+type LateOrders struct {
+	Count int64
+	Value int64
+}
+
+type ReceiptHealth struct {
+	Total   int64
+	Damaged int64
+}
+
+type VendorValue struct {
+	Name   string
+	Rating string
+	Orders int64
+	Value  int64
+}
+
 type Repository interface {
+	CountRequestsByStatus(ctx context.Context) ([]StatusCount, error)
+	CountLateOrders(ctx context.Context) (LateOrders, error)
+	CheckRecentReceipts(ctx context.Context, days int) (ReceiptHealth, error)
+	CountVendorsByRating(ctx context.Context) ([]StatusCount, error)
+	LargestVendors(ctx context.Context, limit int) ([]VendorValue, error)
 	Transaction(ctx context.Context, work func(Repository) error) error
 
 	ListVendors(ctx context.Context, filter VendorFilter) ([]Vendor, int64, error)
@@ -495,4 +522,48 @@ func (f GoodsReceiptFilter) apply(db *gorm.DB) *gorm.DB {
 		db = db.Where("goods_receipt.date <= ?", *f.DateTo)
 	}
 	return db
+}
+
+func (r *gormRepository) CountRequestsByStatus(ctx context.Context) ([]StatusCount, error) {
+	var rows []StatusCount
+	err := r.db.WithContext(ctx).Model(&PurchaseRequest{}).Select("status, COUNT(*) AS count").Group("status").Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) CountLateOrders(ctx context.Context) (LateOrders, error) {
+	var late LateOrders
+	err := r.db.WithContext(ctx).Model(&PurchaseOrder{}).
+		Select("COUNT(*) AS count, COALESCE(SUM(value), 0) AS value").
+		Where("status IN ? AND due_date < CURRENT_DATE", []string{orderSent, orderPartiallyReceived}).
+		Scan(&late).Error
+	return late, database.Translate(err)
+}
+
+func (r *gormRepository) CheckRecentReceipts(ctx context.Context, days int) (ReceiptHealth, error) {
+	var health ReceiptHealth
+	err := r.db.WithContext(ctx).Model(&GoodsReceipt{}).
+		Select("COUNT(*) AS total, COUNT(*) FILTER (WHERE condition <> ?) AS damaged", receiptGood).
+		Where("date >= CURRENT_DATE - ?::int", days).
+		Scan(&health).Error
+	return health, database.Translate(err)
+}
+
+func (r *gormRepository) CountVendorsByRating(ctx context.Context) ([]StatusCount, error) {
+	var rows []StatusCount
+	err := r.db.WithContext(ctx).Model(&Vendor{}).Select("rating AS status, COUNT(*) AS count").
+		Where("active").Group("rating").Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) LargestVendors(ctx context.Context, limit int) ([]VendorValue, error) {
+	var rows []VendorValue
+	err := r.db.WithContext(ctx).Model(&PurchaseOrder{}).
+		Joins("JOIN vendor ON vendor.id = purchase_order.vendor_id").
+		Select("vendor.name AS name, vendor.rating AS rating, COUNT(*) AS orders, SUM(purchase_order.value) AS value").
+		Where("purchase_order.status <> ?", orderCancelled).
+		Group("vendor.id, vendor.name, vendor.rating").
+		Order("value DESC").
+		Limit(limit).
+		Scan(&rows).Error
+	return rows, database.Translate(err)
 }

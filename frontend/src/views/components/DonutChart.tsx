@@ -16,7 +16,12 @@ const GAP = 2
 
 // Lingkaran donat dari stroke-dasharray: setiap irisan satu lingkaran yang
 // digeser sejauh irisan sebelumnya. Celah kecil memisahkan irisan tanpa garis.
-export function DonutChart({ slices, colors, caption }: { slices: DonutSlice[]; colors: string[]; caption: string }) {
+export function DonutChart({ slices, colors, caption, format = rupiahShort }: {
+  slices: DonutSlice[]
+  colors: string[]
+  caption: string
+  format?: (value: number) => string
+}) {
   const [active, setActive] = useState<number | null>(null)
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   if (total === 0) {
@@ -56,7 +61,7 @@ export function DonutChart({ slices, colors, caption }: { slices: DonutSlice[]; 
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
           <div>
             <p className="text-[13px] font-semibold text-slate-900 tabular-nums">
-              <Money>{rupiahShort(focus ? focus.value : total)}</Money>
+              <Money>{format(focus ? focus.value : total)}</Money>
             </p>
             <p className="text-[11px] text-slate-500">
               {focus ? `${Math.round((focus.value / total) * 100)}%` : 'total'}
@@ -76,7 +81,7 @@ export function DonutChart({ slices, colors, caption }: { slices: DonutSlice[]; 
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
             <span className="min-w-0 flex-1 text-slate-700">{slice.label}</span>
             <span className="shrink-0 text-slate-900 tabular-nums">
-              <Money>{rupiahShort(slice.value)}</Money>
+              <Money>{format(slice.value)}</Money>
               <span className="ml-1.5 inline-block w-8 text-right text-xs text-slate-400">
                 {Math.round((slice.value / total) * 100)}%
               </span>

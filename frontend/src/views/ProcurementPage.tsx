@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   useActiveVendorCount,
   usePurchaseOrderSummary,
   usePurchaseRequestCount,
 } from '../controllers/useProcurement'
-import type { PurchaseOrderFormValues } from '../models/procurement'
+import type { PurchaseOrderFormValues, PurchaseOrderStatus, PurchaseRequestStatus } from '../models/procurement'
 import { number, rupiahShort } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
 import { AppShell } from './components/AppShell'
@@ -15,11 +15,13 @@ import type { OrderPrefill } from './procurement/lookup'
 import { OrdersSection } from './procurement/OrdersSection'
 import { ReceiptsSection } from './procurement/ReceiptsSection'
 import { RequestsSection } from './procurement/RequestsSection'
+import { ProcurementOverview, type ProcurementDrill } from './procurement/ProcurementOverview'
 import { VendorsSection } from './procurement/VendorsSection'
 
-type ProcurementTab = 'orders' | 'receipts' | 'vendors' | 'requests'
+type ProcurementTab = 'overview' | 'orders' | 'receipts' | 'vendors' | 'requests'
 
 const TABS: { value: ProcurementTab; label: string }[] = [
+  { value: 'overview', label: 'Ringkasan' },
   { value: 'orders', label: 'Pesanan pembelian' },
   { value: 'receipts', label: 'Penerimaan barang' },
   { value: 'vendors', label: 'Vendor' },
@@ -50,8 +52,31 @@ function ProcurementKpis() {
 }
 
 export function ProcurementPage() {
-  const [tab, setTab] = useState<ProcurementTab>('orders')
+  const [tab, setTab] = useState<ProcurementTab>('overview')
   const [orderPrefill, setOrderPrefill] = useState<OrderPrefill | null>(null)
+  const [orderStatus, setOrderStatus] = useState<PurchaseOrderStatus | ''>('')
+  const [requestStatus, setRequestStatus] = useState<PurchaseRequestStatus | ''>('')
+  const [visit, setVisit] = useState(0)
+
+  const drill = useMemo<ProcurementDrill>(() => {
+    const go = (next: ProcurementTab) => {
+      setOrderPrefill(null)
+      setVisit((current) => current + 1)
+      setTab(next)
+    }
+    return {
+      openRequests: (status) => {
+        setRequestStatus(status)
+        go('requests')
+      },
+      openOrders: (status) => {
+        setOrderStatus(status)
+        go('orders')
+      },
+      openReceipts: () => go('receipts'),
+      openVendors: () => go('vendors'),
+    }
+  }, [])
 
   // "Buat PO dari permintaan" pindah ke tab pesanan dengan formulir yang sudah
   // terisi dari permintaan itu. Isian itu dibuang begitu pengguna pindah tab,
@@ -64,6 +89,8 @@ export function ProcurementPage() {
   const changeTab = (next: ProcurementTab) => {
     if (next !== tab) {
       setOrderPrefill(null)
+      setOrderStatus('')
+      setRequestStatus('')
     }
     setTab(next)
   }
@@ -78,10 +105,13 @@ export function ProcurementPage() {
 
       <div className="mb-6" />
 
-      {tab === 'orders' ? <OrdersSection prefill={orderPrefill} /> : null}
+      {tab === 'overview' ? <ProcurementOverview drill={drill} /> : null}
+      {tab === 'orders' ? <OrdersSection key={`pesanan-${visit}`} prefill={orderPrefill} initialStatus={orderStatus} /> : null}
       {tab === 'receipts' ? <ReceiptsSection /> : null}
       {tab === 'vendors' ? <VendorsSection /> : null}
-      {tab === 'requests' ? <RequestsSection onCreateOrder={createOrderFromRequest} /> : null}
+      {tab === 'requests' ? (
+        <RequestsSection key={`permintaan-${visit}`} onCreateOrder={createOrderFromRequest} initialStatus={requestStatus} />
+      ) : null}
     </AppShell>
   )
 }

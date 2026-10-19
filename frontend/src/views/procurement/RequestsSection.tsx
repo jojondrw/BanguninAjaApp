@@ -398,11 +398,12 @@ function PurchaseRequestDetailCard({ id, onDeleted, onCreateOrder }: {
   )
 }
 
-export function RequestsSection({ onCreateOrder }: {
+export function RequestsSection({ onCreateOrder, initialStatus = '' }: {
   onCreateOrder: (values: PurchaseOrderFormValues, requestNumber: string) => void
+  initialStatus?: PurchaseRequestStatus | ''
 }) {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<PurchaseRequestStatus | ''>('')
+  const [status, setStatus] = useState<PurchaseRequestStatus | ''>(initialStatus)
   const [page, setPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)

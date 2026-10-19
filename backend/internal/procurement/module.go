@@ -44,6 +44,7 @@ func (l inventoryLedger) RecordIncoming(ctx context.Context, stock IncomingStock
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {
 	routes := router.Group("/procurement", middleware.Authentication(m.tokens))
+	routes.GET("/overview", m.controller.Overview)
 
 	vendors := routes.Group("/vendors")
 	vendors.GET("", m.controller.ListVendors)

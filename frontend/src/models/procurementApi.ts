@@ -10,6 +10,7 @@ import type {
   PurchaseOrderFilter,
   PurchaseOrderRequest,
   PurchaseOrderStatusChange,
+  ProcurementOverview,
   PurchaseOrderSummary,
   PurchaseRequest,
   PurchaseRequestDetail,
@@ -22,6 +23,8 @@ import type {
 } from './procurement'
 
 export const procurementApi = {
+  overview: () => request<ProcurementOverview>('/procurement/overview'),
+
   vendors: ({ active, ...filter }: VendorFilter = {}) =>
     request<Page<Vendor>>(
       `/procurement/vendors${toQueryString({ ...filter, active: active === undefined ? undefined : String(active) })}`,
