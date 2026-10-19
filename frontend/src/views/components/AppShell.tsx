@@ -14,6 +14,7 @@ interface AppShellProps {
   title: string
   description?: string
   actions?: ReactNode
+  tabs?: ReactNode
   children: ReactNode
 }
 
@@ -29,7 +30,7 @@ export function AppShell(props: AppShellProps) {
   )
 }
 
-function ShellFrame({ title, description, actions, children }: AppShellProps) {
+function ShellFrame({ title, description, actions, tabs, children }: AppShellProps) {
   const user = useCurrentUser()
   const permissions = usePermissions()
   const logout = useLogout()
@@ -184,7 +185,12 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
                   </h1>
                   {description ? <p className="mt-1 text-[13px] text-slate-500">{description}</p> : null}
                 </div>
-                {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+                {actions || tabs ? (
+                  <div className="flex max-w-full min-w-0 flex-col items-start gap-2 sm:items-end">
+                    {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+                    {tabs ? <div className="max-w-full overflow-x-auto [scrollbar-width:none]">{tabs}</div> : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </header>

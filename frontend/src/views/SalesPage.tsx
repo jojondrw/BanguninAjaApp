@@ -100,12 +100,14 @@ export function SalesPage() {
   }
 
   return (
-    <AppShell title="Penjualan" description="Unit properti, prospek, pelanggan, kontrak, dan jadwal cicilannya">
+    <AppShell
+      title="Penjualan"
+      description="Unit properti, prospek, pelanggan, kontrak, dan jadwal cicilannya"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={chooseTab} label="Bagian penjualan" />}
+    >
       <SalesKpis />
 
-      <div className="mt-8 mb-6">
-        <SectionTabs tabs={TABS} active={tab} onChange={chooseTab} label="Bagian penjualan" />
-      </div>
+      <div className="mb-6" />
 
       {tab === 'overview' ? <SalesOverview drill={drill} /> : null}
       {tab === 'units' ? <UnitsSection key={`units-${visit}`} initialProjectId={projectId} /> : null}

@@ -30,7 +30,11 @@ export function FinancialPage() {
   }
 
   return (
-    <AppShell title="Keuangan" description="Anggaran, kas, jurnal umum, dan buku besar">
+    <AppShell
+      title="Keuangan"
+      description="Anggaran, kas, jurnal umum, dan buku besar"
+      tabs={<SectionTabs tabs={FINANCE_TABS} active={tab} onChange={changeTab} label="Bagian keuangan" />}
+    >
       <KpiRow>
         <Kpi label="Kas masuk" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalIn ?? 0)} />
         <Kpi label="Kas keluar" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalOut ?? 0)} />
@@ -42,9 +46,7 @@ export function FinancialPage() {
         <Kpi label="Saldo" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)} />
       </KpiRow>
 
-      <div className="mt-8 mb-6">
-        <SectionTabs tabs={FINANCE_TABS} active={tab} onChange={changeTab} label="Bagian keuangan" />
-      </div>
+      <div className="mb-6" />
 
       {tab === 'ringkasan' ? <FinanceSummaryTab /> : null}
       {tab === 'anggaran' ? <BudgetsTab /> : null}

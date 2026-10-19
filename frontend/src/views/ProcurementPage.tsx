@@ -72,12 +72,11 @@ export function ProcurementPage() {
     <AppShell
       title="Pengadaan"
       description="Vendor, permintaan, pesanan pembelian, dan penerimaan barang material proyek"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian pengadaan" />}
     >
       <ProcurementKpis />
 
-      <div className="mt-8 mb-6">
-        <SectionTabs tabs={TABS} active={tab} onChange={changeTab} label="Bagian pengadaan" />
-      </div>
+      <div className="mb-6" />
 
       {tab === 'orders' ? <OrdersSection prefill={orderPrefill} /> : null}
       {tab === 'receipts' ? <ReceiptsSection /> : null}

@@ -11,7 +11,7 @@ import { AppShell } from './components/AppShell'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { BUTTON_BASE, BUTTON_SUBTLE } from './components/Form'
 import { AccessScope } from './access/AccessScope'
-import { Tabs, type TabItem } from './components/Tabs'
+import { TabList, TabPanel, type TabItem } from './components/Tabs'
 import { StatusChip } from './project/StatusChip'
 import { PanelToggle, ProgressMeter } from './project/parts'
 import { ProjectDeleteCard } from './project/ProjectDeleteCard'
@@ -151,6 +151,7 @@ export function ProjectWorkspacePage() {
           ))}
         </div>
       }
+      tabs={<TabList idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={tabs} active={tab} onChange={changeTab} />}
     >
       <div className="space-y-8">
         {panel ? (
@@ -163,7 +164,7 @@ export function ProjectWorkspacePage() {
 
         <ProjectFacts project={data} />
 
-        <Tabs idPrefix="proyek" label="Bagian ruang kerja proyek" tabs={tabs} active={tab} onChange={changeTab}>
+        <TabPanel idPrefix="proyek" active={tab}>
           {tab === 'ringkasan' ? <ProjectSummaryTab project={data} /> : null}
           {tab === 'lapangan' ? <ProjectFieldTab project={data} /> : null}
           {tab === 'tim' ? <ProjectTeamTab project={data} /> : null}
@@ -177,7 +178,7 @@ export function ProjectWorkspacePage() {
               <ProjectFinanceTab project={data} />
             </AccessScope>
           ) : null}
-        </Tabs>
+        </TabPanel>
       </div>
     </AppShell>
   )
