@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/database"
@@ -456,5 +457,17 @@ func TestRupiahGroupsThousands(t *testing.T) {
 		if got := rupiah(value); got != want {
 			t.Fatalf("rupiah(%d) = %q, want %q", value, got, want)
 		}
+	}
+}
+
+func TestPaymentRequestAcceptsEveryRecordedMethod(t *testing.T) {
+	for _, method := range []string{"", "transfer", "qris", "tunai", "cek", "lainnya", "onchain"} {
+		request := PaymentRequest{Amount: 1000, Method: method}
+		if err := binding.Validator.ValidateStruct(request); err != nil {
+			t.Errorf("method %q was rejected: %v", method, err)
+		}
+	}
+	if err := binding.Validator.ValidateStruct(PaymentRequest{Amount: 1000, Method: "ovo"}); err == nil {
+		t.Error("an unknown method must be rejected")
 	}
 }
