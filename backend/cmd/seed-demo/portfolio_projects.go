@@ -255,14 +255,14 @@ func portfolioDailyReportPlans() []dailyReportPlan {
 
 func portfolioSitePhotos() []sitePhotoSeed {
 	return []sitePhotoSeed{
-		{projectSkyGarden, "rsia_2.jpg", -9, "struktur tower sampai lantai 14"},
-		{projectTembalang, "gab_2.jpg", -12, "dinding townhouse deret pertama"},
-		{projectBukitHijau, "cld_2.jpg", -200, "perumahan selesai dan dihuni"},
+		{projectSkyGarden, "apt_struktur.jpg", -9, "struktur tower sampai lantai 14"},
+		{projectTembalang, "townhouse.jpg", -12, "dinding townhouse deret pertama"},
+		{projectBukitHijau, "perumahan_selesai.jpg", -200, "perumahan selesai dan dihuni"},
 		{projectMall, "rsm_1.jpg", -25, "pengukuran topografi lahan mal"},
-		{projectSchool, "rsia_1.jpg", -14, "pengecoran kolom lantai 2 gedung sekolah"},
-		{projectWarehouse, "rsm_2.jpg", -60, "uji tanah sebelum perbaikan dengan PVD"},
+		{projectSchool, "sekolah.jpg", -14, "pengecoran kolom lantai 2 gedung sekolah"},
+		{projectWarehouse, "gudang_baja.jpg", -12, "ereksi rangka baja dan pengecoran lantai kerja"},
 		{projectHotel, "cld_1.jpg", -70, "pengecatan fasad dan penataan halaman hotel"},
-		{projectOffice, "gab_1.jpg", -18, "galian dan pondasi basement"},
-		{projectBuahBatu, "gab_2.jpg", -8, "dinding ruko sampai lantai 3"},
+		{projectOffice, "kantor_basement.jpg", -18, "galian dan pondasi basement"},
+		{projectBuahBatu, "ruko_bangun.jpg", -8, "dinding ruko sampai lantai 3"},
 	}
 }

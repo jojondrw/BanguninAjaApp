@@ -315,11 +315,24 @@ func generatedDailyReportPlans() []dailyReportPlan {
 	return plans
 }
 
+var generatedPhotos = map[string]string{
+	"JKS": "rsia_2.jpg", "JKT": "gab_1.jpg", "JKB": "ruko_selesai.jpg", "TGR": "gudang_baja.jpg", "BSD": "rs_bertingkat.jpg",
+	"BDK": "gab_2.jpg", "CMH": "klinik.jpg", "BDA": "rs_bertingkat.jpg", "BDS": "sekolah.jpg", "CRK": "cld_1.jpg",
+	"CRG": "rsm_2.jpg", "DPS": "rsia_1.jpg", "DPK": "gab_1.jpg", "MKP": "ruko_bangun.jpg", "MKH": "hotel_pantai.jpg",
+	"SBY": "cld_2.jpg", "MLG": "sekolah.jpg", "SLO": "rsm_1.jpg", "YOG": "rsm_1.jpg", "DPR": "villa_bali.jpg",
+	"MDN": "apt_struktur.jpg", "PLB": "rsia_1.jpg", "BPN": "gudang_baja.jpg", "PDG": "rsm_2.jpg", "PKU": "gab_1.jpg",
+	"BJM": "kantor_basement.jpg", "MND": "rsm_1.jpg", "BTM": "apt_fasad.jpg", "RNV": "klinik.jpg", "MKS": "gab_1.jpg",
+}
+
 func generatedSitePhotos() []sitePhotoSeed {
 	photos := []sitePhotoSeed{}
 	for index, seed := range generatedSeeds() {
 		template := kindTemplates[seed.kind]
-		photos = append(photos, sitePhotoSeed{generatedCode(seed), template.photo, -(3 + index%20), "kondisi lapangan " + strings.ToLower(template.kind) + " " + seed.city})
+		photo := template.photo
+		if chosen, found := generatedPhotos[seed.suffix]; found {
+			photo = chosen
+		}
+		photos = append(photos, sitePhotoSeed{generatedCode(seed), photo, -(3 + index%20), "kondisi lapangan " + strings.ToLower(template.kind) + " " + seed.city})
 	}
 	return photos
 }
