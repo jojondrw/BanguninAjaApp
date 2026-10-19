@@ -67,6 +67,9 @@ func demoReceivables() []receivableSeed {
 		{"DEMO-PIU-004", clusterBuyer, projectCluster, "", "", -40, 18_500_000, []paymentSeed{
 			{18_500_000, -41, "tunai", "KW-CLD-0912", "Biaya AJB & BPHTB unit DEMO-CLD-C03"},
 		}},
+		{"DEMO-PIU-005", clusterBuyer, projectCluster, "", "", -20, 5_000_000, []paymentSeed{
+			{5_000_000, -21, "qris", "QRIS-RRN-602914773810", "Tanda jadi unit DEMO-CLD-C04 lewat QRIS kantor pemasaran"},
+		}},
 	}
 }
 
