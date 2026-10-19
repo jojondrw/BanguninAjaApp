@@ -22,7 +22,7 @@ import { accountText } from '../../models/accounting'
 import { postableAccountOptions } from '../../models/lookupApi'
 import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
-import { kpiValue, monthLabel, rupiah, rupiahShort, shortDate } from '../../shared/format'
+import { kpiValue, rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { Bar, Card, Empty, Kpi, KpiRow, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
@@ -32,10 +32,9 @@ import { ClaimApprovalCard } from './ClaimApprovalCard'
 import { WageProofCard } from './WageProofCard'
 import { OwnerBillingCard } from './OwnerBillingCard'
 import { PaymentTermsCard } from './PaymentTermsCard'
-import { MoneyText } from '../components/Money'
+import { MonthlyLineChart } from '../components/MonthlyLineChart'
 
 const NO_BUDGETS: Budget[] = []
-const MIN_VISIBLE_BAR = 2
 
 export function ProjectFinanceTab({ project }: { project: Project }) {
   const budgets = useBudgets(project.id)
@@ -113,29 +112,14 @@ export function ProjectFinanceTab({ project }: { project: Project }) {
 }
 
 function SpendByMonth({ periods }: { periods: CashFlowPeriod[] }) {
-  const highest = Math.max(0, ...periods.map((period) => period.cashOut))
-
-  if (highest === 0) {
+  if (periods.every((period) => period.cashOut === 0)) {
     return <Empty message={`Belum ada kas keluar dalam ${CASH_FLOW_MONTHS} bulan terakhir.`} />
   }
-
   return (
-    <ul className="space-y-2">
-      {periods.map((period) => {
-        const width = period.cashOut > 0 ? Math.max(MIN_VISIBLE_BAR, (period.cashOut / highest) * 100) : 0
-        return (
-          <li key={period.period} className="grid grid-cols-[5rem_1fr_5.5rem] items-center gap-3">
-            <span className="text-xs text-slate-600">{monthLabel(period.period)}</span>
-            <span aria-hidden="true" className="h-2.5 overflow-hidden rounded-[3px] bg-slate-100">
-              <span className="bar-fill block h-full rounded-[3px]" style={{ width: `${width}%` }} />
-            </span>
-            <span className="text-right text-xs tabular-nums text-slate-700">
-              <MoneyText>{period.cashOut > 0 ? rupiahShort(period.cashOut) : '-'}</MoneyText>
-            </span>
-          </li>
-        )
-      })}
-    </ul>
+    <MonthlyLineChart
+      label={`Kas keluar proyek ${CASH_FLOW_MONTHS} bulan terakhir`}
+      points={periods.map((period) => ({ period: period.period, value: period.cashOut }))}
+    />
   )
 }
 
