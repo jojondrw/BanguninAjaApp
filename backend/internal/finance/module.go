@@ -41,6 +41,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	cash.DELETE("/:id", m.controller.DeleteCashTransaction)
 
 	routes.GET("/cash-flow", m.controller.SummarizeCashFlow)
+	routes.GET("/cash-flow/accounts", m.controller.SummarizeCashByAccount)
 
 	journals := routes.Group("/journal-entries")
 	journals.GET("", m.controller.ListJournalEntries)

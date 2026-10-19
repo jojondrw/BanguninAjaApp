@@ -3,6 +3,7 @@ import { toQueryString, type Page } from './common'
 import type {
   Budget,
   CashFlow,
+  CashAccountTotal,
   CashFlowFilter,
   CashTransaction,
   CashTransactionFilter,
@@ -62,6 +63,9 @@ export const financeApi = {
 
   cashFlow: (filter: CashFlowFilter = {}) =>
     request<CashFlow>(`/finance/cash-flow${toQueryString({ ...filter })}`),
+
+  cashByAccount: (filter: CashFlowFilter = {}) =>
+    request<CashAccountTotal[]>(`/finance/cash-flow/accounts${toQueryString({ ...filter })}`),
 
   cashTransactions: (filter: CashTransactionFilter = {}) =>
     request<Page<CashTransaction>>(`/finance/cash-transactions${toQueryString({ ...filter })}`),

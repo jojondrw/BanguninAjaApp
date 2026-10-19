@@ -48,7 +48,7 @@ export function FinancialPage() {
 
       <div className="mb-6" />
 
-      {tab === 'ringkasan' ? <FinanceSummaryTab /> : null}
+      {tab === 'ringkasan' ? <FinanceSummaryTab onOpenTab={changeTab} /> : null}
       {tab === 'anggaran' ? <BudgetsTab /> : null}
       {tab === 'kas' ? <CashTab /> : null}
       {tab === 'jurnal' ? <JournalTab /> : null}

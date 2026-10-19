@@ -125,6 +125,16 @@ func (c *Controller) DeleteCashTransaction(ctx *gin.Context) {
 	httpresponse.RespondNoContent(ctx, c.service.DeleteCashTransaction(ctx.Request.Context(), id))
 }
 
+func (c *Controller) SummarizeCashByAccount(ctx *gin.Context) {
+	var query CashFlowQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	accounts, err := c.service.SummarizeCashByAccount(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, accounts, err)
+}
+
 func (c *Controller) SummarizeCashFlow(ctx *gin.Context) {
 	var query CashFlowQuery
 	if err := httprequest.BindQuery(ctx, &query); err != nil {

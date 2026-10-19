@@ -73,6 +73,14 @@ export function useCashFlow(filter: CashFlowFilter = {}, { enabled = true }: Que
   })
 }
 
+export function useCashByAccount(filter: CashFlowFilter = {}) {
+  return useQuery({
+    queryKey: [CASH_FLOW_KEY, 'accounts', filter],
+    queryFn: () => financeApi.cashByAccount(filter),
+    ...DATA_QUERY,
+  })
+}
+
 export function useCashTransactions(pageSize = 10) {
   return useQuery({
     queryKey: [CASH_TRANSACTIONS_KEY, pageSize],
