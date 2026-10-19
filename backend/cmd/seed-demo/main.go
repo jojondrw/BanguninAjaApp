@@ -114,6 +114,8 @@ func seedDemo(ctx context.Context, tx *gorm.DB, cfg config.Config, opts options)
 		patcher:  gormLocationPatcher{db: tx},
 		history:  gormProgressRecorder{db: tx},
 		terms:    gormTermWriter{db: tx},
+		reports:  gormReportWriter{db: tx},
+		reportDB: tx,
 		today:    todayInJakarta(time.Now()),
 		owner:    owner,
 		manager:  manager,
