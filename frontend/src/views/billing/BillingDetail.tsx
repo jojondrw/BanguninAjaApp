@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useScopedCan } from '../../controllers/useAccess'
 import { useBillingRecord, useDeleteBilling, usePayBilling } from '../../controllers/useBilling'
@@ -109,7 +109,46 @@ function DetailList({ fields }: { fields: DetailField[] }) {
 // Rincian dibaca ulang dari GET /billing/<kind>/:id supaya status, sisa, dan
 // keterlambatan selalu hasil hitungan server terbaru. linkedTo menyebut
 // catatan pasangan (faktur atau piutang) yang ikut terbayar.
-export function BillingDetail<K extends BillingKind>({ kind, id, today, heading, fields, linkedTo, renderEdit, onDeleted }: {
+interface BillingDetailProps<K extends BillingKind> {
+  kind: K
+  id: string
+  today: string
+  heading: (record: BillingRecordOf[K]) => string
+  fields: (record: BillingRecordOf[K]) => DetailField[]
+  linkedTo?: (record: BillingRecordOf[K]) => string | null
+  renderEdit: (record: BillingRecordOf[K], controls: EditControls) => ReactNode
+  onDeleted: (message: string) => void
+}
+
+// Rincian tampil di bawah tabel, jadi halaman digulir ke sana setelah datanya
+// termuat (saat masih memuat, halaman belum cukup panjang untuk digulir).
+// Jaraknya mengikuti tinggi header saat itu karena header lebih tinggi di
+// layar sempit. Komponen ini dipasang ulang per id lewat key.
+export function BillingDetail<K extends BillingKind>(props: BillingDetailProps<K>) {
+  const anchor = useRef<HTMLDivElement>(null)
+  const isLoaded = useBillingRecord(props.kind, props.id).isSuccess
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+    const target = anchor.current
+    if (!target) {
+      return
+    }
+    const header = document.querySelector('header')
+    target.style.scrollMarginTop = `${header ? header.getBoundingClientRect().height : 0}px`
+    target.scrollIntoView?.({ block: 'start' })
+  }, [isLoaded])
+
+  return (
+    <div ref={anchor}>
+      <DetailBody {...props} />
+    </div>
+  )
+}
+
+function DetailBody<K extends BillingKind>({ kind, id, today, heading, fields, linkedTo, renderEdit, onDeleted }: {
   kind: K
   id: string
   today: string
