@@ -1,17 +1,17 @@
 import { Layers } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
-  LngLatBounds,
-  MapLibreMap,
-  Marker,
-  NavigationControl,
+  CircleMarker,
+  Control,
+  LatLngBounds,
+  Map as LeafletMap,
   Popup,
-  setWorkerUrl,
-  type MapMouseEvent,
-  type MapOptions,
-} from 'maplibre-gl'
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import 'maplibre-gl/dist/maplibre-gl.css'
+  TileLayer,
+  type Coords,
+  type DoneCallback,
+  type LeafletMouseEvent,
+} from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 import { getAccessToken } from '../../controllers/sessionStore'
 import type { SavedLocation } from '../../models/erpApi'
@@ -19,15 +19,13 @@ import { API_BASE_URL } from '../../shared/apiClient'
 import { CONTROL_CLASS } from './Form'
 import { findMapLayer, MAP_LAYERS, type MapLayerId } from './mapLayers'
 
-setWorkerUrl(maplibreWorkerUrl)
-
 export interface MapPoint {
   latitude: number
   longitude: number
 }
 
-const INDONESIA_CENTER: [number, number] = [118, -2]
-const INDONESIA_ZOOM = 4.3
+const INDONESIA_CENTER: [number, number] = [-2, 118]
+const INDONESIA_ZOOM = 4.5
 const FOCUS_ZOOM = 13
 const FRAME_PADDING = 48
 const FRAME_MAX_ZOOM = 11
@@ -36,23 +34,42 @@ const COORDINATE_DIGITS = 6
 
 const PICKED_COLOR = '#fbbb16'
 const SAVED_COLOR = '#0b2b6b'
-const NON_PICKING_TARGETS = '.maplibregl-marker, .maplibregl-popup'
-const OVERLAY_ID = 'lapisan-data'
 const OVERLAY_MAX_ZOOM = 15
+const OVERLAY_OPACITY = 0.85
 const TILE_PREFIX = `${API_BASE_URL}/site/tiles/`
+const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
-const OSM_STYLE: MapOptions['style'] = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      maxzoom: MAX_TILE_ZOOM,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+// Lapisan data dari server butuh token, padahal ubin Leaflet biasanya hanya
+// tag <img>. Ubin diambil lewat fetch berheader Authorization lalu dipasang
+// sebagai blob, dan URL blob dilepas begitu ubinnya dibuang.
+class AuthorizedTileLayer extends TileLayer {
+  createTile(coords: Coords, done: DoneCallback): HTMLElement {
+    const tile = document.createElement('img')
+    tile.alt = ''
+    tile.setAttribute('role', 'presentation')
+    const accessToken = getAccessToken()
+    fetch(this.getTileUrl(coords), { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`tile ${response.status}`)
+        }
+        return response.blob()
+      })
+      .then((blob) => {
+        tile.onload = () => done(undefined, tile)
+        tile.src = URL.createObjectURL(blob)
+      })
+      .catch((error: Error) => done(error, tile))
+    return tile
+  }
+}
+
+function releaseTile(event: { tile: HTMLElement }) {
+  const source = (event.tile as HTMLImageElement).src
+  if (source.startsWith('blob:')) {
+    URL.revokeObjectURL(source)
+  }
 }
 
 interface SiteMapProps {
@@ -65,9 +82,8 @@ interface SiteMapProps {
 
 export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<MapLibreMap | null>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
   const hasFramedSitesRef = useRef(false)
-  const [isMapReady, setIsMapReady] = useState(false)
   const [layerId, setLayerId] = useState<MapLayerId | null>(null)
   const [zoom, setZoom] = useState(INDONESIA_ZOOM)
   const activeLayer = findMapLayer(layerId)
@@ -75,28 +91,28 @@ export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapPro
   const pickedLongitude = picked?.longitude ?? null
 
   useEffect(() => {
-    if (!containerRef.current) {
+    const container = containerRef.current
+    if (!container) {
       return
     }
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: OSM_STYLE,
+    const map = new LeafletMap(container, {
       center: INDONESIA_CENTER,
       zoom: INDONESIA_ZOOM,
-      transformRequest: (url) => {
-        const accessToken = getAccessToken()
-        return url.startsWith(TILE_PREFIX) && accessToken
-          ? { url, headers: { Authorization: `Bearer ${accessToken}` } }
-          : { url }
-      },
+      zoomSnap: 0.25,
+      zoomControl: false,
+      preferCanvas: true,
     })
-    hasFramedSitesRef.current = false
-    map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
-    map.on('load', () => setIsMapReady(true))
+    new TileLayer(OSM_TILES, { maxZoom: MAX_TILE_ZOOM, attribution: OSM_ATTRIBUTION }).addTo(map)
+    new Control.Zoom({ position: 'topright', zoomInTitle: 'Perbesar', zoomOutTitle: 'Perkecil' }).addTo(map)
     map.on('zoomend', () => setZoom(map.getZoom()))
+    hasFramedSitesRef.current = false
     mapRef.current = map
 
+    const observer = new ResizeObserver(() => map.invalidateSize())
+    observer.observe(container)
+
     return () => {
+      observer.disconnect()
       mapRef.current = null
       map.remove()
     }
@@ -104,41 +120,33 @@ export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapPro
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !isMapReady || !activeLayer) {
+    if (!map || !activeLayer) {
       return
     }
-    map.addSource(OVERLAY_ID, {
-      type: 'raster',
-      tiles: [`${TILE_PREFIX}${activeLayer.id}/{z}/{x}/{y}`],
-      tileSize: 256,
-      minzoom: activeLayer.minZoom,
-      maxzoom: OVERLAY_MAX_ZOOM,
+    const overlay = new AuthorizedTileLayer(`${TILE_PREFIX}${activeLayer.id}/{z}/{x}/{y}`, {
+      minZoom: activeLayer.minZoom,
+      maxNativeZoom: OVERLAY_MAX_ZOOM,
+      maxZoom: MAX_TILE_ZOOM,
+      opacity: OVERLAY_OPACITY,
       attribution: activeLayer.attribution,
     })
-    map.addLayer({ id: OVERLAY_ID, type: 'raster', source: OVERLAY_ID, paint: { 'raster-opacity': 0.85 } })
+    overlay.on('tileunload', releaseTile)
+    overlay.addTo(map)
 
     return () => {
-      if (map.getLayer(OVERLAY_ID)) {
-        map.removeLayer(OVERLAY_ID)
-      }
-      if (map.getSource(OVERLAY_ID)) {
-        map.removeSource(OVERLAY_ID)
-      }
+      overlay.remove()
     }
-  }, [activeLayer, isMapReady])
+  }, [activeLayer])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map) {
       return
     }
-    function handleClick(event: MapMouseEvent) {
-      if (isOverlayClick(event)) {
-        return
-      }
+    function handleClick(event: LeafletMouseEvent) {
       onPick({
-        latitude: roundCoordinate(event.lngLat.lat),
-        longitude: roundCoordinate(event.lngLat.lng),
+        latitude: roundCoordinate(event.latlng.lat),
+        longitude: roundCoordinate(event.latlng.lng),
       })
     }
     map.on('click', handleClick)
@@ -153,9 +161,14 @@ export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapPro
     if (!map || pickedLatitude === null || pickedLongitude === null) {
       return
     }
-    const marker = new Marker({ color: PICKED_COLOR })
-      .setLngLat([pickedLongitude, pickedLatitude])
-      .addTo(map)
+    const marker = new CircleMarker([pickedLatitude, pickedLongitude], {
+      radius: 9,
+      color: '#ffffff',
+      weight: 3,
+      fillColor: PICKED_COLOR,
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(map)
 
     return () => {
       marker.remove()
@@ -170,9 +183,8 @@ export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapPro
     const markers = sites.map((site) => savedSiteMarker(site, onOpenSite).addTo(map))
     if (!hasFramedSitesRef.current && sites.length > 0) {
       hasFramedSitesRef.current = true
-      const bounds = new LngLatBounds()
-      sites.forEach((site) => bounds.extend([site.longitude, site.latitude]))
-      map.fitBounds(bounds, { padding: FRAME_PADDING, maxZoom: FRAME_MAX_ZOOM, duration: 0 })
+      const bounds = new LatLngBounds(sites.map((site) => [site.latitude, site.longitude]))
+      map.fitBounds(bounds, { padding: [FRAME_PADDING, FRAME_PADDING], maxZoom: FRAME_MAX_ZOOM, animate: false })
     }
 
     return () => {
@@ -186,22 +198,19 @@ export function SiteMap({ picked, sites, focus, onPick, onOpenSite }: SiteMapPro
       return
     }
     hasFramedSitesRef.current = true
-    map.flyTo({
-      center: [focus.longitude, focus.latitude],
-      zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
-    })
+    map.flyTo([focus.latitude, focus.longitude], Math.max(map.getZoom(), FOCUS_ZOOM))
   }, [focus])
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="relative isolate">
         <div
           ref={containerRef}
           role="region"
           aria-label="Peta lokasi. Klik peta untuk memilih titik koordinat."
-          className="h-80 w-full overflow-hidden rounded-xl shadow-hairline sm:h-96"
+          className="h-80 w-full overflow-hidden rounded-xl bg-slate-100 shadow-hairline sm:h-96"
         />
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-2 rounded-xl bg-white/90 py-1 pr-1 pl-2.5 shadow-panel backdrop-blur">
+        <div className="absolute top-2.5 left-2.5 z-[1000] flex items-center gap-2 rounded-xl bg-white/90 py-1 pr-1 pl-2.5 shadow-panel backdrop-blur">
           <Layers aria-hidden="true" className="size-4 text-slate-500" strokeWidth={1.8} />
           <label htmlFor="lapisan-peta" className="sr-only">
             Lapisan data di peta
@@ -256,22 +265,32 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   )
 }
 
-function isOverlayClick(event: MapMouseEvent): boolean {
-  const target = event.originalEvent.target
-  return target instanceof Element && target.closest(NON_PICKING_TARGETS) !== null
-}
-
 function roundCoordinate(value: number): number {
   return Number(value.toFixed(COORDINATE_DIGITS))
 }
 
-function savedSiteMarker(site: SavedLocation, onOpenSite?: (id: string) => void): Marker {
-  const popup = new Popup({ offset: 24 })
-  popup.setDOMContent(savedSitePopup(site, onOpenSite ? () => {
-    popup.remove()
-    onOpenSite(site.id)
-  } : undefined))
-  return new Marker({ color: SAVED_COLOR, scale: 0.8 }).setLngLat([site.longitude, site.latitude]).setPopup(popup)
+function savedSiteMarker(site: SavedLocation, onOpenSite?: (id: string) => void): CircleMarker {
+  const marker = new CircleMarker([site.latitude, site.longitude], {
+    radius: 7,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: SAVED_COLOR,
+    fillOpacity: 1,
+    bubblingMouseEvents: false,
+  })
+  const popup = new Popup({ offset: [0, -4] })
+  popup.setContent(
+    savedSitePopup(
+      site,
+      onOpenSite
+        ? () => {
+            marker.closePopup()
+            onOpenSite(site.id)
+          }
+        : undefined,
+    ),
+  )
+  return marker.bindPopup(popup)
 }
 
 function savedSitePopup(site: SavedLocation, onOpen?: () => void): HTMLElement {
