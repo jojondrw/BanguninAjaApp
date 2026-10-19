@@ -66,7 +66,7 @@ export function CustomersSection() {
   }
 
   return (
-    <Card title="Daftar pelanggan" description="Pelanggan yang sudah punya kontrak tidak bisa dihapus.">
+    <Card description="Pelanggan yang sudah punya kontrak tidak bisa dihapus.">
       <Toolbar>
         <ToolbarInput
           id="customer-search"

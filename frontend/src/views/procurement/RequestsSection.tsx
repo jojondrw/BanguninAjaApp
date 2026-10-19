@@ -427,7 +427,6 @@ export function RequestsSection({ onCreateOrder }: {
       ) : null}
 
       <Card
-        title="Permintaan pembelian"
         description="Kebutuhan material dari proyek. Pesanan bisa dibuat dari permintaan yang sudah disetujui."
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

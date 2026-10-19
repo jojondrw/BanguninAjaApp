@@ -309,7 +309,6 @@ export function AccountsSection() {
 
   return (
     <Card
-      title="Bagan akun"
       description="Akun tanpa akun turunan bisa dipakai di transaksi kas dan jurnal. Akun yang sudah dipakai atau masih punya turunan tidak bisa dihapus."
     >
       <Toolbar>

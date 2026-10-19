@@ -52,7 +52,7 @@ export function LocationCompare({ onEvaluate }: { onEvaluate: () => void }) {
 
   if (allSites.isPending) {
     return (
-      <Card title="Bandingkan lokasi">
+      <Card>
         <Loading label="Mengambil lokasi tersimpan..." />
       </Card>
     )
@@ -60,7 +60,7 @@ export function LocationCompare({ onEvaluate }: { onEvaluate: () => void }) {
 
   if (allSites.isError) {
     return (
-      <Card title="Bandingkan lokasi">
+      <Card>
         <LoadFailed onRetry={() => allSites.refetch()} />
       </Card>
     )
@@ -108,7 +108,7 @@ function NotEnoughSites({ count, onEvaluate }: { count: number; onEvaluate: () =
   const status = count === 0 ? 'Belum ada lokasi tersimpan.' : 'Baru ada 1 lokasi tersimpan.'
 
   return (
-    <Card title="Bandingkan lokasi" description={`Perbandingan butuh minimal ${MIN_COMPARED} lokasi tersimpan.`}>
+    <Card description={`Perbandingan butuh minimal ${MIN_COMPARED} lokasi tersimpan.`}>
       <Empty
         message={`${status} Buka tab Evaluasi, klik titik di peta, pilih profil bangunan, lalu jalankan evaluasi. Setiap hasil evaluasi otomatis tersimpan sebagai lokasi dan bisa dibandingkan di sini.`}
       />

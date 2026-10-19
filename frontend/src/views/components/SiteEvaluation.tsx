@@ -123,7 +123,6 @@ export function SiteEvaluation({ project, focus, onFocus }: SiteEvaluationProps)
     <div className="space-y-8">
       <div id={SITE_EVALUATION_ID} className="scroll-mt-6">
         <Card
-          title="Evaluasi lokasi"
           description="Klik peta atau ketik koordinat, lalu pilih profil bangunan untuk menjalankan analisis."
         >
           <form onSubmit={handleSubmit} className="space-y-5">

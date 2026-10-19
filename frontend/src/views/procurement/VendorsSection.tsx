@@ -253,7 +253,7 @@ export function VendorsSection() {
         />
       ) : null}
 
-      <Card title="Daftar vendor" description={vendors.data ? `${number(vendors.data.totalItems)} vendor` : undefined}>
+      <Card description={vendors.data ? `${number(vendors.data.totalItems)} vendor` : undefined}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <ToolbarInput

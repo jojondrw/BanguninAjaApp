@@ -198,7 +198,6 @@ export function BudgetsTab() {
 
   return (
     <Card
-      title="Anggaran proyek"
       description="Satu anggaran per proyek per tahun. Realisasi adalah kas keluar proyek di tahun yang sama, dihitung server."
     >
       <Toolbar>

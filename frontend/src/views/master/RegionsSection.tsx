@@ -286,7 +286,6 @@ export function RegionsSection() {
 
   return (
     <Card
-      title="Wilayah"
       description="Provinsi, kota, kabupaten, dan kecamatan untuk proyek dan lokasi tersimpan. Wilayah yang masih punya turunan atau sudah dipakai tidak bisa dihapus."
     >
       <Toolbar>

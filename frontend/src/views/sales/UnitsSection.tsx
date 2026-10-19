@@ -200,7 +200,7 @@ export function UnitsSection() {
   }
 
   return (
-    <Card title="Daftar unit" description="Unit yang sudah dipesan atau terjual terkunci oleh kontraknya.">
+    <Card description="Unit yang sudah dipesan atau terjual terkunci oleh kontraknya.">
       <Toolbar>
         <SearchSelect
           {...projectOptions}

@@ -322,7 +322,6 @@ export function LeadsSection() {
 
   return (
     <Card
-      title="Prospek"
       description="Calon pembeli dari pameran, iklan, atau rujukan. Majukan tahapnya sampai berhasil, lalu jadikan pelanggan."
     >
       <StagePipeline counts={counts.data} active={stage} onChange={filterChanged(setStage)} />

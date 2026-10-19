@@ -104,7 +104,6 @@ export function ReceiptsSection() {
       ) : null}
 
       <Card
-        title="Penerimaan barang"
         description="Bukti barang datang dari vendor. Menyimpan penerimaan mengubah status pesanan menjadi Diterima sebagian atau Selesai dan menambah stok gudang penerima secara otomatis."
       >
         <Toolbar>

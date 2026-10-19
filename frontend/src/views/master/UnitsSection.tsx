@@ -220,7 +220,6 @@ export function UnitsSection() {
 
   return (
     <Card
-      title="Satuan"
       description="Satuan untuk material, RAB proyek, dan pengadaan. Satuan yang sudah dipakai tidak bisa dihapus."
     >
       <Toolbar>
