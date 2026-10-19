@@ -37,7 +37,7 @@ const VIEWS = [
 
 function ViewToggle({ isList, onChange }: { isList: boolean; onChange: (list: boolean) => void }) {
   return (
-    <div role="group" aria-label="Pilih tampilan" className="ml-auto inline-flex rounded-full bg-slate-100 p-0.5">
+    <div role="group" aria-label="Pilih tampilan" className="inline-flex rounded-full bg-slate-100 p-0.5">
       {VIEWS.map(({ value, label, Icon }) => {
         const isActive = (value === LIST_VIEW) === isList
         return (
@@ -86,10 +86,7 @@ function emptyListMessage(onlyMine: boolean, teamOnly: boolean): string {
   return 'Tidak ada proyek yang cocok dengan penyaringan ini.'
 }
 
-function projectsDescription(total: number | undefined, teamOnly: boolean): string | undefined {
-  if (total === undefined) {
-    return undefined
-  }
+function projectsDescription(total: number, teamOnly: boolean): string {
   return teamOnly ? `${total} proyek yang timnya memuat Anda` : `${total} proyek`
 }
 
@@ -267,7 +264,7 @@ export function ProjectsPage() {
         </div>
       ) : null}
 
-      <Card title="Daftar proyek" description={projectsDescription(projects.data?.totalItems, teamOnly)}>
+      <section aria-label="Daftar proyek">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <label htmlFor="cari" className="sr-only">
             Cari proyek
@@ -305,7 +302,14 @@ export function ProjectsPage() {
               </button>
             ))}
           </div>
-          <ViewToggle isList={isList} onChange={changeView} />
+          <div className="ml-auto flex items-center gap-3">
+            {projects.data ? (
+              <span className="text-[13px] text-slate-500 tabular-nums">
+                {projectsDescription(projects.data.totalItems, teamOnly)}
+              </span>
+            ) : null}
+            <ViewToggle isList={isList} onChange={changeView} />
+          </div>
         </div>
 
         {projects.isPending ? <Loading /> : null}
@@ -331,7 +335,7 @@ export function ProjectsPage() {
             </ul>
           )
         ) : null}
-      </Card>
+      </section>
     </AppShell>
   )
 }

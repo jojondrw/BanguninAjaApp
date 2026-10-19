@@ -169,7 +169,6 @@ export function JournalTab() {
   return (
     <div className="space-y-8">
       <Card
-        title="Jurnal umum"
         description="Setiap jurnal minimal dua baris dengan total debit sama dengan total kredit. Jurnal manual tidak bisa diubah atau dihapus; koreksi dengan jurnal pembalik. Jurnal bertanda Otomatis dari kas mengikuti transaksi kasnya di tab Kas."
       >
         <Toolbar>

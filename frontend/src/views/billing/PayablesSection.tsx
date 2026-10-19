@@ -49,7 +49,6 @@ export function PayablesSection({ today }: { today: string }) {
   return (
     <div className="space-y-8">
       <Card
-        title="Daftar utang"
         description="Kewajiban bayar ke vendor, diurutkan dari jatuh tempo paling awal"
       >
         <Toolbar>

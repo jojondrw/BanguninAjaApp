@@ -222,7 +222,6 @@ export function CashTab() {
 
   return (
     <Card
-      title="Transaksi kas"
       description="Kas masuk bertanda +, kas keluar bertanda −. Setiap transaksi otomatis dicatat sebagai jurnal (kas masuk mendebit Kas, kas keluar mengkredit Kas), dan jurnal itu ikut berubah atau terhapus bersama transaksinya."
     >
       <div className="mb-3">

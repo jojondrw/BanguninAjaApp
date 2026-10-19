@@ -357,7 +357,6 @@ export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
       ) : null}
 
       <Card
-        title="Daftar pesanan pembelian"
         description={orders.data ? `${number(orders.data.totalItems)} pesanan` : undefined}
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

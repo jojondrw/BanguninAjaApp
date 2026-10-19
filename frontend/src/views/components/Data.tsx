@@ -6,22 +6,35 @@ import { BaniLoop } from './BaniLoader'
 import { Button, ErrorNote } from './Form'
 import { MoneyText } from './Money'
 
+// Tanpa judul, kartu hanya menjadi bidang putih untuk tabel atau daftar yang
+// sudah dijuduli halaman atau tabnya, jadi judul tidak diulang dua kali.
 export function Card({ title, description, action, children }: {
-  title: string
+  title?: string
   description?: string
   action?: ReactNode
   children: ReactNode
 }) {
+  const hasHeader = Boolean(title || description || action)
   return (
     <section className="min-w-0 rounded-2xl bg-white shadow-hairline">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-4 pb-3 sm:px-6 sm:pt-5 sm:pb-4">
-        <div className="min-w-0 flex-1 basis-44">
-          <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
-          {description ? <p className="mt-0.5 text-[13px] text-slate-500"><MoneyText>{description}</MoneyText></p> : null}
+      {hasHeader ? (
+        <div
+          className={`flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 sm:px-6 ${
+            title ? 'pt-4 pb-3 sm:pt-5 sm:pb-4' : 'pt-4 pb-1 sm:pt-5'
+          }`}
+        >
+          <div className="min-w-0 flex-1 basis-44">
+            {title ? <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2> : null}
+            {description ? (
+              <p className={`text-[13px] text-slate-500 ${title ? 'mt-0.5' : ''}`}>
+                <MoneyText>{description}</MoneyText>
+              </p>
+            ) : null}
+          </div>
+          {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
         </div>
-        {action ? <div className="-mr-1.5 shrink-0">{action}</div> : null}
-      </div>
-      <div className="px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>
+      ) : null}
+      <div className={`px-5 pb-5 sm:px-6 sm:pb-6 ${hasHeader ? '' : 'pt-4 sm:pt-5'}`}>{children}</div>
     </section>
   )
 }

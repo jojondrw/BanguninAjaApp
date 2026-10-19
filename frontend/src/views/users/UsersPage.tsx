@@ -86,7 +86,6 @@ export function UsersPage() {
   return (
     <AppShell title="Pengguna" description="Atur peran dan status akun tim. Hak akses tiap modul mengikuti peran.">
       <Card
-        title="Daftar pengguna"
         description="Pendaftar baru tidak bisa membuka data apa pun sampai Anda memberi peran. Harus selalu ada minimal satu admin aktif."
       >
         {pendingCount > 0 || isPendingView ? (
