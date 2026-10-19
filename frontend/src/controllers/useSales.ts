@@ -45,11 +45,20 @@ const PAGED_QUERY = {
   placeholderData: keepPreviousData,
 }
 
-export function useUnits(filter: UnitFilter = {}) {
+export function useUnits(filter: UnitFilter = {}, enabled = true) {
   return useQuery({
     queryKey: [SALES_KEY, 'units', filter],
     queryFn: () => salesApi.units(filter),
     ...PAGED_QUERY,
+    enabled,
+  })
+}
+
+export function useProjectUnitSummary() {
+  return useQuery({
+    queryKey: [SALES_KEY, 'unit-summary', 'per-project'],
+    queryFn: () => salesApi.unitsByProject(),
+    ...DATA_QUERY,
   })
 }
 
@@ -74,6 +83,14 @@ export function useLeads(filter: LeadFilter = {}) {
     queryKey: [SALES_KEY, 'leads', filter],
     queryFn: () => salesApi.leads(filter),
     ...PAGED_QUERY,
+  })
+}
+
+export function useLeadFlows(projectId?: string) {
+  return useQuery({
+    queryKey: [SALES_KEY, 'lead-flow', projectId ?? 'all'],
+    queryFn: () => salesApi.leadFlows(projectId),
+    ...DATA_QUERY,
   })
 }
 

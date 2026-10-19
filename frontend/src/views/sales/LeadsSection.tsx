@@ -244,8 +244,8 @@ function LeadForm({ lead, defaultStage, onSaved, onCancel }: {
   )
 }
 
-export function LeadsSection() {
-  const [stage, setStage] = useState<StageFilter>('')
+export function LeadsSection({ initialStage = '' }: { initialStage?: StageFilter }) {
+  const [stage, setStage] = useState<StageFilter>(initialStage)
   const [projectId, setProjectId] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)

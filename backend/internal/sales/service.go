@@ -19,6 +19,9 @@ const (
 	unitAvailable = "available"
 	unitReserved  = "reserved"
 	unitSold      = "sold"
+	unitOnHold    = "on_hold"
+
+	unknownLeadSource = "Tanpa sumber"
 
 	contractDraft     = "draft"
 	contractActive    = "active"
@@ -101,6 +104,8 @@ type Service interface {
 
 	ListUnits(ctx context.Context, query UnitQuery) (pagination.Page[UnitResponse], error)
 	SummarizeUnits(ctx context.Context, query UnitSummaryQuery) ([]UnitStatusCountResponse, error)
+	SummarizeUnitsByProject(ctx context.Context) ([]ProjectUnitSummaryResponse, error)
+	LeadFlows(ctx context.Context, query LeadFlowQuery) ([]LeadFlowResponse, error)
 	GetUnit(ctx context.Context, id uuid.UUID) (UnitResponse, error)
 	CreateUnit(ctx context.Context, request UnitRequest) (UnitResponse, error)
 	UpdateUnit(ctx context.Context, id uuid.UUID, request UnitRequest) (UnitResponse, error)
@@ -203,6 +208,70 @@ func (s *service) ListUnits(ctx context.Context, query UnitQuery) (pagination.Pa
 		return pagination.Page[UnitResponse]{}, apperror.Internal(err)
 	}
 	return pagination.New(pagination.Map(units, newUnitResponse), query.Query, total), nil
+}
+
+func (s *service) LeadFlows(ctx context.Context, query LeadFlowQuery) ([]LeadFlowResponse, error) {
+	counts, err := s.repository.CountLeadFlows(ctx, query.ProjectID)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	return leadFlows(counts), nil
+}
+
+func leadFlows(counts []LeadFlowCount) []LeadFlowResponse {
+	flows := []LeadFlowResponse{}
+	positions := map[[2]string]int{}
+	for _, count := range counts {
+		source := count.Source
+		if source == "" {
+			source = unknownLeadSource
+		}
+		key := [2]string{source, count.Stage}
+		if position, known := positions[key]; known {
+			flows[position].Total += count.Total
+			continue
+		}
+		positions[key] = len(flows)
+		flows = append(flows, LeadFlowResponse{Source: source, Stage: count.Stage, Total: count.Total})
+	}
+	return flows
+}
+
+func (s *service) SummarizeUnitsByProject(ctx context.Context) ([]ProjectUnitSummaryResponse, error) {
+	counts, err := s.repository.CountUnitsByProject(ctx)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	return projectUnitSummaries(counts), nil
+}
+
+func projectUnitSummaries(counts []ProjectUnitCount) []ProjectUnitSummaryResponse {
+	summaries := []ProjectUnitSummaryResponse{}
+	positions := map[uuid.UUID]int{}
+	for _, count := range counts {
+		position, known := positions[count.ProjectID]
+		if !known {
+			position = len(summaries)
+			positions[count.ProjectID] = position
+			summaries = append(summaries, ProjectUnitSummaryResponse{ProjectID: count.ProjectID})
+		}
+		summary := &summaries[position]
+		summary.Total += count.Total
+		switch count.Status {
+		case unitAvailable:
+			summary.Available += count.Total
+			summary.StockValue += count.Value
+		case unitReserved:
+			summary.Reserved += count.Total
+		case unitSold:
+			summary.Sold += count.Total
+			summary.SoldValue += count.Value
+		case unitOnHold:
+			summary.OnHold += count.Total
+			summary.StockValue += count.Value
+		}
+	}
+	return summaries
 }
 
 func (s *service) SummarizeUnits(ctx context.Context, query UnitSummaryQuery) ([]UnitStatusCountResponse, error) {

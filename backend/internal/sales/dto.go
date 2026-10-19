@@ -66,6 +66,27 @@ type UnitResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+type LeadFlowQuery struct {
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type LeadFlowResponse struct {
+	Source string `json:"source"`
+	Stage  string `json:"stage"`
+	Total  int64  `json:"total"`
+}
+
+type ProjectUnitSummaryResponse struct {
+	ProjectID  uuid.UUID `json:"projectId"`
+	Total      int64     `json:"total"`
+	Available  int64     `json:"available"`
+	Reserved   int64     `json:"reserved"`
+	Sold       int64     `json:"sold"`
+	OnHold     int64     `json:"onHold"`
+	StockValue int64     `json:"stockValue"`
+	SoldValue  int64     `json:"soldValue"`
+}
+
 type UnitStatusCountResponse struct {
 	Status string `json:"status"`
 	Total  int64  `json:"total"`

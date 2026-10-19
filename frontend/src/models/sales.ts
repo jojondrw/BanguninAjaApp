@@ -18,6 +18,19 @@ export interface PropertyUnit {
   updatedAt: string
 }
 
+// Ringkasan unit per proyek dari server. Nilai stok menghitung unit tersedia
+// dan ditahan, nilai terjual menghitung unit lunas.
+export interface ProjectUnitSummary {
+  projectId: string
+  total: number
+  available: number
+  reserved: number
+  sold: number
+  onHold: number
+  stockValue: number
+  soldValue: number
+}
+
 export interface UnitStatusCount {
   status: UnitStatus
   total: number
@@ -110,6 +123,13 @@ export interface LeadRequest {
 }
 
 export type LeadStageCounts = Record<LeadStage, number>
+
+// Jumlah prospek untuk satu pasangan sumber dan tahap sekarang.
+export interface LeadFlow {
+  source: string
+  stage: LeadStage
+  total: number
+}
 
 export interface Contract {
   id: string

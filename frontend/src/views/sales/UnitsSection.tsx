@@ -1,6 +1,7 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 
-import { useCreateUnit, useDeleteUnit, useUnits, useUpdateUnit } from '../../controllers/useSales'
+import { useCreateUnit, useDeleteUnit, useProjectUnitSummary, useUnits, useUpdateUnit } from '../../controllers/useSales'
 import { projectOptions } from '../../models/lookupApi'
 import {
   EMPTY_UNIT_FORM,
@@ -17,13 +18,16 @@ import {
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiahShort } from '../../shared/format'
 import { PHOTOS } from '../../shared/photos'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from './RowActions'
 import { LookupName } from '../components/LookupName'
 import { SearchSelect } from '../components/SearchSelect'
+import { Money } from '../components/Money'
+import { ProjectUnitBar, UnitBarLegend } from './ProjectUnitBar'
+import { unitBreakdown } from './unitSegments'
 import { PAGE_SIZE, amountHint, pageAfterRemoval, refusalText } from './salesShared'
 
 const NEW_UNIT_STATUSES: NewUnitStatus[] = ['available', 'on_hold']
@@ -149,14 +153,65 @@ function UnitForm({ unit, onSaved, onCancel }: {
   )
 }
 
-export function UnitsSection() {
-  const [projectId, setProjectId] = useState('')
+// Tanpa saringan proyek, unit dikelompokkan per proyek supaya tidak menjadi
+// tabel ratusan baris. Memilih proyek membuka tabel unit proyek itu.
+function UnitGroups({ onOpen }: { onOpen: (projectId: string) => void }) {
+  const projects = useProjectUnitSummary()
+
+  if (projects.isPending) {
+    return <Loading />
+  }
+  if (projects.isError) {
+    return <LoadFailed onRetry={() => projects.refetch()} />
+  }
+  if (projects.data.length === 0) {
+    return <Empty message="Belum ada unit. Tambahkan unit pertama lewat tombol Tambah unit." photo={PHOTOS.perumahan} />
+  }
+  const sorted = [...projects.data].sort((a, b) => b.total - a.total)
+  return (
+    <div className="space-y-3">
+      <UnitBarLegend />
+      <ul className="divide-y divide-slate-100 border-t border-slate-100">
+        {sorted.map((summary) => (
+          <li key={summary.projectId}>
+            <button
+              type="button"
+              onClick={() => onOpen(summary.projectId)}
+              className="group grid w-full gap-1.5 py-3 text-left sm:grid-cols-[minmax(0,16rem)_1fr_8rem_1rem] sm:items-center sm:gap-4"
+            >
+              <span className="truncate text-[14px] font-medium text-slate-900">
+                <LookupName source={projectOptions} value={summary.projectId} />
+              </span>
+              <span className="min-w-0 space-y-1">
+                <ProjectUnitBar summary={summary} />
+                <span className="block text-xs text-slate-500">
+                  {number(summary.total)} unit: {unitBreakdown(summary)}
+                </span>
+              </span>
+              <span className="text-xs text-slate-500 sm:text-right">
+                stok <Money>{rupiahShort(summary.stockValue)}</Money>
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="hidden size-4 text-slate-300 group-hover:text-slate-500 sm:block"
+                strokeWidth={2}
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+export function UnitsSection({ initialProjectId = '' }: { initialProjectId?: string }) {
+  const [projectId, setProjectId] = useState(initialProjectId)
   const [page, setPage] = useState(1)
   const [isCreating, setIsCreating] = useState(false)
   const [editing, setEditing] = useState<PropertyUnit | null>(null)
   const [askingId, setAskingId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const units = useUnits({ projectId: projectId === '' ? undefined : projectId, page, pageSize: PAGE_SIZE })
+  const units = useUnits({ projectId: projectId === '' ? undefined : projectId, page, pageSize: PAGE_SIZE }, projectId !== '')
   const deleteUnit = useDeleteUnit()
   const isFormOpen = isCreating || editing !== null
 
@@ -242,21 +297,36 @@ export function UnitsSection() {
         </div>
       ) : null}
 
-      {units.isPending ? <Loading /> : null}
-      {units.isError ? <LoadFailed onRetry={() => units.refetch()} /> : null}
-      {units.data ? (
+      {projectId === '' ? (
+        <UnitGroups
+          onOpen={(id) => {
+            setProjectId(id)
+            setPage(1)
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setProjectId('')
+            setPage(1)
+          }}
+          className="mb-3 inline-flex items-center gap-0.5 text-[13px] font-medium text-navy-600 hover:text-navy-800"
+        >
+          <ChevronLeft aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+          Semua proyek
+        </button>
+      )}
+      {projectId !== '' && units.isPending ? <Loading /> : null}
+      {projectId !== '' && units.isError ? <LoadFailed onRetry={() => units.refetch()} /> : null}
+      {projectId !== '' && units.data ? (
         <>
           <Table
             rows={units.data.items}
-            emptyMessage={
-              projectId === ''
-                ? 'Belum ada unit. Tambahkan unit pertama lewat tombol Tambah unit.'
-                : 'Proyek ini belum punya unit.'
-            }
+            emptyMessage="Proyek ini belum punya unit."
             emptyPhoto={PHOTOS.perumahan}
             columns={[
               { header: 'Kode', cell: (row) => <span className="font-medium text-slate-900">{row.code}</span> },
-              { header: 'Proyek', cell: (row) => <LookupName source={projectOptions} value={row.projectId} /> },
               { header: 'Tipe', cell: (row) => row.unitType },
               { header: 'Luas', align: 'right', cell: (row) => `${number(row.areaSqm)} m²` },
               { header: 'Harga', align: 'right', cell: (row) => rupiahShort(row.price) },

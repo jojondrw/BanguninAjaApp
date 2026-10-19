@@ -91,6 +91,21 @@ func (c *Controller) ListUnits(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) LeadFlows(ctx *gin.Context) {
+	var query LeadFlowQuery
+	if err := httprequest.BindQuery(ctx, &query); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	flows, err := c.service.LeadFlows(ctx.Request.Context(), query)
+	httpresponse.Respond(ctx, flows, err)
+}
+
+func (c *Controller) SummarizeUnitsByProject(ctx *gin.Context) {
+	summary, err := c.service.SummarizeUnitsByProject(ctx.Request.Context())
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) SummarizeUnits(ctx *gin.Context) {
 	var query UnitSummaryQuery
 	if err := httprequest.BindQuery(ctx, &query); err != nil {

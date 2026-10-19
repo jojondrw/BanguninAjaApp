@@ -20,8 +20,8 @@ import { PAGE_SIZE } from './salesShared'
 
 const CONTRACT_STATUSES: ContractStatus[] = ['draft', 'active', 'paid', 'cancelled']
 
-export function ContractsSection() {
-  const [status, setStatus] = useState<ContractStatus | ''>('')
+export function ContractsSection({ initialStatus = '' }: { initialStatus?: ContractStatus | '' }) {
+  const [status, setStatus] = useState<ContractStatus | ''>(initialStatus)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)

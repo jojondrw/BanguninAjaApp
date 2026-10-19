@@ -15,8 +15,10 @@ import {
   type InstallmentPaymentRequest,
   type InstallmentRequest,
   type InstallmentSummary,
+  type ProjectUnitSummary,
   type Lead,
   type LeadConversion,
+  type LeadFlow,
   type LeadFilter,
   type LeadRequest,
   type LeadStageCounts,
@@ -41,6 +43,7 @@ export const salesApi = {
   units: (filter: UnitFilter = {}) =>
     request<Page<PropertyUnit>>(`/sales/units${toQueryString({ ...filter })}`),
 
+  unitsByProject: () => request<ProjectUnitSummary[]>('/sales/units/summary/projects'),
   unitSummary: (projectId?: string) =>
     request<UnitStatusCount[]>(`/sales/units/summary${toQueryString({ projectId })}`),
 
@@ -65,6 +68,7 @@ export const salesApi = {
   leads,
 
   leadStageCounts,
+  leadFlows: (projectId?: string) => request<LeadFlow[]>(`/sales/leads/flow${toQueryString({ projectId })}`),
 
   createLead: (body: LeadRequest) => request<Lead>('/sales/leads', { method: 'POST', body }),
 
