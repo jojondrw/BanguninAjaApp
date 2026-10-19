@@ -8,7 +8,6 @@ import { BrandName } from './Brand'
 import { CommandPalette } from './CommandPalette'
 import { type MenuItem, moduleForPath, visibleMenu } from './navigation'
 
-const SCROLL_EDGE_PX = 4
 const PALETTE_SHORTCUT = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K'
 
 interface AppShellProps {
@@ -37,21 +36,8 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
   const navigate = useNavigate()
   const menu = visibleMenu((module) => canAccess(permissions, module, 'read'))
   const menuItems = menu.flatMap((group) => group.items)
-  const panelRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLElement>(null)
-  const [isScrolled, setIsScrolled] = useState(false)
   const [isPaletteOpen, setIsPaletteOpen] = useState(false)
-
-  useEffect(() => {
-    const panel = panelRef.current
-    const update = () => setIsScrolled(Math.max(panel?.scrollTop ?? 0, window.scrollY) > SCROLL_EDGE_PX)
-    panel?.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('scroll', update, { passive: true })
-    return () => {
-      panel?.removeEventListener('scroll', update)
-      window.removeEventListener('scroll', update)
-    }
-  }, [])
 
   useEffect(() => {
     mobileNavRef.current
@@ -140,15 +126,12 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
 
       <div className="flex min-h-screen min-w-0 flex-col lg:min-h-0 lg:py-2 lg:pr-2">
         <div
-          ref={panelRef}
           className="flex flex-1 flex-col bg-white lg:min-h-0 lg:overflow-y-auto lg:rounded-2xl lg:shadow-panel"
         >
-          <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl backdrop-saturate-150">
-            <div
-              aria-hidden="true"
-              className={`pointer-events-none absolute inset-x-0 top-full h-5 bg-gradient-to-b from-slate-900/[0.07] to-transparent
-                          transition-opacity duration-300 ${isScrolled ? 'opacity-100' : 'opacity-0'}`}
-            />
+          <header
+            className="pointer-events-none sticky top-0 z-20 -mb-6 bg-white/80 pb-6 backdrop-blur-xl backdrop-saturate-150
+                       [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)] [&>*]:pointer-events-auto"
+          >
             <div className="flex items-center justify-between gap-3 px-5 pt-3 lg:hidden">
               <BrandName />
               <div className="flex items-center gap-1">
@@ -206,7 +189,7 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
             </div>
           </header>
 
-          <main id="konten" tabIndex={-1} className="flex-1 px-5 pt-2 pb-16 focus:outline-none lg:px-10">
+          <main id="konten" tabIndex={-1} className="flex-1 px-5 pt-6 pb-16 focus:outline-none lg:px-10">
             <div className="mx-auto max-w-[1280px] motion-safe:animate-enter">{children}</div>
           </main>
         </div>
