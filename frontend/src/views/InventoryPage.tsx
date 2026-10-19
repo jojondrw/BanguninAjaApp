@@ -13,15 +13,17 @@ import { Kpi, KpiRow } from './components/Data'
 import { SectionTabs } from './components/ListTools'
 import { kpiText } from './components/kpiText'
 import { AssetsCard } from './inventory/AssetsCard'
+import { InventoryOverview } from './inventory/InventoryOverview'
 import { EquipmentCard } from './inventory/EquipmentCard'
 import { MaterialsCard } from './inventory/MaterialsCard'
 import { MovementsCard } from './inventory/MovementsCard'
 import { LowStockCard, StockCard } from './inventory/StockCards'
 import { WarehousesCard } from './inventory/WarehousesCard'
 
-type InventoryTab = 'stock' | 'catalog' | 'assets'
+type InventoryTab = 'overview' | 'stock' | 'catalog' | 'assets'
 
 const TABS: { value: InventoryTab; label: string }[] = [
+  { value: 'overview', label: 'Ringkasan' },
   { value: 'stock', label: 'Stok dan mutasi' },
   { value: 'catalog', label: 'Material dan gudang' },
   { value: 'assets', label: 'Aset dan alat' },
@@ -29,7 +31,7 @@ const TABS: { value: InventoryTab; label: string }[] = [
 
 export function InventoryPage() {
   const [today] = useState(todayDate)
-  const [tab, setTab] = useState<InventoryTab>('stock')
+  const [tab, setTab] = useState<InventoryTab>('overview')
   const materials = useMaterials({ pageSize: 1 })
   const warehouses = useWarehouses({ pageSize: 1 })
   const lowStock = useLowStockMaterials(1)
@@ -67,6 +69,10 @@ export function InventoryPage() {
       </KpiRow>
 
       <div className="mb-6" />
+
+      {tab === 'overview' ? (
+        <InventoryOverview drill={{ openStock: () => setTab('stock'), openAssets: () => setTab('assets') }} />
+      ) : null}
 
       {tab === 'stock' ? (
         <div className="grid gap-8">

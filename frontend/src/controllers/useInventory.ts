@@ -190,6 +190,22 @@ export function useRecordStockMovement() {
   })
 }
 
+export function useInventoryOverview() {
+  return useQuery({
+    queryKey: [INVENTORY_KEY, 'overview'],
+    queryFn: () => inventoryApi.overview(),
+    ...DATA_QUERY,
+  })
+}
+
+export function useAssetOverview() {
+  return useQuery({
+    queryKey: [...ASSETS_KEY, 'overview'],
+    queryFn: () => assetApi.overview(),
+    ...DATA_QUERY,
+  })
+}
+
 export function useAssets(filter: AssetFilter) {
   return useQuery({
     queryKey: [...ASSETS_KEY, filter],

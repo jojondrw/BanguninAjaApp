@@ -25,6 +25,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 
 	assets := router.Group("/assets", authenticated)
 	assets.GET("", m.controller.ListAssets)
+	assets.GET("/overview", m.controller.Overview)
 	assets.POST("", m.controller.CreateAsset)
 	assets.GET("/:id", m.controller.GetAsset)
 	assets.PUT("/:id", m.controller.UpdateAsset)

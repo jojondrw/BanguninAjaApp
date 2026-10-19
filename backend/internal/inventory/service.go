@@ -16,6 +16,7 @@ import (
 const (
 	movementIn         = "in"
 	movementOut        = "out"
+	overviewWeeks      = 8
 	movementTransfer   = "transfer"
 	movementAdjustment = "adjustment"
 
@@ -55,6 +56,7 @@ var (
 )
 
 type Service interface {
+	Overview(ctx context.Context) (InventoryOverviewResponse, error)
 	ListMaterials(ctx context.Context, query MaterialQuery) (pagination.Page[MaterialResponse], error)
 	ListLowStockMaterials(ctx context.Context, query pagination.Query) (pagination.Page[LowStockResponse], error)
 	GetMaterial(ctx context.Context, id uuid.UUID) (MaterialResponse, error)
@@ -365,4 +367,36 @@ func applyWarehouseRequest(warehouse *Warehouse, request WarehouseRequest) {
 	warehouse.Code = strings.TrimSpace(request.Code)
 	warehouse.Name = strings.TrimSpace(request.Name)
 	warehouse.ProjectID = request.ProjectID
+}
+
+func (s *service) Overview(ctx context.Context) (InventoryOverviewResponse, error) {
+	warehouses, err := s.repository.ValueStockByWarehouse(ctx)
+	if err != nil {
+		return InventoryOverviewResponse{}, apperror.Internal(err)
+	}
+	low, err := s.repository.CountLowStock(ctx)
+	if err != nil {
+		return InventoryOverviewResponse{}, apperror.Internal(err)
+	}
+	weeks, err := s.repository.SumMovementsByWeek(ctx, overviewWeeks)
+	if err != nil {
+		return InventoryOverviewResponse{}, apperror.Internal(err)
+	}
+	return newInventoryOverview(warehouses, low, weeks), nil
+}
+
+func newInventoryOverview(warehouses []WarehouseValue, low int64, weeks []WeeklyMovement) InventoryOverviewResponse {
+	overview := InventoryOverviewResponse{
+		LowStock:   low,
+		Warehouses: make([]WarehouseValueResponse, len(warehouses)),
+		Weeks:      make([]WeeklyMovementResponse, len(weeks)),
+	}
+	for index, warehouse := range warehouses {
+		overview.Warehouses[index] = WarehouseValueResponse{Name: warehouse.Name, Value: warehouse.Value, Items: warehouse.Items}
+		overview.StockValue += warehouse.Value
+	}
+	for index, week := range weeks {
+		overview.Weeks[index] = WeeklyMovementResponse{Week: week.Week.Format(time.DateOnly), InValue: week.InValue, OutValue: week.OutValue}
+	}
+	return overview
 }

@@ -105,7 +105,22 @@ type StockMovementRow struct {
 	CreatedAt           time.Time
 }
 
+type WarehouseValue struct {
+	Name  string
+	Value int64
+	Items int64
+}
+
+type WeeklyMovement struct {
+	Week     time.Time
+	InValue  int64
+	OutValue int64
+}
+
 type Repository interface {
+	ValueStockByWarehouse(ctx context.Context) ([]WarehouseValue, error)
+	CountLowStock(ctx context.Context) (int64, error)
+	SumMovementsByWeek(ctx context.Context, weeks int) ([]WeeklyMovement, error)
 	Transaction(ctx context.Context, work func(Repository) error) error
 
 	ListMaterials(ctx context.Context, filter MaterialFilter) ([]Material, int64, error)
@@ -359,4 +374,38 @@ func (f StockMovementFilter) apply(db *gorm.DB) *gorm.DB {
 		db = db.Where("stock_movement.date <= ?", *f.DateTo)
 	}
 	return db
+}
+
+func (r *gormRepository) ValueStockByWarehouse(ctx context.Context) ([]WarehouseValue, error) {
+	var rows []WarehouseValue
+	err := r.db.WithContext(ctx).Table("stock").
+		Joins("JOIN warehouse ON warehouse.id = stock.warehouse_id").
+		Joins("JOIN material ON material.id = stock.material_id").
+		Select("warehouse.name AS name, ROUND(SUM(stock.quantity * material.last_price))::bigint AS value, " +
+			"COUNT(*) FILTER (WHERE stock.quantity > 0) AS items").
+		Group("warehouse.id, warehouse.name").
+		Order("value DESC").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) CountLowStock(ctx context.Context) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Table(lowStockSource).Where(lowStockCondition).Count(&total).Error
+	return total, database.Translate(err)
+}
+
+func (r *gormRepository) SumMovementsByWeek(ctx context.Context, weeks int) ([]WeeklyMovement, error) {
+	var rows []WeeklyMovement
+	err := r.db.WithContext(ctx).Table("stock_movement").
+		Joins("JOIN material ON material.id = stock_movement.material_id").
+		Select("date_trunc('week', stock_movement.date)::date AS week, "+
+			"ROUND(COALESCE(SUM(stock_movement.quantity * material.last_price) FILTER (WHERE stock_movement.type = ?), 0))::bigint AS in_value, "+
+			"ROUND(COALESCE(SUM(stock_movement.quantity * material.last_price) FILTER (WHERE stock_movement.type = ?), 0))::bigint AS out_value",
+			movementIn, movementOut).
+		Where("stock_movement.date >= date_trunc('week', CURRENT_DATE) - (? * INTERVAL '1 week')", weeks-1).
+		Group("week").
+		Order("week").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
 }

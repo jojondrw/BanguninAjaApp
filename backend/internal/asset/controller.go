@@ -124,3 +124,8 @@ func (c *Controller) DeleteEquipment(ctx *gin.Context) {
 	}
 	httpresponse.RespondNoContent(ctx, c.service.DeleteEquipment(ctx.Request.Context(), id))
 }
+
+func (c *Controller) Overview(ctx *gin.Context) {
+	overview, err := c.service.Overview(ctx.Request.Context())
+	httpresponse.Respond(ctx, overview, err)
+}
