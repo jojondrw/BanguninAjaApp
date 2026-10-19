@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useCan } from '../controllers/useAccess'
 import { useCashFlow, useProjects } from '../controllers/useErp'
 import { shortDate } from '../shared/format'
-import { todayDate } from '../shared/localDate'
+import { monthsAgo, todayDate } from '../shared/localDate'
 import { AppShell } from './components/AppShell'
 import { CashFlowChart } from './components/CashFlowChart'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
@@ -117,10 +117,4 @@ function CardLink({ to, label }: { to: string; label: string }) {
       <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={2} />
     </Link>
   )
-}
-
-function monthsAgo(count: number): string {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth() - count, 1)
-  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
 }

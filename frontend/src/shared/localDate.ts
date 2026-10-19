@@ -10,6 +10,13 @@ export function todayDate(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+// Tanggal pertama bulan, count bulan sebelum bulan ini.
+export function monthsAgo(count: number): string {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() - count, 1)
+  return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`
+}
+
 export function currentPeriod(): string {
   return todayDate().slice(0, 7)
 }

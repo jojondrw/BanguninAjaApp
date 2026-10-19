@@ -52,6 +52,14 @@ export interface CashFlow {
   balance: number
 }
 
+// Jumlah kas per akun dalam satu rentang, dari server.
+export interface CashAccountTotal {
+  accountCode: string
+  accountName: string
+  type: 'in' | 'out'
+  total: number
+}
+
 export interface CashFlowFilter {
   projectId?: string
   dateFrom?: string
@@ -156,4 +164,20 @@ export function summarizeBudgets(budgets: Budget[]): BudgetSummary {
     remaining: value - realized,
     absorption: value > 0 ? Math.round((realized / value) * 100) : 0,
   }
+}
+
+// Akun terbesar ditampilkan satu per satu, sisanya digabung jadi "Lainnya"
+// supaya daftar tetap pendek tetapi totalnya tetap utuh.
+export function topAccounts(accounts: CashAccountTotal[], type: CashAccountTotal['type'], limit: number) {
+  const rows = accounts.filter((account) => account.type === type).sort((a, b) => b.total - a.total)
+  const total = rows.reduce((sum, row) => sum + row.total, 0)
+  const shown = rows.slice(0, limit).map((row) => ({ label: row.accountName, code: row.accountCode, total: row.total }))
+  const rest = rows.slice(limit).reduce((sum, row) => sum + row.total, 0)
+  return { total, items: rest > 0 ? [...shown, { label: 'Lainnya', code: '', total: rest }] : shown }
+}
+
+// Serapan tertinggi dulu: proyek yang hampir atau sudah melewati anggarannya
+// yang paling perlu dilihat.
+export function busiestBudgets(budgets: Budget[], limit: number): Budget[] {
+  return [...budgets].sort((a, b) => b.absorption - a.absorption).slice(0, limit)
 }

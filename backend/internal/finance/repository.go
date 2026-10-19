@@ -109,6 +109,13 @@ type CashTransactionRow struct {
 	BillingPaymentID *uuid.UUID
 }
 
+type CashAccountRow struct {
+	AccountCode string
+	AccountName string
+	Type        string
+	Total       int64
+}
+
 type CashFlowRow struct {
 	Period  time.Time
 	CashIn  int64
@@ -173,6 +180,7 @@ type Repository interface {
 	SaveCashTransaction(ctx context.Context, transaction *CashTransaction) error
 	DeleteCashTransaction(ctx context.Context, id uuid.UUID) error
 	SumCashFlowByMonth(ctx context.Context, filter CashFlowFilter) ([]CashFlowRow, error)
+	SumCashByAccount(ctx context.Context, filter CashFlowFilter) ([]CashAccountRow, error)
 	CashBalance(ctx context.Context, projectID *uuid.UUID, until time.Time) (int64, error)
 
 	FindAccountIDByCode(ctx context.Context, code string) (uuid.UUID, error)
@@ -316,6 +324,20 @@ func (r *gormRepository) SumCashFlowByMonth(ctx context.Context, filter CashFlow
 			"COALESCE(SUM(amount) FILTER (WHERE type = ?), 0) AS cash_out", cashIn, cashOut).
 		Group("period").
 		Order("period ASC").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) SumCashByAccount(ctx context.Context, filter CashFlowFilter) ([]CashAccountRow, error) {
+	var rows []CashAccountRow
+	err := r.db.WithContext(ctx).
+		Model(&CashTransaction{}).
+		Scopes(filter.apply).
+		Joins("JOIN account ON account.id = cash_transaction.account_id").
+		Select("account.code AS account_code, account.name AS account_name, cash_transaction.type AS type, " +
+			"SUM(cash_transaction.amount) AS total").
+		Group("account.code, account.name, cash_transaction.type").
+		Order("total DESC").
 		Scan(&rows).Error
 	return rows, database.Translate(err)
 }

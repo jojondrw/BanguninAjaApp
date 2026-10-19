@@ -77,6 +77,13 @@ type CashFlowQuery struct {
 	DateTo    *time.Time `form:"dateTo" time_format:"2006-01-02"`
 }
 
+type CashAccountResponse struct {
+	AccountCode string `json:"accountCode"`
+	AccountName string `json:"accountName"`
+	Type        string `json:"type"`
+	Total       int64  `json:"total"`
+}
+
 type CashFlowPeriodResponse struct {
 	Period  string `json:"period"`
 	CashIn  int64  `json:"cashIn"`

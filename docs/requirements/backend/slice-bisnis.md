@@ -494,6 +494,7 @@ Semua di bawah `/api/finance`.
 | GET, POST | `/cash-transactions` | Filter `type`, `accountId`, `projectId`, `dateFrom`, `dateTo`. Berisi `journalEntryId` |
 | GET, PUT, DELETE | `/cash-transactions/:id` | Ikut mengubah atau menghapus jurnal otomatisnya |
 | GET | `/cash-flow` | Kas masuk dan keluar per bulan, bawaan enam bulan terakhir. Filter `projectId`, `dateFrom`, `dateTo` |
+| GET | `/cash-flow/accounts` | Jumlah kas masuk dan keluar per akun dalam rentang yang sama dengan arus kas |
 | GET, POST | `/journal-entries` | Filter `search`, `accountId`, `dateFrom`, `dateTo`. Berisi `cashTransactionId`, `null` untuk jurnal manual |
 | GET | `/journal-entries/:id` | Berisi baris debit dan kredit |
 | GET | `/ledger` | Buku besar satu akun. Wajib `accountId`, filter `dateFrom`, `dateTo`. Tiap baris berisi `cashTransactionId` |

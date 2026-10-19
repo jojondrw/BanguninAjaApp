@@ -67,6 +67,7 @@ type Service interface {
 	UpdateCashTransaction(ctx context.Context, id uuid.UUID, request CashTransactionRequest) (CashTransactionResponse, error)
 	DeleteCashTransaction(ctx context.Context, id uuid.UUID) error
 	SummarizeCashFlow(ctx context.Context, query CashFlowQuery) (CashFlowResponse, error)
+	SummarizeCashByAccount(ctx context.Context, query CashFlowQuery) ([]CashAccountResponse, error)
 
 	ListJournalEntries(ctx context.Context, query JournalEntryQuery) (pagination.Page[JournalEntryResponse], error)
 	GetJournalEntry(ctx context.Context, id uuid.UUID) (JournalEntryDetailResponse, error)
@@ -189,6 +190,22 @@ func (s *service) DeleteCashTransaction(ctx context.Context, id uuid.UUID) error
 		return apperror.From(err)
 	}
 	return nil
+}
+
+func (s *service) SummarizeCashByAccount(ctx context.Context, query CashFlowQuery) ([]CashAccountResponse, error) {
+	from, to := cashFlowRange(query, s.today())
+	if to.Before(from) {
+		return nil, errInvalidDateRange
+	}
+	rows, err := s.repository.SumCashByAccount(ctx, CashFlowFilter{ProjectID: query.ProjectID, DateFrom: from, DateTo: to})
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	accounts := make([]CashAccountResponse, len(rows))
+	for index, row := range rows {
+		accounts[index] = CashAccountResponse{AccountCode: row.AccountCode, AccountName: row.AccountName, Type: row.Type, Total: row.Total}
+	}
+	return accounts, nil
 }
 
 func (s *service) SummarizeCashFlow(ctx context.Context, query CashFlowQuery) (CashFlowResponse, error) {
