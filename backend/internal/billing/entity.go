@@ -99,8 +99,29 @@ func (OnchainRequest) TableName() string {
 	return "onchain_payment_request"
 }
 
+type GatewayRequest struct {
+	entity.Base
+	TargetKind    string     `gorm:"type:varchar(20);not null;index:idx_gateway_payment_request_target,priority:1"`
+	TargetID      uuid.UUID  `gorm:"type:uuid;not null;index:idx_gateway_payment_request_target,priority:2"`
+	AmountIDR     int64      `gorm:"column:amount_idr;not null"`
+	Provider      string     `gorm:"type:varchar(20);not null"`
+	Channel       string     `gorm:"type:varchar(20);not null"`
+	ProviderID    string     `gorm:"type:varchar(80);not null;uniqueIndex:uq_gateway_payment_request_provider_id"`
+	QRString      string     `gorm:"column:qr_string;type:text;not null"`
+	Token         string     `gorm:"type:varchar(64);not null;uniqueIndex:uq_gateway_payment_request_token"`
+	Status        string     `gorm:"type:varchar(20);not null;index:idx_gateway_payment_request_status"`
+	FailureReason string     `gorm:"type:varchar(300);not null;default:''"`
+	CreatedBy     *uuid.UUID `gorm:"type:uuid;index:idx_gateway_payment_request_created_by"`
+	ExpiresAt     time.Time  `gorm:"not null"`
+	PaidAt        *time.Time
+}
+
+func (GatewayRequest) TableName() string {
+	return "gateway_payment_request"
+}
+
 func Entities() []any {
-	return []any{&Invoice{}, &Receivable{}, &Payable{}, &Payment{}, &OnchainRequest{}}
+	return []any{&Invoice{}, &Receivable{}, &Payable{}, &Payment{}, &OnchainRequest{}, &GatewayRequest{}}
 }
 
 func Indexes() []string {
@@ -143,5 +164,10 @@ func Constraints() []string {
 		database.Check("onchain_payment_request", "status", "status IN ('pending','paid','expired','failed','cancelled')"),
 		database.Check("onchain_payment_request", "amount", "amount_idr > 0 AND idr_per_eth > 0 AND amount_wei ~ '^[1-9][0-9]*$'"),
 		database.Check("onchain_payment_request", "paid", "status <> 'paid' OR (tx_hash IS NOT NULL AND paid_at IS NOT NULL)"),
+		database.ForeignKey("gateway_payment_request", "created_by", "users", database.DeleteSetNull),
+		database.Check("gateway_payment_request", "target_kind", "target_kind IN ('invoice','receivable')"),
+		database.Check("gateway_payment_request", "status", "status IN ('pending','paid','expired','failed','cancelled')"),
+		database.Check("gateway_payment_request", "amount", "amount_idr > 0"),
+		database.Check("gateway_payment_request", "paid", "status <> 'paid' OR paid_at IS NOT NULL"),
 	}
 }

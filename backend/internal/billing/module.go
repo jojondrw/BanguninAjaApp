@@ -16,14 +16,16 @@ import (
 type Module struct {
 	controller *Controller
 	onchain    *OnchainController
+	gateway    *GatewayController
 	tokens     *token.Manager
 }
 
-func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain) *Module {
+func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain, gateway config.Gateway) *Module {
 	repository := NewRepository(db, NewFinanceCashBook)
 	return &Module{
 		controller: NewController(NewService(repository)),
 		onchain:    NewOnchainController(NewOnchainService(repository, ethereum.NewClient(onchain.RPCURL), onchain)),
+		gateway:    NewGatewayController(NewGatewayService(repository, NewPaymentGateway(gateway), gateway)),
 		tokens:     tokens,
 	}
 }
@@ -60,6 +62,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	invoices.GET("/:id/payments", m.controller.InvoicePayments)
 	invoices.POST("/:id/onchain-requests", m.onchain.CreateInvoiceRequest)
 	invoices.GET("/:id/onchain-requests", m.onchain.InvoiceRequests)
+	invoices.POST("/:id/gateway-requests", m.gateway.CreateInvoiceRequest)
+	invoices.GET("/:id/gateway-requests", m.gateway.InvoiceRequests)
 
 	receivables := routes.Group("/receivables")
 	receivables.GET("", m.controller.ListReceivables)
@@ -71,6 +75,8 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	receivables.GET("/:id/payments", m.controller.ReceivablePayments)
 	receivables.POST("/:id/onchain-requests", m.onchain.CreateReceivableRequest)
 	receivables.GET("/:id/onchain-requests", m.onchain.ReceivableRequests)
+	receivables.POST("/:id/gateway-requests", m.gateway.CreateReceivableRequest)
+	receivables.GET("/:id/gateway-requests", m.gateway.ReceivableRequests)
 
 	payables := routes.Group("/payables")
 	payables.GET("", m.controller.ListPayables)
@@ -88,7 +94,15 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	onchain.GET("/config", m.onchain.Config)
 	onchain.POST("/requests/:id/cancel", m.onchain.CancelRequest)
 
+	gateway := routes.Group("/gateway")
+	gateway.GET("/config", m.gateway.Config)
+	gateway.POST("/requests/:id/cancel", m.gateway.CancelRequest)
+
 	pay := router.Group("/pay")
 	pay.GET("/:token", m.onchain.PublicPayment)
 	pay.POST("/:token/confirm", m.onchain.ConfirmPayment)
+	pay.GET("/qris/:token", m.gateway.PublicPayment)
+	pay.POST("/qris/:token/refresh", m.gateway.RefreshPayment)
+	pay.POST("/qris/:token/simulate", m.gateway.SimulatePayment)
+	pay.POST("/xendit/webhook", m.gateway.Webhook)
 }

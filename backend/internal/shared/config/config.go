@@ -23,6 +23,7 @@ type Config struct {
 	CORS     CORS
 	Score    Score
 	Onchain  Onchain
+	Gateway  Gateway
 }
 
 type App struct {
@@ -130,6 +131,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	gateway, err := loadGateway()
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		App: App{
 			Environment: env("APP_ENV", "development"),
@@ -165,6 +171,7 @@ func Load() (Config, error) {
 			Timeout: scoreTimeout,
 		},
 		Onchain: onchain,
+		Gateway: gateway,
 	}, nil
 }
 

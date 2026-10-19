@@ -38,7 +38,7 @@ func onchainRouter(t *testing.T, results ...databasetest.Result) (*gin.Engine, *
 	tokens := token.NewManager(config.Token{AccessSecret: "billing-onchain-test", AccessTTL: time.Minute, Issuer: "billing-onchain-test"})
 	router := gin.New()
 	router.Use(middleware.ErrorHandler())
-	NewModule(db, tokens, config.Onchain{}).RegisterRoutes(router.Group("/api"))
+	NewModule(db, tokens, config.Onchain{}, config.Gateway{}).RegisterRoutes(router.Group("/api"))
 	return router, recorder, tokens
 }
 
@@ -169,5 +169,34 @@ func TestWindowLimiterStartsAFreshWindow(t *testing.T) {
 	current = current.Add(time.Minute)
 	if !limiter.Allow("a") {
 		t.Fatal("a new window must allow calls again")
+	}
+}
+
+func TestQRISRoutesArePublicAndTheWebhookNeedsItsToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, recorder := databasetest.Open(t)
+	tokens := token.NewManager(config.Token{AccessSecret: "billing-gateway-test", AccessTTL: time.Minute, Issuer: "billing-gateway-test"})
+	router := gin.New()
+	router.Use(middleware.ErrorHandler())
+	settings := config.Gateway{Provider: config.GatewayFake, XenditCallbackToken: "rahasia", RequestTTL: time.Minute}
+	NewModule(db, tokens, config.Onchain{}, settings).RegisterRoutes(router.Group("/api"))
+
+	response := servePublicRoute(t, router, http.MethodGet, "/api/pay/qris/bukan-token", "", "")
+	if response.Code != http.StatusNotFound || errorCodeOf(t, response) != "gateway_request_not_found" {
+		t.Fatalf("got %d %s", response.Code, response.Body.String())
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/api/pay/xendit/webhook", strings.NewReader(`{"event":"payment.capture","data":{"payment_request_id":"pr-x"}}`))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("x-callback-token", "salah")
+	rejected := httptest.NewRecorder()
+	router.ServeHTTP(rejected, request)
+	if rejected.Code != http.StatusUnauthorized || len(recorder.Queries()) != 0 {
+		t.Fatalf("got %d with %d queries", rejected.Code, len(recorder.Queries()))
+	}
+
+	response = servePublicRoute(t, router, http.MethodGet, "/api/billing/gateway/config", "", "")
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("staff gateway routes must need a login, got %d", response.Code)
 	}
 }
