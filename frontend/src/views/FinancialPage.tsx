@@ -35,18 +35,20 @@ export function FinancialPage() {
       description="Anggaran, kas, jurnal umum, dan buku besar"
       tabs={<SectionTabs tabs={FINANCE_TABS} active={tab} onChange={changeTab} label="Bagian keuangan" />}
     >
-      <KpiRow>
-        <Kpi label="Kas masuk" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalIn ?? 0)} />
-        <Kpi label="Kas keluar" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalOut ?? 0)} />
-        <Kpi
-          label="Selisih"
-          value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.net ?? 0)}
-          note="masuk dikurangi keluar"
-        />
-        <Kpi label="Saldo" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)} />
-      </KpiRow>
-
-      <div className="mb-6" />
+      {tab === 'ringkasan' ? null : (
+        <div className="mb-6">
+          <KpiRow>
+            <Kpi label="Kas masuk" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalIn ?? 0)} />
+            <Kpi label="Kas keluar" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.totalOut ?? 0)} />
+            <Kpi
+              label="Selisih"
+              value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.net ?? 0)}
+              note="masuk dikurangi keluar"
+            />
+            <Kpi label="Saldo" value={cashFlow.isPending ? '...' : rupiahShort(cashFlow.data?.balance ?? 0)} />
+          </KpiRow>
+        </div>
+      )}
 
       {tab === 'ringkasan' ? <FinanceSummaryTab onOpenTab={changeTab} /> : null}
       {tab === 'anggaran' ? <BudgetsTab /> : null}

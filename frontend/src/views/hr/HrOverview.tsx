@@ -144,13 +144,15 @@ export function HrOverview({ drill }: { drill: HrDrill }) {
         <AttendanceBars days={data.days} />
       </Card>
 
-      <Card
-        title="Gaji bersih 6 bulan"
-        description={unpaid > 0 ? `${rupiahShort(unpaid)} belum dibayar (kuning)` : 'Semua slip sudah dibayar'}
-        action={<LinkButton label="Penggajian" onClick={drill.openPayroll} />}
-      >
-        <PayrollBars payrolls={data.payrolls} />
-      </Card>
+      <div className="xl:col-span-2">
+        <Card
+          title="Gaji bersih 6 bulan"
+          description={unpaid > 0 ? `${rupiahShort(unpaid)} belum dibayar (kuning)` : 'Semua slip sudah dibayar'}
+          action={<LinkButton label="Penggajian" onClick={drill.openPayroll} />}
+        >
+          <PayrollBars payrolls={data.payrolls} />
+        </Card>
+      </div>
     </div>
   )
 }

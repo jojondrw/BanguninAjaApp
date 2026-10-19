@@ -80,7 +80,7 @@ export function ProcurementOverview({ drill }: { drill: ProcurementDrill }) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <div className="grid content-start gap-6">
+      <div className="grid gap-6">
         <Card title="Alur pengadaan" description="Dari permintaan proyek sampai barang diterima lengkap">
           <div className="flex flex-col gap-2 sm:flex-row">
             <FlowStep

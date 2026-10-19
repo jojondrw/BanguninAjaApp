@@ -105,7 +105,7 @@ export function InventoryOverview({ drill }: { drill: InventoryDrill }) {
         />
       </Card>
 
-      <div className="grid content-start gap-6">
+      <div className="grid gap-6">
         <Card title="Perlu ditindaklanjuti">
           <div className="grid gap-2 sm:grid-cols-3">
             <Tile

@@ -86,7 +86,7 @@ export function PortfolioOverview({ onOpenList }: { onOpenList: () => void }) {
         </ul>
       </Card>
 
-      <div className="grid content-start gap-6">
+      <div className="grid gap-6">
         <Card title="Status proyek" action={<LinkButton label="Daftar" onClick={onOpenList} />}>
           <DonutChart
             caption="Jumlah proyek per status"
