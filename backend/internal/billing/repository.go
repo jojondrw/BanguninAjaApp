@@ -165,7 +165,21 @@ type PayableFilter struct {
 	Limit           int
 }
 
+type AgingRow struct {
+	Bucket string
+	Count  int64
+	Amount int64
+}
+
+type PartyBalanceRow struct {
+	Name   string
+	Count  int64
+	Amount int64
+}
+
 type Repository interface {
+	AgeOpenBalances(ctx context.Context, side string, today time.Time) ([]AgingRow, error)
+	LargestOpenBalances(ctx context.Context, side string, limit int) ([]PartyBalanceRow, error)
 	Transaction(ctx context.Context, work func(Repository) error) error
 	CashBook() CashBook
 
@@ -642,4 +656,44 @@ func (f PayableFilter) apply(db *gorm.DB) *gorm.DB {
 		db = db.Where("payable.purchase_order_id = ?", *f.PurchaseOrderID)
 	}
 	return db
+}
+
+var balanceSides = map[string]struct {
+	table string
+	party string
+	join  string
+}{
+	sideReceivable: {"receivable", "customer.name", "JOIN customer ON customer.id = receivable.customer_id"},
+	sidePayable:    {"payable", "vendor.name", "JOIN vendor ON vendor.id = payable.vendor_id"},
+}
+
+func (r *gormRepository) AgeOpenBalances(ctx context.Context, side string, today time.Time) ([]AgingRow, error) {
+	source := balanceSides[side]
+	var rows []AgingRow
+	err := r.db.WithContext(ctx).Table(source.table).
+		Select(`CASE
+			WHEN due_date >= ? THEN 'current'
+			WHEN ?::date - due_date <= 30 THEN 'days_30'
+			WHEN ?::date - due_date <= 60 THEN 'days_60'
+			WHEN ?::date - due_date <= 90 THEN 'days_90'
+			ELSE 'days_over_90' END AS bucket,
+			COUNT(*) AS count, SUM(amount - paid_amount) AS amount`, today, today, today, today).
+		Where("amount > paid_amount").
+		Group("bucket").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) LargestOpenBalances(ctx context.Context, side string, limit int) ([]PartyBalanceRow, error) {
+	source := balanceSides[side]
+	var rows []PartyBalanceRow
+	err := r.db.WithContext(ctx).Table(source.table).
+		Joins(source.join).
+		Select(source.party + " AS name, COUNT(*) AS count, SUM(" + source.table + ".amount - " + source.table + ".paid_amount) AS amount").
+		Where(source.table + ".amount > " + source.table + ".paid_amount").
+		Group(source.party).
+		Order("amount DESC").
+		Limit(limit).
+		Scan(&rows).Error
+	return rows, database.Translate(err)
 }

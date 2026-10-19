@@ -82,6 +82,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	payables.GET("/:id/payments", m.controller.PayablePayments)
 
 	routes.GET("/reconciliation", m.controller.ListUnreconciledPairs)
+	routes.GET("/summary", m.controller.Summarize)
 
 	onchain := routes.Group("/onchain")
 	onchain.GET("/config", m.onchain.Config)

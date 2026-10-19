@@ -209,6 +209,19 @@ func generatedSalePlans() []salePlan {
 	return plans
 }
 
+var ownerPrefix = map[string]string{
+	"rumah sakit": "Yayasan Kesehatan Sejahtera",
+	"klinik":      "Yayasan Klinik Sehat",
+	"sekolah":     "Yayasan Pendidikan Cendekia",
+	"gudang":      "PT Logistik Nusantara",
+	"hotel":       "PT Hotelindo",
+	"kantor":      "PT Graha Properti",
+}
+
+func ownerName(seed generatedSeed) string {
+	return ownerPrefix[seed.kind] + " " + seed.city
+}
+
 func generatedClients() []sales.CustomerRequest {
 	clients := []sales.CustomerRequest{}
 	for _, seed := range generatedSeeds() {
@@ -216,7 +229,7 @@ func generatedClients() []sales.CustomerRequest {
 			continue
 		}
 		clients = append(clients, sales.CustomerRequest{
-			Name:           "PT Pemilik " + strings.SplitN(seed.name, " ", 2)[1],
+			Name:           ownerName(seed),
 			Contact:        personPhone(len(seed.name) * 13),
 			Email:          "proyek.g" + strings.ToLower(seed.suffix) + "@pemberikerja.contoh.id",
 			IdentityNumber: "DEMO-PT-G" + seed.suffix,

@@ -1,9 +1,9 @@
-import { ChevronRight } from 'lucide-react'
 
 import { useContractSummary, useProjectUnitSummary } from '../../controllers/useSales'
 import { projectOptions } from '../../models/lookupApi'
 import { CONTRACT_STATUS_LABEL, type ContractStatus, type LeadStage } from '../../models/sales'
 import { number, rupiahShort } from '../../shared/format'
+import { LinkButton } from '../components/LinkButton'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { LookupName } from '../components/LookupName'
 import { Money } from '../components/Money'
@@ -19,19 +19,6 @@ export interface SalesDrill {
   openUnits: (projectId: string) => void
   openLeads: (stage: LeadStage | '') => void
   openContracts: (status: ContractStatus | '') => void
-}
-
-function LinkButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-0.5 text-[13px] font-medium text-navy-600 hover:text-navy-800"
-    >
-      {label}
-      <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
-    </button>
-  )
 }
 
 function ContractTiles({ onOpen }: { onOpen: SalesDrill['openContracts'] }) {

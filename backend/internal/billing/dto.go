@@ -285,3 +285,28 @@ func newReconciliationResponse(row ReconciliationRow) ReconciliationResponse {
 		Difference:           row.InvoicePaidAmount - row.ReceivablePaidAmount,
 	}
 }
+
+type AgingBucketResponse struct {
+	Bucket string `json:"bucket"`
+	Count  int64  `json:"count"`
+	Amount int64  `json:"amount"`
+}
+
+type PartyBalanceResponse struct {
+	Name   string `json:"name"`
+	Count  int64  `json:"count"`
+	Amount int64  `json:"amount"`
+}
+
+type BalanceSummaryResponse struct {
+	Outstanding int64                  `json:"outstanding"`
+	Overdue     int64                  `json:"overdue"`
+	OpenCount   int64                  `json:"openCount"`
+	Buckets     []AgingBucketResponse  `json:"buckets"`
+	Largest     []PartyBalanceResponse `json:"largest"`
+}
+
+type BillingSummaryResponse struct {
+	Receivables BalanceSummaryResponse `json:"receivables"`
+	Payables    BalanceSummaryResponse `json:"payables"`
+}

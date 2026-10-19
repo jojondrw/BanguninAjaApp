@@ -1,4 +1,3 @@
-import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useBudgets, useCashByAccount, useCashFlow, useCashTransactions } from '../../controllers/useErp'
@@ -7,6 +6,7 @@ import { number, rupiahShort, shortDate } from '../../shared/format'
 import { monthsAgo, todayDate } from '../../shared/localDate'
 import { CashFlowChart } from '../components/CashFlowChart'
 import { DonutChart } from '../components/DonutChart'
+import { LinkButton } from '../components/LinkButton'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { Money } from '../components/Money'
 import type { FinanceTab } from './financeTabs'
@@ -16,19 +16,6 @@ const CHART_MONTHS = 12
 const TOP_ACCOUNTS = 5
 const TOP_BUDGETS = 6
 const RECENT = 5
-
-function LinkButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-0.5 text-[13px] font-medium text-navy-600 hover:text-navy-800"
-    >
-      {label}
-      <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
-    </button>
-  )
-}
 
 const OUT_COLORS = ['#0b2b6b', '#1f5fd1', '#5b86d9', '#94a3b8', '#cbd5e1', '#e2e8f0']
 const IN_COLORS = ['#15803d', '#22c55e', '#86efac', '#fbbb16', '#cbd5e1', '#e2e8f0']

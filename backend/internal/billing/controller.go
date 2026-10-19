@@ -274,3 +274,8 @@ func actorOf(ctx *gin.Context) *uuid.UUID {
 	}
 	return &userID
 }
+
+func (c *Controller) Summarize(ctx *gin.Context) {
+	summary, err := c.service.Summarize(ctx.Request.Context())
+	httpresponse.Respond(ctx, summary, err)
+}
