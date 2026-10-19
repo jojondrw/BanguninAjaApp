@@ -143,10 +143,12 @@ function ShellFrame({ title, description, actions, children }: AppShellProps) {
           ref={panelRef}
           className="flex flex-1 flex-col bg-white lg:min-h-0 lg:overflow-y-auto lg:rounded-2xl lg:shadow-panel"
         >
-          <header
-            className={`sticky top-0 z-20 border-b bg-white/80 backdrop-blur-xl backdrop-saturate-150 transition-colors
-                        duration-200 ${isScrolled ? 'border-slate-200/80' : 'border-transparent'}`}
-          >
+          <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl backdrop-saturate-150">
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-0 top-full h-5 bg-gradient-to-b from-slate-900/[0.07] to-transparent
+                          transition-opacity duration-300 ${isScrolled ? 'opacity-100' : 'opacity-0'}`}
+            />
             <div className="flex items-center justify-between gap-3 px-5 pt-3 lg:hidden">
               <BrandName />
               <div className="flex items-center gap-1">

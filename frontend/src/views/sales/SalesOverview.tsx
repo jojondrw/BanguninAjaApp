@@ -1,31 +1,19 @@
 import { ChevronRight } from 'lucide-react'
 
-import { useContractSummary, useLeadStageCounts, useProjectUnitSummary } from '../../controllers/useSales'
+import { useContractSummary, useProjectUnitSummary } from '../../controllers/useSales'
 import { projectOptions } from '../../models/lookupApi'
-import {
-  CONTRACT_STATUS_LABEL,
-  LEAD_STAGE_LABEL,
-  LEAD_STAGES,
-  type ContractStatus,
-  type LeadStage,
-} from '../../models/sales'
+import { CONTRACT_STATUS_LABEL, type ContractStatus, type LeadStage } from '../../models/sales'
 import { number, rupiahShort } from '../../shared/format'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
 import { LookupName } from '../components/LookupName'
 import { Money } from '../components/Money'
 import { SalesFunnel } from '../overview/SalesFunnel'
+import { LeadSankey } from './LeadSankey'
 import { ProjectUnitBar, UnitBarLegend } from './ProjectUnitBar'
 import { unitBreakdown } from './unitSegments'
 
 const TOP_PROJECTS = 6
 const CONTRACT_ORDER: ContractStatus[] = ['draft', 'active', 'paid', 'cancelled']
-const STAGE_COLOR: Record<LeadStage, string> = {
-  new: 'bg-slate-400',
-  interested: 'bg-navy-500',
-  negotiating: 'bg-amber-400',
-  won: 'bg-green-500',
-  cancelled: 'bg-red-300',
-}
 
 export interface SalesDrill {
   openUnits: (projectId: string) => void
@@ -43,42 +31,6 @@ function LinkButton({ label, onClick }: { label: string; onClick: () => void }) 
       {label}
       <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
     </button>
-  )
-}
-
-function LeadPipeline({ onOpen }: { onOpen: SalesDrill['openLeads'] }) {
-  const counts = useLeadStageCounts()
-
-  if (counts.isPending) {
-    return <Loading />
-  }
-  if (counts.isError) {
-    return <LoadFailed onRetry={() => counts.refetch()} />
-  }
-  const highest = Math.max(1, ...LEAD_STAGES.map((stage) => counts.data[stage]))
-  return (
-    <ul className="space-y-1">
-      {LEAD_STAGES.map((stage) => (
-        <li key={stage}>
-          <button
-            type="button"
-            onClick={() => onOpen(stage)}
-            className="grid w-full grid-cols-[6rem_1fr_2.5rem] items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-slate-50"
-          >
-            <span className="text-[13px] text-slate-700">{LEAD_STAGE_LABEL[stage]}</span>
-            <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-slate-100">
-              <span
-                className={`block h-full rounded-full ${STAGE_COLOR[stage]}`}
-                style={{ width: `${(counts.data[stage] / highest) * 100}%` }}
-              />
-            </span>
-            <span className="text-right text-[13px] font-medium text-slate-900 tabular-nums">
-              {number(counts.data[stage])}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
   )
 }
 
@@ -162,16 +114,16 @@ function ProjectStock({ onOpen }: { onOpen: SalesDrill['openUnits'] }) {
 export function SalesOverview({ drill }: { drill: SalesDrill }) {
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card title="Corong penjualan" description="Dari unit dipasarkan sampai lunas">
           <SalesFunnel />
         </Card>
         <Card
-          title="Pipeline prospek"
-          description="Pilih tahap untuk melihat prospeknya"
+          title="Sumber prospek"
+          description="Dari mana prospek datang dan di tahap mana mereka sekarang. Pilih pita atau tahap untuk melihat prospeknya"
           action={<LinkButton label="Semua prospek" onClick={() => drill.openLeads('')} />}
         >
-          <LeadPipeline onOpen={drill.openLeads} />
+          <LeadSankey onOpenStage={drill.openLeads} />
         </Card>
       </div>
       <Card

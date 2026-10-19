@@ -421,6 +421,7 @@ Semua di bawah `/api/sales`.
 | GET, PUT, DELETE | `/customers/:id` | |
 | GET, POST | `/units` | Filter `search`, `projectId`, `status` |
 | GET | `/units/summary` | Jumlah unit per status, bisa disaring `projectId` |
+| GET | `/leads/flow` | Jumlah prospek per pasangan sumber dan tahap sekarang, bisa disaring `projectId` |
 | GET | `/units/summary/projects` | Jumlah unit per status dan nilai stok serta nilai terjual untuk setiap proyek |
 | GET, PUT, DELETE | `/units/:id` | |
 | GET, POST | `/leads` | Filter `search`, `projectId`, `stage` |

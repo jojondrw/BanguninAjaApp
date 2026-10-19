@@ -124,6 +124,13 @@ export interface LeadRequest {
 
 export type LeadStageCounts = Record<LeadStage, number>
 
+// Jumlah prospek untuk satu pasangan sumber dan tahap sekarang.
+export interface LeadFlow {
+  source: string
+  stage: LeadStage
+  total: number
+}
+
 export interface Contract {
   id: string
   number: string

@@ -41,6 +41,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 
 	leads := routes.Group("/leads")
 	leads.GET("", m.controller.ListLeads)
+	leads.GET("/flow", m.controller.LeadFlows)
 	leads.POST("", m.controller.CreateLead)
 	leads.GET("/:id", m.controller.GetLead)
 	leads.PUT("/:id", m.controller.UpdateLead)

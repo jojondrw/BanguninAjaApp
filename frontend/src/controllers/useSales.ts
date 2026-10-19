@@ -86,6 +86,14 @@ export function useLeads(filter: LeadFilter = {}) {
   })
 }
 
+export function useLeadFlows(projectId?: string) {
+  return useQuery({
+    queryKey: [SALES_KEY, 'lead-flow', projectId ?? 'all'],
+    queryFn: () => salesApi.leadFlows(projectId),
+    ...DATA_QUERY,
+  })
+}
+
 export function useLeadStageCounts(projectId?: string) {
   return useQuery({
     queryKey: [SALES_KEY, 'lead-stage-counts', projectId ?? 'all'],

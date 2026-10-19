@@ -66,6 +66,16 @@ type UnitResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+type LeadFlowQuery struct {
+	ProjectID *uuid.UUID `form:"projectId,parser=encoding.TextUnmarshaler"`
+}
+
+type LeadFlowResponse struct {
+	Source string `json:"source"`
+	Stage  string `json:"stage"`
+	Total  int64  `json:"total"`
+}
+
 type ProjectUnitSummaryResponse struct {
 	ProjectID  uuid.UUID `json:"projectId"`
 	Total      int64     `json:"total"`

@@ -40,3 +40,22 @@ func TestProjectUnitSummariesOfNoUnitsIsEmptyList(t *testing.T) {
 		t.Errorf("summaries = %#v, want empty non-nil list", summaries)
 	}
 }
+
+func TestLeadFlowsNameEmptySourcesAndMergeThem(t *testing.T) {
+	flows := leadFlows([]LeadFlowCount{
+		{Source: "", Stage: "new", Total: 2},
+		{Source: "Instagram", Stage: "new", Total: 5},
+		{Source: "Instagram", Stage: "won", Total: 1},
+		{Source: "", Stage: "new", Total: 3},
+	})
+
+	if len(flows) != 3 {
+		t.Fatalf("flows = %+v, want 3 merged rows", flows)
+	}
+	if flows[0] != (LeadFlowResponse{Source: unknownLeadSource, Stage: "new", Total: 5}) {
+		t.Errorf("unknown source row = %+v, want both empty-source rows merged into 5", flows[0])
+	}
+	if flows[2] != (LeadFlowResponse{Source: "Instagram", Stage: "won", Total: 1}) {
+		t.Errorf("last row = %+v", flows[2])
+	}
+}

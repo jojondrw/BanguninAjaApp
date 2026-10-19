@@ -18,6 +18,7 @@ import {
   type ProjectUnitSummary,
   type Lead,
   type LeadConversion,
+  type LeadFlow,
   type LeadFilter,
   type LeadRequest,
   type LeadStageCounts,
@@ -67,6 +68,7 @@ export const salesApi = {
   leads,
 
   leadStageCounts,
+  leadFlows: (projectId?: string) => request<LeadFlow[]>(`/sales/leads/flow${toQueryString({ projectId })}`),
 
   createLead: (body: LeadRequest) => request<Lead>('/sales/leads', { method: 'POST', body }),
 

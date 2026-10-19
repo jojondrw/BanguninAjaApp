@@ -21,6 +21,8 @@ const (
 	unitSold      = "sold"
 	unitOnHold    = "on_hold"
 
+	unknownLeadSource = "Tanpa sumber"
+
 	contractDraft     = "draft"
 	contractActive    = "active"
 	contractPaid      = "paid"
@@ -103,6 +105,7 @@ type Service interface {
 	ListUnits(ctx context.Context, query UnitQuery) (pagination.Page[UnitResponse], error)
 	SummarizeUnits(ctx context.Context, query UnitSummaryQuery) ([]UnitStatusCountResponse, error)
 	SummarizeUnitsByProject(ctx context.Context) ([]ProjectUnitSummaryResponse, error)
+	LeadFlows(ctx context.Context, query LeadFlowQuery) ([]LeadFlowResponse, error)
 	GetUnit(ctx context.Context, id uuid.UUID) (UnitResponse, error)
 	CreateUnit(ctx context.Context, request UnitRequest) (UnitResponse, error)
 	UpdateUnit(ctx context.Context, id uuid.UUID, request UnitRequest) (UnitResponse, error)
@@ -205,6 +208,33 @@ func (s *service) ListUnits(ctx context.Context, query UnitQuery) (pagination.Pa
 		return pagination.Page[UnitResponse]{}, apperror.Internal(err)
 	}
 	return pagination.New(pagination.Map(units, newUnitResponse), query.Query, total), nil
+}
+
+func (s *service) LeadFlows(ctx context.Context, query LeadFlowQuery) ([]LeadFlowResponse, error) {
+	counts, err := s.repository.CountLeadFlows(ctx, query.ProjectID)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	return leadFlows(counts), nil
+}
+
+func leadFlows(counts []LeadFlowCount) []LeadFlowResponse {
+	flows := []LeadFlowResponse{}
+	positions := map[[2]string]int{}
+	for _, count := range counts {
+		source := count.Source
+		if source == "" {
+			source = unknownLeadSource
+		}
+		key := [2]string{source, count.Stage}
+		if position, known := positions[key]; known {
+			flows[position].Total += count.Total
+			continue
+		}
+		positions[key] = len(flows)
+		flows = append(flows, LeadFlowResponse{Source: source, Stage: count.Stage, Total: count.Total})
+	}
+	return flows
 }
 
 func (s *service) SummarizeUnitsByProject(ctx context.Context) ([]ProjectUnitSummaryResponse, error) {
