@@ -16,7 +16,7 @@ export function Card({ title, description, action, children }: {
 }) {
   const hasHeader = Boolean(title || description || action)
   return (
-    <section className="min-w-0 rounded-2xl bg-white shadow-hairline">
+    <section className="h-full min-w-0 rounded-2xl bg-white shadow-hairline">
       {hasHeader ? (
         <div
           className={`flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 sm:px-6 ${

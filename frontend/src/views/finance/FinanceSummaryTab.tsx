@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
 
 import { useBudgets, useCashByAccount, useCashFlow, useCashTransactions } from '../../controllers/useErp'
-import { busiestBudgets, topAccounts, type Budget, type CashAccountTotal } from '../../models/finance'
+import { busiestBudgets, topAccounts, type Budget, type CashAccountTotal, type CashFlow } from '../../models/finance'
 import { number, rupiahShort, shortDate } from '../../shared/format'
 import { monthsAgo, todayDate } from '../../shared/localDate'
 import { CashFlowChart } from '../components/CashFlowChart'
 import { DonutChart } from '../components/DonutChart'
 import { LinkButton } from '../components/LinkButton'
 import { Card, Empty, LoadFailed, Loading } from '../components/Data'
-import { Money } from '../components/Money'
+import { Money, MoneyText } from '../components/Money'
 import type { FinanceTab } from './financeTabs'
 import { SignedAmount } from './parts'
 
@@ -30,24 +30,28 @@ function AccountDonut({ accounts, type, colors, caption }: {
   return <DonutChart slices={items.map((item) => ({ label: item.label, value: item.total }))} colors={colors} caption={caption} />
 }
 
-function MoneyMix({ from, to }: { from: string; to: string }) {
-  const accounts = useCashByAccount({ dateFrom: from, dateTo: to })
-  if (accounts.isPending) {
-    return <Loading />
-  }
-  if (accounts.isError) {
-    return <LoadFailed onRetry={() => accounts.refetch()} />
-  }
+function Total({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
+    <div className="flex min-w-0 flex-col justify-between gap-4 bg-white px-5 py-4 sm:px-6 sm:py-5">
+      <p className="text-[13px] font-medium text-slate-500">{label}</p>
       <div>
-        <p className="mb-3 text-xs font-medium text-slate-500">Keluar untuk</p>
-        <AccountDonut accounts={accounts.data} type="out" colors={OUT_COLORS} caption="Kas keluar per akun" />
+        <p className="text-[26px] leading-8 font-semibold tracking-[-0.03em] text-slate-900 tabular-nums">
+          <MoneyText>{value}</MoneyText>
+        </p>
+        <p className="mt-1 text-xs text-slate-500">{note}</p>
       </div>
-      <div>
-        <p className="mb-3 text-xs font-medium text-slate-500">Masuk dari</p>
-        <AccountDonut accounts={accounts.data} type="in" colors={IN_COLORS} caption="Kas masuk per akun" />
-      </div>
+    </div>
+  )
+}
+
+function CashTotals({ cashFlow }: { cashFlow: CashFlow | undefined }) {
+  const value = (amount: number | undefined) => (cashFlow ? rupiahShort(amount ?? 0) : '...')
+  return (
+    <div className="grid h-full grid-cols-2 gap-px overflow-hidden rounded-2xl bg-slate-200/70 shadow-hairline">
+      <Total label="Kas masuk" value={value(cashFlow?.totalIn)} note="12 bulan terakhir" />
+      <Total label="Kas keluar" value={value(cashFlow?.totalOut)} note="12 bulan terakhir" />
+      <Total label="Selisih" value={value(cashFlow?.net)} note="masuk dikurangi keluar" />
+      <Total label="Saldo" value={value(cashFlow?.balance)} note="per hari ini" />
     </div>
   )
 }
@@ -89,64 +93,86 @@ function BudgetBullets({ budgets }: { budgets: Budget[] }) {
   )
 }
 
-// Ringkasan keuangan dalam satu layar: arus kas, ke mana uang pergi, serapan
-// anggaran, dan transaksi terakhir. Rincian lengkap ada di tab lainnya.
+// Ringkasan keuangan: angka kas 12 bulan bersama asal dan tujuannya, grafik
+// arus kas selebar halaman, lalu serapan anggaran dan transaksi terakhir.
 export function FinanceSummaryTab({ onOpenTab }: { onOpenTab: (tab: FinanceTab) => void }) {
   const from = monthsAgo(CHART_MONTHS - 1)
   const to = todayDate()
   const cashFlow = useCashFlow({ dateFrom: from, dateTo: to })
+  const accounts = useCashByAccount({ dateFrom: from, dateTo: to })
   const budgets = useBudgets()
   const transactions = useCashTransactions(RECENT)
+  const ledger = <LinkButton label="Buku besar" onClick={() => onOpenTab('buku-besar')} />
+
+  function accountDonut(type: 'in' | 'out') {
+    if (accounts.isPending) {
+      return <Loading />
+    }
+    if (accounts.isError) {
+      return <LoadFailed onRetry={() => accounts.refetch()} />
+    }
+    return type === 'in' ? (
+      <AccountDonut accounts={accounts.data} type="in" colors={IN_COLORS} caption="Kas masuk per akun" />
+    ) : (
+      <AccountDonut accounts={accounts.data} type="out" colors={OUT_COLORS} caption="Kas keluar per akun" />
+    )
+  }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="grid gap-6">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,4fr)_minmax(0,3fr)_minmax(0,3fr)]">
+        <div className="lg:col-span-2 xl:col-span-1">
+          <CashTotals cashFlow={cashFlow.data} />
+        </div>
+        <Card title="Masuk dari" description="Kas masuk per akun, 12 bulan" action={ledger}>
+          {accountDonut('in')}
+        </Card>
+        <Card title="Keluar untuk" description="Kas keluar per akun, 12 bulan" action={ledger}>
+          {accountDonut('out')}
+        </Card>
+      </div>
+
       <Card title="Arus kas 12 bulan" description="Masuk ke atas, keluar ke bawah, garis kuning adalah selisihnya">
         {cashFlow.isPending ? <Loading /> : null}
         {cashFlow.isError ? <LoadFailed onRetry={() => cashFlow.refetch()} /> : null}
         {cashFlow.data ? <CashFlowChart periods={cashFlow.data.periods} /> : null}
       </Card>
 
-      <Card
-        title="Ke mana uangnya"
-        description="Kas per akun dalam 12 bulan"
-        action={<LinkButton label="Buku besar" onClick={() => onOpenTab('buku-besar')} />}
-      >
-        <MoneyMix from={from} to={to} />
-      </Card>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card
+          title="Serapan anggaran"
+          description="Proyek dengan serapan tertinggi, merah bila melewati anggaran"
+          action={<LinkButton label="Semua anggaran" onClick={() => onOpenTab('anggaran')} />}
+        >
+          {budgets.isPending ? <Loading /> : null}
+          {budgets.isError ? <LoadFailed onRetry={() => budgets.refetch()} /> : null}
+          {budgets.data ? <BudgetBullets budgets={budgets.data.items} /> : null}
+        </Card>
 
-      <Card
-        title="Serapan anggaran"
-        description="Proyek dengan serapan tertinggi, merah bila melewati anggaran"
-        action={<LinkButton label="Semua anggaran" onClick={() => onOpenTab('anggaran')} />}
-      >
-        {budgets.isPending ? <Loading /> : null}
-        {budgets.isError ? <LoadFailed onRetry={() => budgets.refetch()} /> : null}
-        {budgets.data ? <BudgetBullets budgets={budgets.data.items} /> : null}
-      </Card>
-
-      <Card title="Transaksi terakhir" action={<LinkButton label="Semua transaksi" onClick={() => onOpenTab('kas')} />}>
-        {transactions.isPending ? <Loading /> : null}
-        {transactions.isError ? <LoadFailed onRetry={() => transactions.refetch()} /> : null}
-        {transactions.data ? (
-          transactions.data.items.length === 0 ? (
-            <Empty message="Belum ada transaksi kas." />
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {transactions.data.items.map((row) => (
-                <li key={row.id} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
-                  <span className="min-w-0">
-                    <span className="block truncate text-slate-900">{row.note || '-'}</span>
-                    <span className="text-xs text-slate-500">{shortDate(row.date)}</span>
-                  </span>
-                  <span className="shrink-0">
-                    <SignedAmount type={row.type} amount={row.amount} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
-      </Card>
+        <Card title="Transaksi terakhir" action={<LinkButton label="Semua transaksi" onClick={() => onOpenTab('kas')} />}>
+          {transactions.isPending ? <Loading /> : null}
+          {transactions.isError ? <LoadFailed onRetry={() => transactions.refetch()} /> : null}
+          {transactions.data ? (
+            transactions.data.items.length === 0 ? (
+              <Empty message="Belum ada transaksi kas." />
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {transactions.data.items.map((row) => (
+                  <li key={row.id} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
+                    <span className="min-w-0">
+                      <span className="block truncate text-slate-900">{row.note || '-'}</span>
+                      <span className="text-xs text-slate-500">{shortDate(row.date)}</span>
+                    </span>
+                    <span className="shrink-0">
+                      <SignedAmount type={row.type} amount={row.amount} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+        </Card>
+      </div>
     </div>
   )
 }
