@@ -253,6 +253,7 @@ erDiagram
     payable |o--o{ billing_payment : "pembayaran"
     users |o--o{ billing_payment : "dicatat oleh"
     users |o--o{ onchain_payment_request : "dibuat oleh"
+    users |o--o{ gateway_payment_request : "dibuat oleh"
 
     budget {
         uuid id PK
@@ -349,7 +350,28 @@ erDiagram
         timestamptz expires_at
         timestamptz paid_at
     }
+    gateway_payment_request {
+        uuid id PK
+        varchar target_kind "invoice, receivable"
+        uuid target_id "polimorfik, tanpa FK"
+        bigint amount_idr "paling banyak Rp 10 juta per QRIS"
+        varchar provider "xendit atau fake"
+        varchar channel "QRIS"
+        varchar provider_id UK "id permintaan di gerbang pembayaran"
+        text qr_string
+        varchar token UK "dipakai di tautan publik /bayar/qris/:token"
+        varchar status "pending, paid, failed, expired, cancelled"
+        text failure_reason
+        uuid created_by FK
+        timestamptz expires_at
+        timestamptz paid_at
+    }
 ```
+
+`gateway_payment_request` mengikuti pola yang sama untuk QRIS lewat gerbang
+pembayaran. Pembayaran baru dicatat ke `billing_payment` (metode `qris`,
+referensi `provider_id`) setelah server sendiri menanyakan status ke gerbang
+pembayaran, bukan karena isi webhook.
 
 ## 4. Penjualan
 

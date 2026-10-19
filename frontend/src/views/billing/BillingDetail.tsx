@@ -18,6 +18,7 @@ import { Money, MoneyText } from '../components/Money'
 import type { OnchainBillingKind } from '../../models/onchain'
 import { StatusChip } from './BillingCells'
 import { OnchainSection } from './OnchainPanel'
+import { QrisSection } from './QrisPanel'
 import { PaymentForm, PaymentHistory } from './BillingPayments'
 
 export interface DetailField {
@@ -205,6 +206,8 @@ export function BillingDetail<K extends BillingKind>({ kind, id, today, heading,
       />
 
       <PaymentHistory kind={kind} record={data} />
+
+      {isOnchainKind(kind) && isCustomerSide(data) ? <QrisSection kind={kind} record={data} /> : null}
 
       {isOnchainKind(kind) && isCustomerSide(data) ? <OnchainSection kind={kind} record={data} /> : null}
 

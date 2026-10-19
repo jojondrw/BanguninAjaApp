@@ -21,6 +21,7 @@ const MasterDataPage = lazy(() => import('./views/master/MasterDataPage').then((
 const LocationPage = lazy(() => import('./views/LocationPage').then((module) => ({ default: module.LocationPage })))
 const OverviewPage = lazy(() => import('./views/OverviewPage').then((module) => ({ default: module.OverviewPage })))
 const PayPage = lazy(() => import('./views/pay/PayPage').then((module) => ({ default: module.PayPage })))
+const QrisPayPage = lazy(() => import('./views/pay/QrisPayPage').then((module) => ({ default: module.QrisPayPage })))
 const VerifyWagePage = lazy(() => import('./views/verify/WageProofPages').then((module) => ({ default: module.VerifyWagePage })))
 const WageReceiptPage = lazy(() => import('./views/verify/WageProofPages').then((module) => ({ default: module.WageReceiptPage })))
 const VerifyClaimPage = lazy(() => import('./views/verify/VerifyClaimPage').then((module) => ({ default: module.VerifyClaimPage })))
@@ -46,6 +47,7 @@ export default function App() {
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/masuk" element={<GuestOnly><LoginPage /></GuestOnly>} />
+                <Route path="/bayar/qris/:token" element={<QrisPayPage />} />
                 <Route path="/bayar/:token" element={<PayPage />} />
                 <Route path="/verifikasi/:token" element={<VerifyClaimPage />} />
                 <Route path="/verifikasi-upah/:token" element={<VerifyWagePage />} />

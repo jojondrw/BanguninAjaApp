@@ -35,6 +35,7 @@ const (
 	reconciliationMismatch = "invoice.paid_amount <> receivable.paid_amount"
 
 	onchainRequestColumns = "onchain_payment_request.*, users.name AS created_by_name"
+	gatewayRequestColumns = "gateway_payment_request.*, users.name AS created_by_name"
 	onchainTxHashTaken    = "SELECT EXISTS (SELECT 1 FROM onchain_payment_request WHERE tx_hash = ? AND id <> ?) " +
 		"OR EXISTS (SELECT 1 FROM billing_payment WHERE method = ? AND lower(reference) = ?)"
 
@@ -102,6 +103,11 @@ type ReconciliationRow struct {
 
 type OnchainRequestRow struct {
 	OnchainRequest
+	CreatedByName *string
+}
+
+type GatewayRequestRow struct {
+	GatewayRequest
 	CreatedByName *string
 }
 
@@ -226,6 +232,15 @@ type Repository interface {
 	ListOnchainRequests(ctx context.Context, filter OnchainRequestFilter) ([]OnchainRequestRow, int64, error)
 	ActiveOnchainRequestExists(ctx context.Context, targets OnchainTargets, now time.Time) (bool, error)
 	OnchainTxHashTaken(ctx context.Context, hash string, exceptID uuid.UUID) (bool, error)
+
+	CreateGatewayRequest(ctx context.Context, request *GatewayRequest) error
+	FindGatewayRequestRow(ctx context.Context, id uuid.UUID) (GatewayRequestRow, error)
+	FindGatewayRequestByToken(ctx context.Context, token string) (GatewayRequest, error)
+	FindGatewayRequestByProviderID(ctx context.Context, providerID string) (GatewayRequest, error)
+	LockGatewayRequest(ctx context.Context, id uuid.UUID) (GatewayRequest, error)
+	SaveGatewayRequest(ctx context.Context, request *GatewayRequest) error
+	ListGatewayRequests(ctx context.Context, filter OnchainRequestFilter) ([]GatewayRequestRow, int64, error)
+	ActiveGatewayRequestExists(ctx context.Context, targets OnchainTargets, now time.Time) (bool, error)
 }
 
 type gormRepository struct {
@@ -502,6 +517,72 @@ func (r *gormRepository) OnchainTxHashTaken(ctx context.Context, hash string, ex
 	return taken, database.Translate(err)
 }
 
+func (r *gormRepository) CreateGatewayRequest(ctx context.Context, request *GatewayRequest) error {
+	return database.Translate(r.db.WithContext(ctx).Create(request).Error)
+}
+
+func (r *gormRepository) FindGatewayRequestRow(ctx context.Context, id uuid.UUID) (GatewayRequestRow, error) {
+	var row GatewayRequestRow
+	err := r.gatewayRequestRows(ctx).Select(gatewayRequestColumns).Where("gateway_payment_request.id = ?", id).Take(&row).Error
+	return row, database.Translate(err)
+}
+
+func (r *gormRepository) FindGatewayRequestByToken(ctx context.Context, token string) (GatewayRequest, error) {
+	var request GatewayRequest
+	err := r.db.WithContext(ctx).Where("token = ?", token).Take(&request).Error
+	return request, database.Translate(err)
+}
+
+func (r *gormRepository) FindGatewayRequestByProviderID(ctx context.Context, providerID string) (GatewayRequest, error) {
+	var request GatewayRequest
+	err := r.db.WithContext(ctx).Where("provider_id = ?", providerID).Take(&request).Error
+	return request, database.Translate(err)
+}
+
+func (r *gormRepository) LockGatewayRequest(ctx context.Context, id uuid.UUID) (GatewayRequest, error) {
+	var request GatewayRequest
+	err := r.locked(ctx).Where("id = ?", id).Take(&request).Error
+	return request, database.Translate(err)
+}
+
+func (r *gormRepository) SaveGatewayRequest(ctx context.Context, request *GatewayRequest) error {
+	return database.Translate(r.db.WithContext(ctx).Save(request).Error)
+}
+
+func (r *gormRepository) ListGatewayRequests(ctx context.Context, filter OnchainRequestFilter) ([]GatewayRequestRow, int64, error) {
+	base := r.gatewayRequestRows(ctx).Scopes(filter.Targets.gatewayScope)
+
+	var total int64
+	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, database.Translate(err)
+	}
+
+	rows := make([]GatewayRequestRow, 0, filter.Limit)
+	err := base.Session(&gorm.Session{}).
+		Select(gatewayRequestColumns).
+		Order("gateway_payment_request.created_at DESC").
+		Offset(filter.Offset).
+		Limit(filter.Limit).
+		Scan(&rows).Error
+	return rows, total, database.Translate(err)
+}
+
+func (r *gormRepository) ActiveGatewayRequestExists(ctx context.Context, targets OnchainTargets, now time.Time) (bool, error) {
+	var exists bool
+	active := r.db.Model(&GatewayRequest{}).
+		Scopes(targets.gatewayScope).
+		Select("1").
+		Where("gateway_payment_request.status = ? AND gateway_payment_request.expires_at > ?", onchainPending, now)
+	err := r.db.WithContext(ctx).Raw("SELECT EXISTS (?)", active).Scan(&exists).Error
+	return exists, database.Translate(err)
+}
+
+func (r *gormRepository) gatewayRequestRows(ctx context.Context) *gorm.DB {
+	return r.db.WithContext(ctx).
+		Model(&GatewayRequest{}).
+		Joins("LEFT JOIN users ON users.id = gateway_payment_request.created_by")
+}
+
 func (r *gormRepository) onchainRequestRows(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).
 		Model(&OnchainRequest{}).
@@ -596,6 +677,14 @@ func (t OnchainTargets) scope(db *gorm.DB) *gorm.DB {
 	return db.Where(
 		"((onchain_payment_request.target_kind = ? AND onchain_payment_request.target_id = ?) OR "+
 			"(onchain_payment_request.target_kind = ? AND onchain_payment_request.target_id = ?))",
+		onchainInvoiceTarget, t.InvoiceID, onchainReceivableTarget, t.ReceivableID,
+	)
+}
+
+func (t OnchainTargets) gatewayScope(db *gorm.DB) *gorm.DB {
+	return db.Where(
+		"((gateway_payment_request.target_kind = ? AND gateway_payment_request.target_id = ?) OR "+
+			"(gateway_payment_request.target_kind = ? AND gateway_payment_request.target_id = ?))",
 		onchainInvoiceTarget, t.InvoiceID, onchainReceivableTarget, t.ReceivableID,
 	)
 }
