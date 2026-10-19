@@ -33,6 +33,10 @@ type siteSeed struct {
 }
 
 func demoSites() []siteSeed {
+	return append(append(coreSites(), portfolioSites()...), generatedSites()...)
+}
+
+func coreSites() []siteSeed {
 	return []siteSeed{
 		{"Kandidat perumahan Gedebage, Bandung", "3273", "housing", projectGriyaAsri, -6.9536, 107.6915, 38_000, 4_250_000, 0.42, 0.31, []int{64, 78, 81, 74, 70}},
 		{"Kandidat perumahan Cimahi Utara", "3273", "housing", "", -6.8540, 107.5425, 21_500, 3_600_000, 0.18, 0.36, []int{79, 71, 75, 68, 73}},

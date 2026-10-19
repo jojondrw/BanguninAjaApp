@@ -34,7 +34,7 @@ var demoWeather = []dayWeather{
 }
 
 func demoDailyReportPlans() []dailyReportPlan {
-	return []dailyReportPlan{
+	return append([]dailyReportPlan{
 		{
 			project:   projectHospital,
 			crew:      68,
@@ -57,7 +57,7 @@ func demoDailyReportPlans() []dailyReportPlan {
 				"Pembersihan saluran drainase utama sebelum musim hujan",
 			},
 		},
-	}
+	}, append(portfolioDailyReportPlans(), generatedDailyReportPlans()...)...)
 }
 
 func (s *seeder) seedDailyReports() error {

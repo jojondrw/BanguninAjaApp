@@ -19,6 +19,7 @@ const (
 	checkInSpread      = 45
 	checkOutSpread     = 50
 	socialSecurityRate = 50
+	payrollMonths      = 6
 )
 
 type employeeSeed struct {
@@ -33,6 +34,10 @@ type employeeSeed struct {
 }
 
 func demoEmployees() []employeeSeed {
+	return append(append(coreEmployees(), portfolioEmployees()...), generatedEmployees()...)
+}
+
+func coreEmployees() []employeeSeed {
 	return []employeeSeed{
 		{"DEMO-NIK-001", "Agus Setiawan", "Manajer Proyek", projectGriyaAsri, employmentPermanent, -38, 18_500_000, 3_000_000},
 		{"DEMO-NIK-002", "Rizky Ramadhan", "Site Engineer", projectGriyaAsri, employmentPermanent, -26, 11_000_000, 1_500_000},
@@ -82,12 +87,12 @@ func (s *seeder) seedEmployee(seed employeeSeed) (uuid.UUID, error) {
 
 func (s *seeder) attendanceStart(seed employeeSeed) time.Time {
 	start := s.day(1 - attendanceDays)
-	if seed.employment != employmentDaily {
-		return start
+	if seed.employment == employmentDaily {
+		start = s.monthDay(payrollMonths-1, 1)
 	}
-	previousMonth := s.monthDay(1, 1)
-	if previousMonth.Before(start) {
-		return previousMonth
+	joined := *s.monthOffset(seed.joined)
+	if joined.After(start) {
+		return joined
 	}
 	return start
 }
@@ -142,7 +147,7 @@ func attendanceFor(employeeID uuid.UUID, index int, date time.Time) hr.Attendanc
 }
 
 func (s *seeder) seedPayrolls(employeeID uuid.UUID, seed employeeSeed) error {
-	for monthsAgo := 1; monthsAgo >= 0; monthsAgo-- {
+	for monthsAgo := min(payrollMonths-1, -seed.joined); monthsAgo >= 0; monthsAgo-- {
 		period := s.period(monthsAgo)
 		id, created, err := s.ensure("payroll", map[string]any{"employee_id": employeeID, "period": period}, func() (uuid.UUID, error) {
 			response, err := s.services.hr.CreatePayroll(s.ctx, hr.PayrollRequest{
@@ -153,7 +158,7 @@ func (s *seeder) seedPayrolls(employeeID uuid.UUID, seed employeeSeed) error {
 		if err != nil {
 			return err
 		}
-		if created && monthsAgo == 1 {
+		if created && monthsAgo >= 1 {
 			if _, err := s.services.hr.PayPayroll(s.ctx, id); err != nil {
 				return err
 			}

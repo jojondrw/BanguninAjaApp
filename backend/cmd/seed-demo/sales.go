@@ -67,6 +67,12 @@ var contractStatusPath = map[string][]string{
 }
 
 func demoCustomers() []sales.CustomerRequest {
+	customers := append(coreCustomers(), portfolioBuyers()...)
+	customers = append(customers, portfolioClients()...)
+	return append(customers, generatedClients()...)
+}
+
+func coreCustomers() []sales.CustomerRequest {
 	return []sales.CustomerRequest{
 		{Name: "Budi Santoso", Contact: "0812-2045-7781", Email: "budi.santoso@contoh.id", IdentityNumber: installmentBuyer, Address: "Jl. Soekarno-Hatta No. 412, Bandung"},
 		{Name: "Siti Rahmawati", Contact: "0813-9420-1156", Email: "siti.rahmawati@contoh.id", IdentityNumber: mortgageBuyer, Address: "Jl. Buah Batu No. 88, Bandung"},
@@ -90,6 +96,10 @@ func demoCustomers() []sales.CustomerRequest {
 }
 
 func demoLeads() []leadSeed {
+	return append(append(coreLeads(), portfolioLeads()...), generatedLeads()...)
+}
+
+func coreLeads() []leadSeed {
 	return []leadSeed{
 		{"Rina Marlina", "0812-7788-1209", projectGriyaAsri, "Pameran properti", "negotiating", -3, &sales.CustomerRequest{
 			Name: "Rina Marlina", Contact: "0812-7788-1209", Email: "rina.marlina@contoh.id",
@@ -146,7 +156,7 @@ func demoUnits() []unitSeed {
 		}
 		units = append(units, unitSeed{code, projectRuko, "Ruko 3 lantai 4×15", 180, 1_850_000_000 + int64(index)*45_000_000, status})
 	}
-	return units
+	return append(units, portfolioUnits()...)
 }
 
 func monthlyInstallments(firstDue int, start int, paidBefore int) []installmentSeed {
@@ -159,6 +169,10 @@ func monthlyInstallments(firstDue int, start int, paidBefore int) []installmentS
 }
 
 func demoContracts() []contractSeed {
+	return append(coreContracts(), portfolioContracts()...)
+}
+
+func coreContracts() []contractSeed {
 	installments := monthlyInstallments(-160, -132, -30)
 	return []contractSeed{
 		{contractInstallment, installmentBuyer, "DEMO-GAB-A01", "installment", 485_000_000, -170, contractActive, installments},

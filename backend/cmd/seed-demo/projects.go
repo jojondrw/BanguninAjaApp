@@ -60,9 +60,15 @@ var projectStatusPath = map[string][]string{
 	"planning":  nil,
 	"ongoing":   {"ongoing"},
 	"completed": {"ongoing", "completed"},
+	"on_hold":   {"ongoing", "on_hold"},
+	"cancelled": {"cancelled"},
 }
 
 func demoProjects() []projectSeed {
+	return append(append(coreProjects(), portfolioProjects()...), generatedProjects()...)
+}
+
+func coreProjects() []projectSeed {
 	return []projectSeed{
 		{
 			code: projectGriyaAsri, name: "Perumahan Griya Asri Bandung", region: "3273", kind: "Perumahan",

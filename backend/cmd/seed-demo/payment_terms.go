@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/project"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/access"
+	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/apperror"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/shared/duedate"
 )
 
@@ -43,6 +45,10 @@ type constructionSeed struct {
 }
 
 func demoConstructionContracts() []constructionSeed {
+	return append(append(coreConstructionContracts(), portfolioConstructionContracts()...), generatedConstructionContracts()...)
+}
+
+func coreConstructionContracts() []constructionSeed {
 	return []constructionSeed{
 		{projectHospital, vendorStructure, "DEMO-SPK-RSIA-01", 23_500_000_000, 5, []termSeed{
 			{0, 10, true}, {20, 20, true}, {40, 20, true}, {70, 25, false}, {100, 25, false},
@@ -126,6 +132,9 @@ func (s *seeder) seedChange(projectID uuid.UUID, seed changeSeed) error {
 	_, _, err := s.ensure("contract_change", keys, func() (uuid.UUID, error) {
 		return s.proposeChange(projectID, seed)
 	})
+	if projectClosed(err) {
+		return nil
+	}
 	return err
 }
 
@@ -152,6 +161,9 @@ func (s *seeder) proposeChange(projectID uuid.UUID, seed changeSeed) (uuid.UUID,
 
 func (s *seeder) claimTerm(projectID uuid.UUID, seed constructionSeed, termID uuid.UUID, position int) error {
 	schedule, err := s.services.projects.ClaimPaymentTerm(s.ctx, projectID, termID, s.owner)
+	if progressNotReached(err) || projectClosed(err) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("claim term %d of %s: %w", position, seed.number, err)
 	}
@@ -187,6 +199,19 @@ func (s *seeder) claimTerm(projectID uuid.UUID, seed constructionSeed, termID uu
 		s.tally.add("billing_payment")
 	}
 	return nil
+}
+
+func progressNotReached(err error) bool {
+	return hasCode(err, "payment_term_progress_not_reached")
+}
+
+func projectClosed(err error) bool {
+	return hasCode(err, "project_closed")
+}
+
+func hasCode(err error, code string) bool {
+	var appError *apperror.Error
+	return errors.As(err, &appError) && appError.Code == code
 }
 
 func (s *seeder) claimMoment(projectID uuid.UUID, required int) (time.Time, int, error) {
