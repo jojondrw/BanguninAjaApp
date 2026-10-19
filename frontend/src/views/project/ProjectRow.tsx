@@ -8,7 +8,8 @@ import { Money } from '../components/Money'
 import { ProjectTypeIcon } from './ProjectTypeIcon'
 import { StatusChip } from './StatusChip'
 
-// Baris tampilan daftar: foto lapangan di kiri, keterangan proyek di kanan.
+// Baris tampilan daftar: foto lapangan menempel di tepi kiri dan memudar ke
+// putih ke arah kanan, lalu keterangan proyek di atas bagian yang memudar.
 // Lebih rapat dari kartu, jadi banyak proyek bisa dibandingkan sekali gulir.
 export function ProjectRow({ project }: { project: Project }) {
   const photoUrl = useSitePhotoUrl(project.id, project.coverPhotoId)
@@ -17,20 +18,22 @@ export function ProjectRow({ project }: { project: Project }) {
   return (
     <Link
       to={`/proyek/${project.id}`}
-      className="group flex items-center gap-4 rounded-2xl bg-white p-2.5 shadow-hairline transition-shadow
-                 hover:shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_8px_22px_rgb(15_23_42/0.10)] sm:gap-5"
+      className="group relative isolate flex min-h-[124px] items-stretch overflow-hidden rounded-2xl bg-white shadow-hairline transition-shadow
+                 hover:shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_8px_22px_rgb(15_23_42/0.10)]"
     >
-      <div className="relative aspect-[4/3] w-28 shrink-0 self-center overflow-hidden rounded-xl bg-navy-900 sm:w-44">
+      <div
+        className="relative w-32 shrink-0 overflow-hidden [mask-image:linear-gradient(to_right,black_30%,transparent_82%)] sm:w-64"
+      >
         {photoUrl ? (
           <img
             src={photoUrl}
             alt={`Kondisi lapangan ${project.name}`}
-            className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-safe:animate-fade"
+            className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-safe:animate-fade"
           />
         ) : project.coverPhotoId ? (
-          <div aria-hidden="true" className="size-full animate-pulse bg-slate-200" />
+          <div aria-hidden="true" className="absolute inset-0 animate-pulse bg-slate-200" />
         ) : (
-          <div className="grid size-full place-items-center bg-gradient-to-br from-navy-600 via-navy-700 to-navy-900 text-white/85">
+          <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-navy-600 via-navy-700 to-navy-900 pr-10 text-white/85">
             <div className="flex flex-col items-center gap-1">
               <ProjectTypeIcon type={project.type} className="size-7" />
               <span className="inline-flex items-center gap-1 text-[10px] text-white/65">
@@ -42,7 +45,7 @@ export function ProjectRow({ project }: { project: Project }) {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 py-1 pr-1">
+      <div className="-ml-4 flex min-w-0 flex-1 flex-col justify-center gap-2 py-4 pr-4 sm:-ml-10 sm:pr-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-600">
             <ProjectTypeIcon type={project.type} className="size-3.5 shrink-0 text-navy-600" />
@@ -85,7 +88,7 @@ export function ProjectRow({ project }: { project: Project }) {
 
       <ChevronRight
         aria-hidden="true"
-        className="hidden size-4 shrink-0 self-center text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500 sm:block"
+        className="mr-4 hidden size-4 shrink-0 self-center text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500 sm:block"
         strokeWidth={2}
       />
     </Link>
