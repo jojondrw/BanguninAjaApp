@@ -409,3 +409,22 @@ func unpostedLines(items []GoodsReceiptItemResponse) []UnpostedLineResponse {
 	}
 	return unposted
 }
+
+type VendorValueResponse struct {
+	Name   string `json:"name"`
+	Rating string `json:"rating"`
+	Orders int64  `json:"orders"`
+	Value  int64  `json:"value"`
+}
+
+type ProcurementOverviewResponse struct {
+	Requests       map[string]int64             `json:"requests"`
+	Orders         PurchaseOrderSummaryResponse `json:"orders"`
+	LateOrders     int64                        `json:"lateOrders"`
+	LateValue      int64                        `json:"lateValue"`
+	RecentReceipts int64                        `json:"recentReceipts"`
+	DamagedRecent  int64                        `json:"damagedRecent"`
+	ReceiptDays    int                          `json:"receiptDays"`
+	VendorRatings  map[string]int64             `json:"vendorRatings"`
+	LargestVendors []VendorValueResponse        `json:"largestVendors"`
+}

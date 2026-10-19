@@ -50,6 +50,14 @@ const PAGED_QUERY = {
   placeholderData: keepPreviousData,
 }
 
+export function useProcurementOverview() {
+  return useQuery({
+    queryKey: [PROCUREMENT_KEY, 'overview'],
+    queryFn: () => procurementApi.overview(),
+    ...DATA_QUERY,
+  })
+}
+
 export function useVendors(filter: VendorFilter = {}) {
   return useQuery({
     queryKey: [PROCUREMENT_KEY, 'vendors', filter],

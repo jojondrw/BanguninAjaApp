@@ -31,6 +31,10 @@ const (
 
 	quantityPrecision = 100
 
+	receiptGood          = "good"
+	recentReceiptDays    = 90
+	largestVendorsListed = 5
+
 	stockPosted  = "posted"
 	stockSkipped = "skipped"
 	stockLegacy  = "legacy"
@@ -138,6 +142,7 @@ type Service interface {
 
 	ListPurchaseOrders(ctx context.Context, query PurchaseOrderQuery) (pagination.Page[PurchaseOrderResponse], error)
 	SummarizePurchaseOrders(ctx context.Context, query PurchaseOrderSummaryQuery) (PurchaseOrderSummaryResponse, error)
+	Overview(ctx context.Context) (ProcurementOverviewResponse, error)
 	GetPurchaseOrder(ctx context.Context, id uuid.UUID) (PurchaseOrderDetailResponse, error)
 	CreatePurchaseOrder(ctx context.Context, request PurchaseOrderRequest) (PurchaseOrderDetailResponse, error)
 	UpdatePurchaseOrder(ctx context.Context, id uuid.UUID, request PurchaseOrderRequest) (PurchaseOrderDetailResponse, error)
@@ -888,4 +893,61 @@ func applyPurchaseOrderRequest(order *PurchaseOrder, request PurchaseOrderReques
 	order.Date = request.Date
 	order.DueDate = request.DueDate
 	order.Value = orderValue(request.Items)
+}
+
+func (s *service) Overview(ctx context.Context) (ProcurementOverviewResponse, error) {
+	requests, err := s.repository.CountRequestsByStatus(ctx)
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	totals, err := s.repository.SummarizePurchaseOrders(ctx, PurchaseOrderFilter{})
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	late, err := s.repository.CountLateOrders(ctx)
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	receipts, err := s.repository.CheckRecentReceipts(ctx, recentReceiptDays)
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	ratings, err := s.repository.CountVendorsByRating(ctx)
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	vendors, err := s.repository.LargestVendors(ctx, largestVendorsListed)
+	if err != nil {
+		return ProcurementOverviewResponse{}, apperror.Internal(err)
+	}
+	return newProcurementOverview(requests, totals, late, receipts, ratings, vendors), nil
+}
+
+func countsByStatus(rows []StatusCount) map[string]int64 {
+	counts := map[string]int64{}
+	for _, row := range rows {
+		counts[row.Status] += row.Count
+	}
+	return counts
+}
+
+func newProcurementOverview(
+	requests []StatusCount, totals PurchaseOrderTotals, late LateOrders, receipts ReceiptHealth,
+	ratings []StatusCount, vendors []VendorValue,
+) ProcurementOverviewResponse {
+	largest := make([]VendorValueResponse, len(vendors))
+	for index, vendor := range vendors {
+		largest[index] = VendorValueResponse{Name: vendor.Name, Rating: vendor.Rating, Orders: vendor.Orders, Value: vendor.Value}
+	}
+	return ProcurementOverviewResponse{
+		Requests:       countsByStatus(requests),
+		Orders:         newPurchaseOrderSummaryResponse(totals),
+		LateOrders:     late.Count,
+		LateValue:      late.Value,
+		RecentReceipts: receipts.Total,
+		DamagedRecent:  receipts.Damaged,
+		ReceiptDays:    recentReceiptDays,
+		VendorRatings:  countsByStatus(ratings),
+		LargestVendors: largest,
+	}
 }

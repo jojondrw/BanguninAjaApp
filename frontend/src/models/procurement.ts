@@ -273,6 +273,19 @@ export interface PurchaseOrderSummary {
   byStatus: Record<PurchaseOrderStatus, number>
 }
 
+// Ringkasan pengadaan dari server untuk tab Ringkasan.
+export interface ProcurementOverview {
+  requests: Partial<Record<PurchaseRequestStatus, number>>
+  orders: PurchaseOrderSummary
+  lateOrders: number
+  lateValue: number
+  recentReceipts: number
+  damagedRecent: number
+  receiptDays: number
+  vendorRatings: Partial<Record<VendorRating, number>>
+  largestVendors: { name: string; rating: VendorRating; orders: number; value: number }[]
+}
+
 // Sama dengan pengecekan receiveGoods di backend.
 export const RECEIVABLE_ORDER_STATUSES: PurchaseOrderStatus[] = ['sent', 'partially_received']
 

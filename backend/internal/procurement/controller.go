@@ -253,3 +253,8 @@ func (c *Controller) RecordGoodsReceipt(ctx *gin.Context) {
 	receipt, err := c.service.RecordGoodsReceipt(ctx.Request.Context(), request)
 	httpresponse.RespondCreated(ctx, receipt, err)
 }
+
+func (c *Controller) Overview(ctx *gin.Context) {
+	overview, err := c.service.Overview(ctx.Request.Context())
+	httpresponse.Respond(ctx, overview, err)
+}

@@ -320,9 +320,12 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
 
 // prefill hanya dibaca saat bagian ini dibuka. Menutup formulir membuang isian
 // dari permintaan, jadi membukanya lagi memberi formulir kosong.
-export function OrdersSection({ prefill }: { prefill: OrderPrefill | null }) {
+export function OrdersSection({ prefill, initialStatus = '' }: {
+  prefill: OrderPrefill | null
+  initialStatus?: PurchaseOrderStatus | ''
+}) {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<PurchaseOrderStatus | ''>('')
+  const [status, setStatus] = useState<PurchaseOrderStatus | ''>(initialStatus)
   const [page, setPage] = useState(1)
   const [formSeed, setFormSeed] = useState<OrderPrefill | null>(prefill)
   const [isFormOpen, setIsFormOpen] = useState(prefill !== null)
