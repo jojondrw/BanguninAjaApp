@@ -59,6 +59,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	projects.GET("", m.controller.ListProjects)
 	projects.POST("", m.controller.CreateProject)
 	projects.GET("/summary", m.controller.SummarizeProjects)
+	projects.GET("/portfolio", m.controller.Portfolio)
 
 	project := projects.Group("/:id", m.controller.RequireProjectAccess)
 	project.GET("", m.controller.GetProject)

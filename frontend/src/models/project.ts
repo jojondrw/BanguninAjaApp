@@ -601,3 +601,29 @@ const ROLES_SEEING_EVERY_PROJECT: readonly string[] = ['admin', 'pengamat', 'keu
 export function seesEveryProject(roleCode: string | undefined): boolean {
   return roleCode !== undefined && ROLES_SEEING_EVERY_PROJECT.includes(roleCode)
 }
+
+// Portofolio proyek dari server: progres nyata dan rencana hari ini per
+// proyek (rencana hanya untuk yang berjalan atau tertunda), dan nilai kontrak
+// per jenis di luar yang batal.
+export interface PortfolioProject {
+  id: string
+  name: string
+  type: string
+  status: ProjectStatus
+  progress: number
+  planned: number | null
+  contractValue: number
+}
+
+export interface Portfolio {
+  projects: PortfolioProject[]
+  byType: { type: string; count: number; contractValue: number }[]
+}
+
+// Proyek yang paling tertinggal dari rencana lebih dulu.
+export function scheduleGaps(projects: PortfolioProject[]): (PortfolioProject & { gap: number })[] {
+  return projects
+    .filter((project) => project.planned !== null)
+    .map((project) => ({ ...project, gap: project.progress - (project.planned ?? 0) }))
+    .sort((a, b) => a.gap - b.gap)
+}

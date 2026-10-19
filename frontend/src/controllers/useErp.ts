@@ -38,6 +38,14 @@ export function useCreateProject() {
   })
 }
 
+export function usePortfolio() {
+  return useQuery({
+    queryKey: [PROJECTS_KEY, 'portfolio'],
+    queryFn: () => projectApi.portfolio(),
+    ...DATA_QUERY,
+  })
+}
+
 export function useProjectSummary({ enabled = true }: QueryToggle = {}) {
   return useQuery({
     queryKey: [PROJECTS_KEY, 'summary'],
