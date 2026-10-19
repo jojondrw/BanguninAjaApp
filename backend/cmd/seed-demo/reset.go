@@ -31,6 +31,7 @@ func demoPurges(today time.Time) []purge {
 		{"evidence_claim", "project_id IN (?)", []any{demoProjects}},
 		{"evidence_approver", "project_id IN (?)", []any{demoProjects}},
 		{"evidence_record", "project_id IN (?)", []any{demoProjects}},
+		{"report", "name IN ?", []any{demoReportNames(today)}},
 		{"comparison", "name = ?", []any{comparisonName}},
 		{"saved_location", "name IN ?", []any{demoSiteNames()}},
 		{"receivable", "reference LIKE ? OR id IN (?)", []any{demoPattern, demoOwnerReceivables}},

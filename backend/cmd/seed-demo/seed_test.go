@@ -331,3 +331,23 @@ func TestDemoSitePhotosAreEmbeddedAndLabelled(t *testing.T) {
 		t.Errorf("demo photos must be labelled as illustrations")
 	}
 }
+
+func TestDemoReportsCoverEveryTypeAndAreFoundByReset(t *testing.T) {
+	today := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+	kinds := map[string]bool{}
+	resettable := map[string]bool{}
+	for _, name := range demoReportNames(today) {
+		resettable[name] = true
+	}
+	for _, seed := range reportSeedsOf(today) {
+		kinds[seed.kind] = true
+		if !resettable[seed.name] {
+			t.Errorf("report %q would survive --reset-demo", seed.name)
+		}
+	}
+	for _, kind := range []string{"cash_flow", "budget", "project", "aging", "stock", "payroll", "sales"} {
+		if !kinds[kind] {
+			t.Errorf("no demo report of type %s", kind)
+		}
+	}
+}

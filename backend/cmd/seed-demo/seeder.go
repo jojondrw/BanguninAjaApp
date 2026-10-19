@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/asset"
 	"github.com/jojondrw/BanguninAjaApp/backend/internal/billing"
@@ -61,6 +62,8 @@ type seeder struct {
 	patcher  locationPatcher
 	history  progressRecorder
 	terms    termWriter
+	reports  reportWriter
+	reportDB *gorm.DB
 	today    time.Time
 	owner    uuid.UUID
 	manager  uuid.UUID
@@ -94,6 +97,7 @@ func (s *seeder) run() error {
 		{"hr", s.seedHR},
 		{"assets", s.seedAssets},
 		{"locations", s.seedLocations},
+		{"reports", s.seedReports},
 	}
 	for _, step := range steps {
 		if err := step.run(); err != nil {
