@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
-import { Plus, X } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { LayoutGrid, List, Plus, X } from 'lucide-react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { useCan } from '../controllers/useAccess'
 import { useSessionStore } from '../controllers/sessionStore'
@@ -24,8 +24,41 @@ import { AppShell } from './components/AppShell'
 import { Card, Empty, LoadFailed, Loading } from './components/Data'
 import { Button, CONTROL_CLASS, ErrorNote, Field, SuccessNote } from './components/Form'
 import { ProjectCard } from './project/ProjectCard'
+import { ProjectRow } from './project/ProjectRow'
 
 const TYPE_OPTIONS_ID = 'project-type-options'
+const VIEW_PARAM = 'tampilan'
+const LIST_VIEW = 'daftar'
+
+const VIEWS = [
+  { value: 'kisi', label: 'Tampilan kisi', Icon: LayoutGrid },
+  { value: LIST_VIEW, label: 'Tampilan daftar', Icon: List },
+] as const
+
+function ViewToggle({ isList, onChange }: { isList: boolean; onChange: (list: boolean) => void }) {
+  return (
+    <div role="group" aria-label="Pilih tampilan" className="ml-auto inline-flex rounded-full bg-slate-100 p-0.5">
+      {VIEWS.map(({ value, label, Icon }) => {
+        const isActive = (value === LIST_VIEW) === isList
+        return (
+          <button
+            key={value}
+            type="button"
+            aria-label={label}
+            aria-pressed={isActive}
+            title={label}
+            onClick={() => onChange(value === LIST_VIEW)}
+            className={`grid size-7 place-items-center rounded-full transition-[background-color,color,box-shadow] ${
+              isActive ? 'bg-white text-slate-900 shadow-hairline' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Icon aria-hidden="true" className="size-4" strokeWidth={1.9} />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 const FILTERS: { value: ProjectStatus | ''; label: string }[] = [
   { value: '', label: 'Semua' },
@@ -179,6 +212,21 @@ export function ProjectsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const canCreate = useCan('projects', 'write')
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const isList = searchParams.get(VIEW_PARAM) === LIST_VIEW
+  const changeView = (list: boolean) =>
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        if (list) {
+          next.set(VIEW_PARAM, LIST_VIEW)
+        } else {
+          next.delete(VIEW_PARAM)
+        }
+        return next
+      },
+      { replace: true },
+    )
   const deletedProject = deletedProjectName(location.state)
   const projects = useProjects({
     pageSize: 50,
@@ -257,6 +305,7 @@ export function ProjectsPage() {
               </button>
             ))}
           </div>
+          <ViewToggle isList={isList} onChange={changeView} />
         </div>
 
         {projects.isPending ? <Loading /> : null}
@@ -264,6 +313,14 @@ export function ProjectsPage() {
         {projects.data ? (
           projects.data.items.length === 0 ? (
             <Empty message={emptyListMessage(onlyMine, teamOnly)} photo={PHOTOS.konstruksi} />
+          ) : isList ? (
+            <ul className="space-y-2.5">
+              {projects.data.items.map((project) => (
+                <li key={project.id} className="min-w-0">
+                  <ProjectRow project={project} />
+                </li>
+              ))}
+            </ul>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {projects.data.items.map((project) => (
