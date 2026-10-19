@@ -159,7 +159,7 @@ export function EmployeesSection({ today }: {
       : null
 
   return (
-    <Card title="Karyawan" description="Karyawan yang sudah punya absensi atau slip gaji dinonaktifkan, bukan dihapus.">
+    <Card description="Karyawan yang sudah punya absensi atau slip gaji dinonaktifkan, bukan dihapus.">
       <Toolbar>
         <ToolbarInput
           id="employee-search"

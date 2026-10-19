@@ -236,7 +236,7 @@ export function AttendanceSection({ today }: { today: string }) {
   }
 
   return (
-    <Card title="Absensi harian" description="Satu catatan per karyawan per tanggal">
+    <Card description="Satu catatan per karyawan per tanggal">
       <Toolbar>
         <ToolbarInput
           id="attendance-date"

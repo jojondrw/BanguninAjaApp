@@ -7,9 +7,20 @@ import { currentPeriod, todayDate } from '../shared/localDate'
 import { AppShell } from './components/AppShell'
 import { Kpi, KpiRow } from './components/Data'
 import { kpiText } from './components/kpiText'
+import { SectionTabs } from './components/ListTools'
 import { AttendanceSection } from './hr/AttendanceSection'
 import { EmployeesSection } from './hr/EmployeesSection'
+import { HrOverview } from './hr/HrOverview'
 import { PayrollSection } from './hr/PayrollSection'
+
+type HrTab = 'overview' | 'employees' | 'attendance' | 'payroll'
+
+const TABS: { value: HrTab; label: string }[] = [
+  { value: 'overview', label: 'Ringkasan' },
+  { value: 'employees', label: 'Karyawan' },
+  { value: 'attendance', label: 'Absensi' },
+  { value: 'payroll', label: 'Penggajian' },
+]
 
 function headcountNote(byType: EmploymentCount[]): string {
   if (byType.length === 0) {
@@ -21,12 +32,17 @@ function headcountNote(byType: EmploymentCount[]): string {
 export function HrPage() {
   const [today] = useState(todayDate)
   const [period, setPeriod] = useState(currentPeriod)
+  const [tab, setTab] = useState<HrTab>('overview')
   const headcount = useEmployeeHeadcount()
   const presentToday = useAttendanceCount({ dateFrom: today, dateTo: today, status: 'present' })
   const recordedToday = useAttendanceCount({ dateFrom: today, dateTo: today })
   const payrollSummary = usePayrollSummary({ period })
   return (
-    <AppShell title="SDM" description="Karyawan, absensi harian, dan penggajian per periode">
+    <AppShell
+      title="SDM"
+      description="Karyawan, absensi harian, dan penggajian per periode"
+      tabs={<SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian SDM" />}
+    >
       <KpiRow>
         <Kpi
           label="Karyawan aktif"
@@ -50,10 +66,19 @@ export function HrPage() {
         />
       </KpiRow>
 
-      <div className="mt-8 grid gap-8">
-        <EmployeesSection today={today} />
-        <AttendanceSection today={today} />
-        <PayrollSection period={period} onPeriodChange={setPeriod} />
+      <div className="mt-6">
+        {tab === 'overview' ? (
+          <HrOverview
+            drill={{
+              openEmployees: () => setTab('employees'),
+              openAttendance: () => setTab('attendance'),
+              openPayroll: () => setTab('payroll'),
+            }}
+          />
+        ) : null}
+        {tab === 'employees' ? <EmployeesSection today={today} /> : null}
+        {tab === 'attendance' ? <AttendanceSection today={today} /> : null}
+        {tab === 'payroll' ? <PayrollSection period={period} onPeriodChange={setPeriod} /> : null}
       </div>
     </AppShell>
   )

@@ -185,3 +185,31 @@ func newPayrollSummaryResponse(totals PayrollTotals) PayrollSummaryResponse {
 		UnpaidCount:  totals.UnpaidCount,
 	}
 }
+
+type ProjectHeadcountResponse struct {
+	ProjectID *uuid.UUID `json:"projectId"`
+	Total     int64      `json:"total"`
+}
+
+type DailyAttendanceResponse struct {
+	Date      string `json:"date"`
+	Present   int64  `json:"present"`
+	Sick      int64  `json:"sick"`
+	Permitted int64  `json:"permitted"`
+	Absent    int64  `json:"absent"`
+}
+
+type MonthlyPayrollResponse struct {
+	Period string `json:"period"`
+	NetPay int64  `json:"netPay"`
+	Unpaid int64  `json:"unpaid"`
+	Slips  int64  `json:"slips"`
+}
+
+type HROverviewResponse struct {
+	Headcount int64                      `json:"headcount"`
+	ByType    []EmploymentCountResponse  `json:"byType"`
+	ByProject []ProjectHeadcountResponse `json:"byProject"`
+	Days      []DailyAttendanceResponse  `json:"days"`
+	Payrolls  []MonthlyPayrollResponse   `json:"payrolls"`
+}

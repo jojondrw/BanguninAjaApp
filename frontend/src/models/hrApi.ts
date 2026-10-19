@@ -8,6 +8,7 @@ import type {
   EmployeeFilter,
   EmployeeRequest,
   EmploymentCount,
+  HrOverview,
   Payroll,
   PayrollFilter,
   PayrollRequest,
@@ -16,6 +17,8 @@ import type {
 } from './hr'
 
 export const hrApi = {
+  overview: () => request<HrOverview>('/hr/overview'),
+
   employees: (filter: EmployeeFilter = {}) =>
     request<Page<Employee>>(`/hr/employees${toQueryString({ ...filter })}`),
 

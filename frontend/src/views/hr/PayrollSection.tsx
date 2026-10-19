@@ -309,7 +309,7 @@ export function PayrollSection({ period, onPeriodChange }: {
       : null
 
   return (
-    <Card title="Penggajian" description="Slip gaji per periode. Slip yang sudah dibayar tidak bisa diubah atau dihapus.">
+    <Card description="Slip gaji per periode. Slip yang sudah dibayar tidak bisa diubah atau dihapus.">
       <Toolbar>
         <ToolbarInput
           id="payroll-period"
