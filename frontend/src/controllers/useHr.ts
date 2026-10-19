@@ -39,6 +39,14 @@ const PAGED_QUERY = {
   placeholderData: keepPreviousData,
 }
 
+export function useHrOverview() {
+  return useQuery({
+    queryKey: [HR_KEY, 'overview'],
+    queryFn: () => hrApi.overview(),
+    ...DATA_QUERY,
+  })
+}
+
 export function useEmployees(filter: EmployeeFilter) {
   return useQuery({
     queryKey: [...EMPLOYEES_KEY, filter],

@@ -20,6 +20,9 @@ const (
 	clockLayout       = "15:04"
 	storedClockLayout = "15:04:05"
 	periodLayout      = "2006-01"
+
+	overviewDays    = 14
+	overviewPeriods = 6
 )
 
 var (
@@ -58,6 +61,7 @@ var (
 )
 
 type Service interface {
+	Overview(ctx context.Context) (HROverviewResponse, error)
 	ListEmployees(ctx context.Context, query EmployeeQuery) (pagination.Page[EmployeeResponse], error)
 	SummarizeEmployees(ctx context.Context) ([]EmploymentCountResponse, error)
 	GetEmployee(ctx context.Context, id uuid.UUID) (EmployeeResponse, error)
@@ -504,4 +508,66 @@ func applyAttendanceRequest(attendance *Attendance, request AttendanceRequest) {
 	attendance.CheckInTime = request.CheckInTime
 	attendance.CheckOutTime = request.CheckOutTime
 	attendance.Status = request.Status
+}
+
+func (s *service) Overview(ctx context.Context) (HROverviewResponse, error) {
+	byType, err := s.repository.CountActiveEmployees(ctx, s.today())
+	if err != nil {
+		return HROverviewResponse{}, apperror.Internal(err)
+	}
+	byProject, err := s.repository.CountActiveByProject(ctx)
+	if err != nil {
+		return HROverviewResponse{}, apperror.Internal(err)
+	}
+	days, err := s.repository.CountAttendanceByDay(ctx, overviewDays)
+	if err != nil {
+		return HROverviewResponse{}, apperror.Internal(err)
+	}
+	periods := recentPeriods(s.today(), overviewPeriods)
+	payrolls, err := s.repository.SumPayrollByPeriod(ctx, periods)
+	if err != nil {
+		return HROverviewResponse{}, apperror.Internal(err)
+	}
+	return newHROverview(byType, byProject, days, periods, payrolls), nil
+}
+
+func recentPeriods(today time.Time, count int) []string {
+	first := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
+	periods := make([]string, count)
+	for index := range count {
+		periods[index] = first.AddDate(0, index-count+1, 0).Format(periodLayout)
+	}
+	return periods
+}
+
+func newHROverview(
+	byType []EmploymentCount, byProject []ProjectHeadcount, days []DailyAttendance, periods []string, payrolls []MonthlyPayroll,
+) HROverviewResponse {
+	overview := HROverviewResponse{
+		ByType:    make([]EmploymentCountResponse, len(byType)),
+		ByProject: make([]ProjectHeadcountResponse, len(byProject)),
+		Days:      make([]DailyAttendanceResponse, len(days)),
+		Payrolls:  make([]MonthlyPayrollResponse, len(periods)),
+	}
+	for index, count := range byType {
+		overview.ByType[index] = EmploymentCountResponse{EmploymentType: count.EmploymentType, Total: count.Total}
+		overview.Headcount += count.Total
+	}
+	for index, count := range byProject {
+		overview.ByProject[index] = ProjectHeadcountResponse{ProjectID: count.ProjectID, Total: count.Total}
+	}
+	for index, day := range days {
+		overview.Days[index] = DailyAttendanceResponse{
+			Date: day.Date.Format(time.DateOnly), Present: day.Present, Sick: day.Sick, Permitted: day.Permitted, Absent: day.Absent,
+		}
+	}
+	byPeriod := map[string]MonthlyPayroll{}
+	for _, payroll := range payrolls {
+		byPeriod[payroll.Period] = payroll
+	}
+	for index, period := range periods {
+		payroll := byPeriod[period]
+		overview.Payrolls[index] = MonthlyPayrollResponse{Period: period, NetPay: payroll.NetPay, Unpaid: payroll.Unpaid, Slips: payroll.Slips}
+	}
+	return overview
 }

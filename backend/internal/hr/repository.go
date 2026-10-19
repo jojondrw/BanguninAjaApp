@@ -94,7 +94,30 @@ type PayrollRow struct {
 	UpdatedAt    time.Time
 }
 
+type ProjectHeadcount struct {
+	ProjectID *uuid.UUID
+	Total     int64
+}
+
+type DailyAttendance struct {
+	Date      time.Time
+	Present   int64
+	Sick      int64
+	Permitted int64
+	Absent    int64
+}
+
+type MonthlyPayroll struct {
+	Period string
+	NetPay int64
+	Unpaid int64
+	Slips  int64
+}
+
 type Repository interface {
+	CountActiveByProject(ctx context.Context) ([]ProjectHeadcount, error)
+	CountAttendanceByDay(ctx context.Context, days int) ([]DailyAttendance, error)
+	SumPayrollByPeriod(ctx context.Context, periods []string) ([]MonthlyPayroll, error)
 	ListEmployees(ctx context.Context, filter EmployeeFilter) ([]Employee, int64, error)
 	CountActiveEmployees(ctx context.Context, today time.Time) ([]EmploymentCount, error)
 	FindEmployee(ctx context.Context, id uuid.UUID) (Employee, error)
@@ -348,4 +371,41 @@ func (f PayrollFilter) apply(db *gorm.DB) *gorm.DB {
 		db = db.Where("payroll.paid = ?", *f.Paid)
 	}
 	return db
+}
+
+func (r *gormRepository) CountActiveByProject(ctx context.Context) ([]ProjectHeadcount, error) {
+	var rows []ProjectHeadcount
+	err := r.db.WithContext(ctx).Model(&Employee{}).
+		Select("project_id, COUNT(*) AS total").
+		Where("left_date IS NULL OR left_date >= CURRENT_DATE").
+		Group("project_id").
+		Order("total DESC").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) CountAttendanceByDay(ctx context.Context, days int) ([]DailyAttendance, error) {
+	var rows []DailyAttendance
+	err := r.db.WithContext(ctx).Model(&Attendance{}).
+		Select(`date,
+			COUNT(*) FILTER (WHERE status = 'present') AS present,
+			COUNT(*) FILTER (WHERE status = 'sick') AS sick,
+			COUNT(*) FILTER (WHERE status = 'permitted') AS permitted,
+			COUNT(*) FILTER (WHERE status = 'absent') AS absent`).
+		Where("date > CURRENT_DATE - ?::int AND date <= CURRENT_DATE", days).
+		Group("date").
+		Order("date").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
+}
+
+func (r *gormRepository) SumPayrollByPeriod(ctx context.Context, periods []string) ([]MonthlyPayroll, error) {
+	var rows []MonthlyPayroll
+	err := r.db.WithContext(ctx).Model(&Payroll{}).
+		Select("period, SUM(net_pay) AS net_pay, COALESCE(SUM(net_pay) FILTER (WHERE NOT paid), 0) AS unpaid, COUNT(*) AS slips").
+		Where("period IN ?", periods).
+		Group("period").
+		Order("period").
+		Scan(&rows).Error
+	return rows, database.Translate(err)
 }

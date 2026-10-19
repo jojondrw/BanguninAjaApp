@@ -22,6 +22,7 @@ func NewModule(db *gorm.DB, tokens *token.Manager) *Module {
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {
 	routes := router.Group("/hr", middleware.Authentication(m.tokens))
+	routes.GET("/overview", m.controller.Overview)
 
 	employees := routes.Group("/employees")
 	employees.GET("", m.controller.ListEmployees)

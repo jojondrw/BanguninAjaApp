@@ -286,3 +286,12 @@ export function toPayrollRequest(values: PayrollFormValues, period: string): Pay
     deduction: amount(values.deduction),
   }
 }
+
+// Ringkasan SDM dari server untuk tab Ringkasan.
+export interface HrOverview {
+  headcount: number
+  byType: { employmentType: EmploymentType; total: number }[]
+  byProject: { projectId: string | null; total: number }[]
+  days: { date: string; present: number; sick: number; permitted: number; absent: number }[]
+  payrolls: { period: string; netPay: number; unpaid: number; slips: number }[]
+}
