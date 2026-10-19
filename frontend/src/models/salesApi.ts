@@ -15,6 +15,7 @@ import {
   type InstallmentPaymentRequest,
   type InstallmentRequest,
   type InstallmentSummary,
+  type ProjectUnitSummary,
   type Lead,
   type LeadConversion,
   type LeadFilter,
@@ -41,6 +42,7 @@ export const salesApi = {
   units: (filter: UnitFilter = {}) =>
     request<Page<PropertyUnit>>(`/sales/units${toQueryString({ ...filter })}`),
 
+  unitsByProject: () => request<ProjectUnitSummary[]>('/sales/units/summary/projects'),
   unitSummary: (projectId?: string) =>
     request<UnitStatusCount[]>(`/sales/units/summary${toQueryString({ projectId })}`),
 

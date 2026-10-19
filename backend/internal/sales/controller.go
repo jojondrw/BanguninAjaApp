@@ -91,6 +91,11 @@ func (c *Controller) ListUnits(ctx *gin.Context) {
 	httpresponse.Respond(ctx, page, err)
 }
 
+func (c *Controller) SummarizeUnitsByProject(ctx *gin.Context) {
+	summary, err := c.service.SummarizeUnitsByProject(ctx.Request.Context())
+	httpresponse.Respond(ctx, summary, err)
+}
+
 func (c *Controller) SummarizeUnits(ctx *gin.Context) {
 	var query UnitSummaryQuery
 	if err := httprequest.BindQuery(ctx, &query); err != nil {

@@ -34,6 +34,7 @@ func (m *Module) RegisterRoutes(router gin.IRouter) {
 	units.GET("", m.controller.ListUnits)
 	units.POST("", m.controller.CreateUnit)
 	units.GET("/summary", m.controller.SummarizeUnits)
+	units.GET("/summary/projects", m.controller.SummarizeUnitsByProject)
 	units.GET("/:id", m.controller.GetUnit)
 	units.PUT("/:id", m.controller.UpdateUnit)
 	units.DELETE("/:id", m.controller.DeleteUnit)

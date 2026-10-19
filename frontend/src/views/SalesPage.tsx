@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useContractSummary, useInstallmentCount, useUnitSummary } from '../controllers/useSales'
-import type { UnitStatus } from '../models/sales'
+import type { ContractStatus, LeadStage, UnitStatus } from '../models/sales'
 import { number, rupiahShort } from '../shared/format'
 import { kpiText } from '../shared/kpiText'
 import { AppShell } from './components/AppShell'
@@ -10,12 +10,14 @@ import { SectionTabs } from './components/ListTools'
 import { ContractsSection } from './sales/ContractsSection'
 import { CustomersSection } from './sales/CustomersSection'
 import { LeadsSection } from './sales/LeadsSection'
+import { SalesOverview, type SalesDrill } from './sales/SalesOverview'
 import { UnitsSection } from './sales/UnitsSection'
 
-type SalesTab = 'units' | 'leads' | 'customers' | 'contracts'
+type SalesTab = 'overview' | 'units' | 'leads' | 'customers' | 'contracts'
 
-// Urutannya mengikuti alur jual: stok unit, calon pembeli, pelanggan, kontrak.
+// Ringkasan dulu, lalu urutan alur jual: stok unit, calon pembeli, pelanggan, kontrak.
 const TABS: { value: SalesTab; label: string }[] = [
+  { value: 'overview', label: 'Ringkasan' },
   { value: 'units', label: 'Unit' },
   { value: 'leads', label: 'Prospek' },
   { value: 'customers', label: 'Pelanggan' },
@@ -63,20 +65,53 @@ function SalesKpis() {
 }
 
 export function SalesPage() {
-  const [tab, setTab] = useState<SalesTab>('units')
+  const [tab, setTab] = useState<SalesTab>('overview')
+  const [projectId, setProjectId] = useState('')
+  const [stage, setStage] = useState<LeadStage | ''>('')
+  const [status, setStatus] = useState<ContractStatus | ''>('')
+  const [visit, setVisit] = useState(0)
+
+  const drill = useMemo<SalesDrill>(
+    () => ({
+      openUnits: (id) => {
+        setProjectId(id)
+        setVisit((current) => current + 1)
+        setTab('units')
+      },
+      openLeads: (next) => {
+        setStage(next)
+        setVisit((current) => current + 1)
+        setTab('leads')
+      },
+      openContracts: (next) => {
+        setStatus(next)
+        setVisit((current) => current + 1)
+        setTab('contracts')
+      },
+    }),
+    [],
+  )
+
+  const chooseTab = (next: SalesTab) => {
+    setProjectId('')
+    setStage('')
+    setStatus('')
+    setTab(next)
+  }
 
   return (
     <AppShell title="Penjualan" description="Unit properti, prospek, pelanggan, kontrak, dan jadwal cicilannya">
       <SalesKpis />
 
       <div className="mt-8 mb-6">
-        <SectionTabs tabs={TABS} active={tab} onChange={setTab} label="Bagian penjualan" />
+        <SectionTabs tabs={TABS} active={tab} onChange={chooseTab} label="Bagian penjualan" />
       </div>
 
-      {tab === 'units' ? <UnitsSection /> : null}
-      {tab === 'leads' ? <LeadsSection /> : null}
+      {tab === 'overview' ? <SalesOverview drill={drill} /> : null}
+      {tab === 'units' ? <UnitsSection key={`units-${visit}`} initialProjectId={projectId} /> : null}
+      {tab === 'leads' ? <LeadsSection key={`leads-${visit}`} initialStage={stage} /> : null}
       {tab === 'customers' ? <CustomersSection /> : null}
-      {tab === 'contracts' ? <ContractsSection /> : null}
+      {tab === 'contracts' ? <ContractsSection key={`contracts-${visit}`} initialStatus={status} /> : null}
     </AppShell>
   )
 }

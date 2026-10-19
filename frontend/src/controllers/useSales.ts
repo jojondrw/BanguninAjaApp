@@ -45,11 +45,20 @@ const PAGED_QUERY = {
   placeholderData: keepPreviousData,
 }
 
-export function useUnits(filter: UnitFilter = {}) {
+export function useUnits(filter: UnitFilter = {}, enabled = true) {
   return useQuery({
     queryKey: [SALES_KEY, 'units', filter],
     queryFn: () => salesApi.units(filter),
     ...PAGED_QUERY,
+    enabled,
+  })
+}
+
+export function useProjectUnitSummary() {
+  return useQuery({
+    queryKey: [SALES_KEY, 'unit-summary', 'per-project'],
+    queryFn: () => salesApi.unitsByProject(),
+    ...DATA_QUERY,
   })
 }
 

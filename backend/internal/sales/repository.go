@@ -100,6 +100,13 @@ type UnitStatusCount struct {
 	Total  int64
 }
 
+type ProjectUnitCount struct {
+	ProjectID uuid.UUID
+	Status    string
+	Total     int64
+	Value     int64
+}
+
 type ContractRow struct {
 	ID           uuid.UUID
 	Number       string
@@ -141,6 +148,7 @@ type Repository interface {
 
 	ListUnits(ctx context.Context, filter UnitFilter) ([]Unit, int64, error)
 	CountUnitsByStatus(ctx context.Context, projectID *uuid.UUID) ([]UnitStatusCount, error)
+	CountUnitsByProject(ctx context.Context) ([]ProjectUnitCount, error)
 	FindUnit(ctx context.Context, id uuid.UUID) (Unit, error)
 	LockUnit(ctx context.Context, id uuid.UUID) (Unit, error)
 	CreateUnit(ctx context.Context, unit *Unit) error
@@ -230,6 +238,16 @@ func (r *gormRepository) CountUnitsByStatus(ctx context.Context, projectID *uuid
 		query = query.Where("project_id = ?", *projectID)
 	}
 	err := query.Group("status").Order("status ASC").Scan(&counts).Error
+	return counts, database.Translate(err)
+}
+
+func (r *gormRepository) CountUnitsByProject(ctx context.Context) ([]ProjectUnitCount, error) {
+	var counts []ProjectUnitCount
+	err := r.db.WithContext(ctx).Model(&Unit{}).
+		Select("project_id, status, COUNT(*) AS total, COALESCE(SUM(price), 0) AS value").
+		Group("project_id, status").
+		Order("project_id, status").
+		Scan(&counts).Error
 	return counts, database.Translate(err)
 }
 
