@@ -87,7 +87,19 @@ type rawReceipt struct {
 }
 
 type rawBlock struct {
-	Timestamp string `json:"timestamp"`
+	Timestamp     string  `json:"timestamp"`
+	BaseFeePerGas *string `json:"baseFeePerGas"`
+}
+
+type Fees struct {
+	MaxPriorityFeePerGas *big.Int
+	MaxFeePerGas         *big.Int
+}
+
+type CallRequest struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	Data string `json:"data"`
 }
 
 func (c *Client) ChainID(ctx context.Context) (*big.Int, error) {
@@ -142,6 +154,59 @@ func (c *Client) BlockTime(ctx context.Context, number uint64) (time.Time, error
 		return time.Time{}, fmt.Errorf("%w: block %d not found", ErrMalformed, number)
 	}
 	return malformedOnError(unixQuantity(raw.Timestamp))
+}
+
+func (c *Client) PendingNonce(ctx context.Context, address string) (uint64, error) {
+	var raw string
+	if _, err := c.call(ctx, "eth_getTransactionCount", []any{address, "pending"}, &raw); err != nil {
+		return 0, err
+	}
+	return malformedOnError(ParseUint64Quantity(raw))
+}
+
+func (c *Client) SuggestFees(ctx context.Context) (Fees, error) {
+	var tipRaw string
+	if _, err := c.call(ctx, "eth_maxPriorityFeePerGas", []any{}, &tipRaw); err != nil {
+		return Fees{}, err
+	}
+	tip, err := ParseQuantity(tipRaw)
+	if err != nil {
+		return Fees{}, fmt.Errorf("%w: %w", ErrMalformed, err)
+	}
+	var block rawBlock
+	found, err := c.call(ctx, "eth_getBlockByNumber", []any{"latest", false}, &block)
+	if err != nil {
+		return Fees{}, err
+	}
+	if !found || block.BaseFeePerGas == nil {
+		return Fees{}, fmt.Errorf("%w: latest block has no base fee", ErrMalformed)
+	}
+	base, err := ParseQuantity(*block.BaseFeePerGas)
+	if err != nil {
+		return Fees{}, fmt.Errorf("%w: %w", ErrMalformed, err)
+	}
+	maxFee := new(big.Int).Add(new(big.Int).Mul(base, big.NewInt(2)), tip)
+	return Fees{MaxPriorityFeePerGas: tip, MaxFeePerGas: maxFee}, nil
+}
+
+func (c *Client) EstimateGas(ctx context.Context, request CallRequest) (uint64, error) {
+	var raw string
+	if _, err := c.call(ctx, "eth_estimateGas", []any{request}, &raw); err != nil {
+		return 0, err
+	}
+	return malformedOnError(ParseUint64Quantity(raw))
+}
+
+func (c *Client) SendRawTransaction(ctx context.Context, raw string) (string, error) {
+	var hash string
+	found, err := c.call(ctx, "eth_sendRawTransaction", []any{raw}, &hash)
+	if err != nil {
+		return "", err
+	}
+	if !found {
+		return "", fmt.Errorf("%w: eth_sendRawTransaction returned no hash", ErrMalformed)
+	}
+	return strings.ToLower(hash), nil
 }
 
 func (c *Client) call(ctx context.Context, method string, params []any, result any) (bool, error) {

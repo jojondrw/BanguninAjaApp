@@ -119,6 +119,7 @@ func buildRouter(cfg config.Config, db *gorm.DB, tokens *token.Manager, refreshC
 	billing.NewModule(db, tokens, cfg.Onchain, cfg.Gateway).RegisterRoutes(api)
 	evidenceModule := evidence.NewModule(db, tokens, cfg.Onchain, wageproof.NewEvidenceSource(db))
 	evidenceModule.RegisterRoutes(api)
+	evidenceModule.StartAutoAnchor(context.Background())
 	wageproof.NewModule(db, tokens, evidenceModule.Service()).RegisterRoutes(api)
 	hr.NewModule(db, tokens).RegisterRoutes(api)
 	scoring.NewModule(db, tokens).RegisterRoutes(api)

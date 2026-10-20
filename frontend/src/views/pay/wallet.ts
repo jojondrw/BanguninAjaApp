@@ -95,9 +95,9 @@ async function connect(wallet: Eip1193Provider, chainId: number): Promise<string
 
 // Mencatat sidik jari bukti: transaksi 0 ETH ke alamat sendiri yang membawa
 // data (akar Merkle). Tidak ada dana yang berpindah, hanya biaya gas jaringan uji.
-export async function sendCalldata(wallet: Eip1193Provider, chainId: number, data: string): Promise<string> {
+export async function sendCalldata(wallet: Eip1193Provider, chainId: number, data: string, to?: string): Promise<string> {
   const from = await connect(wallet, chainId)
-  const hash = await wallet.request({ method: 'eth_sendTransaction', params: [{ from, to: from, value: '0x0', data }] })
+  const hash = await wallet.request({ method: 'eth_sendTransaction', params: [{ from, to: to || from, value: '0x0', data }] })
   if (typeof hash !== 'string') {
     throw new Error('Dompet tidak mengembalikan hash transaksi.')
   }

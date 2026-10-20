@@ -76,6 +76,14 @@ type Onchain struct {
 	MinConfirmations uint64
 	RequestTTL       time.Duration
 	ExplorerURL      string
+
+	RegistryAddress    string
+	SignerKey          string
+	AutoAnchorInterval time.Duration
+}
+
+func (o Onchain) HasSigner() bool {
+	return o.SignerKey != ""
 }
 
 func (o Onchain) Enabled() bool {

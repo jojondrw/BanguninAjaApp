@@ -61,6 +61,20 @@ func (c *Controller) CreateClaimLink(ctx *gin.Context) {
 	httpresponse.RespondCreated(ctx, claim, err)
 }
 
+func (c *Controller) Config(ctx *gin.Context) {
+	httpresponse.OK(ctx, c.service.Config())
+}
+
+func (c *Controller) AnchorWithServer(ctx *gin.Context) {
+	actorID, err := httprequest.UserID(ctx)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	sent, err := c.service.AnchorWithServer(ctx.Request.Context(), &actorID)
+	httpresponse.RespondCreated(ctx, sent, err)
+}
+
 func (c *Controller) ListBatches(ctx *gin.Context) {
 	batches, err := c.service.ListBatches(ctx.Request.Context())
 	httpresponse.Respond(ctx, batches, err)

@@ -19,6 +19,7 @@ const (
 	defaultMinConfirmations   = 1
 	maxOnchainIDRPerETH       = 1e15
 	minOnchainRequestTTL      = time.Minute
+	minAutoAnchorInterval     = 10 * time.Minute
 )
 
 func loadOnchain() (Onchain, error) {
@@ -46,14 +47,35 @@ func loadOnchain() (Onchain, error) {
 		return Onchain{}, fmt.Errorf("environment variable ONCHAIN_REQUEST_TTL must be at least %s", minOnchainRequestTTL)
 	}
 
+	registry, err := receiverAddressEnv("EVIDENCE_REGISTRY_ADDRESS")
+	if err != nil {
+		return Onchain{}, err
+	}
+	signerKey := env("EVIDENCE_SIGNER_KEY", "")
+	if signerKey != "" {
+		if _, err := ethereum.NewSigner(signerKey); err != nil {
+			return Onchain{}, fmt.Errorf("environment variable EVIDENCE_SIGNER_KEY: %w", err)
+		}
+	}
+	interval, err := durationEnv("EVIDENCE_AUTO_ANCHOR_INTERVAL", 0)
+	if err != nil {
+		return Onchain{}, err
+	}
+	if interval != 0 && (interval < minAutoAnchorInterval || signerKey == "") {
+		return Onchain{}, fmt.Errorf("EVIDENCE_AUTO_ANCHOR_INTERVAL needs EVIDENCE_SIGNER_KEY and must be at least %s", minAutoAnchorInterval)
+	}
+
 	return Onchain{
-		ReceiverAddress:  receiver,
-		RPCURL:           env("ONCHAIN_RPC_URL", defaultOnchainRPCURL),
-		ChainID:          chainID,
-		IDRPerETH:        rate,
-		MinConfirmations: uint64(confirmations),
-		RequestTTL:       ttl,
-		ExplorerURL:      strings.TrimRight(env("ONCHAIN_EXPLORER_URL", defaultOnchainExplorerURL), "/"),
+		RegistryAddress:    registry,
+		SignerKey:          signerKey,
+		AutoAnchorInterval: interval,
+		ReceiverAddress:    receiver,
+		RPCURL:             env("ONCHAIN_RPC_URL", defaultOnchainRPCURL),
+		ChainID:            chainID,
+		IDRPerETH:          rate,
+		MinConfirmations:   uint64(confirmations),
+		RequestTTL:         ttl,
+		ExplorerURL:        strings.TrimRight(env("ONCHAIN_EXPLORER_URL", defaultOnchainExplorerURL), "/"),
 	}, nil
 }
 
