@@ -11,6 +11,37 @@ untuk mengelola proyek yang sudah berjalan.
 | Backend | Go 1.27, Gin, GORM, arsitektur vertical slice |
 | Database | PostgreSQL 18 dengan PostGIS |
 
+## Serah terima ke anggota tim
+
+Ringkasan untuk anggota tim yang baru memegang proyek ini.
+
+**Hanya mencoba demo online.** Buka https://banguninaja.vercel.app dan minta
+email serta password akun demo lewat chat pribadi. Situs ini hanya hidup selama
+laptop pemegang demo menyala, karena `/api` diteruskan lewat tunnel ke laptop itu.
+
+**Menjalankan sendiri.** Yang dibutuhkan:
+
+| Apa | Dari mana |
+|---|---|
+| Akses repo `jojondrw/BanguninAjaApp` | Diundang sebagai collaborator di GitHub |
+| Docker Desktop dan Node.js | Pasang sendiri |
+| `.env` | Salin dari `.env.example` (langkah di bawah). `JWT_ACCESS_SECRET`, `POSTGRES_PASSWORD`, dan `DEMO_USER_PASSWORD` dibuat sendiri |
+| `scoring-bundle.zip` (239 MB) | Google Drive tim "AOL SWE", untuk analisis lokasi |
+
+Fitur opsional dan nilainya:
+
+| Fitur | Isi `.env` | Catatan |
+|---|---|---|
+| Pembayaran on-chain | `ONCHAIN_RECEIVER_ADDRESS` = alamat dompet penerima | Alamat publik, aman dibagikan |
+| Bukti anti-tamper | `EVIDENCE_REGISTRY_ADDRESS=0x032bEd17beb565676e30eE5a903A17904F70BD4a` | Kontrak hanya menerima dompet yang diizinkan. Pemilik kontrak menambahkan dompet MetaMask anggota lewat Etherscan, Write Contract, `setAnchorer(alamat, true)`. Kosongkan bila tidak perlu; format lama tanpa kontrak tetap jalan |
+| Pencatatan bukti otomatis | `EVIDENCE_SIGNER_KEY`, `EVIDENCE_AUTO_ANCHOR_INTERVAL` | Pakai dompet testnet sendiri yang sudah diizinkan di kontrak, lihat `contracts/README.md` |
+| QRIS | `PAYMENT_GATEWAY=fake` | Simulator tanpa akun. Untuk Xendit mode uji, buat akun Xendit sendiri |
+
+**Jangan pernah dibagikan**, termasuk ke sesama anggota tim: `EVIDENCE_SIGNER_KEY`
+(kunci privat dompet), `XENDIT_SECRET_KEY`, `XENDIT_CALLBACK_TOKEN`, dan berkas
+`.env` secara utuh. Setiap orang membuat `.env` sendiri. Bila kunci sempat
+terkirim, buat kunci baru dan cabut yang lama.
+
 ## Menjalankan di laptop
 
 Yang perlu terpasang: Docker Desktop dan Node.js. Go tidak perlu, karena
@@ -63,8 +94,12 @@ Mengisi wilayah, satuan, bagan akun, dimensi dan bobot penilaian. Aman diulang.
 ### Data demo (opsional, untuk presentasi)
 
 ```bash
-docker compose exec -e DEMO_USER_PASSWORD=<kata-sandi-demo> backend go run ./cmd/seed-demo
+docker compose exec backend go run ./cmd/seed-demo
 ```
+
+Isi dulu `DEMO_USER_PASSWORD` di `.env` supaya akun `demo@banguninaja.id` ikut
+dibuat. Bisa juga diberikan langsung dengan
+`docker compose exec -e DEMO_USER_PASSWORD=<kata-sandi-demo> backend go run ./cmd/seed-demo`.
 
 Dijalankan setelah `cmd/migrate` dan `cmd/seed`. Mengisi cerita pengembang
 properti yang utuh: 4 proyek (Griya Asri Bandung berjalan, Ruko Sentra Makassar
