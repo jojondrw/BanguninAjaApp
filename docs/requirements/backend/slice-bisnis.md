@@ -835,8 +835,9 @@ Slice `internal/evidence`. Masalahnya: tagihan termin dibayar berdasarkan progre
 - Sumber bukti dibaca lewat adapter, mengikuti pola lintas slice: `project.EvidenceFeed` (laporan harian, foto lapangan dengan SHA-256 isi berkasnya, riwayat progres, termin pemberi kerja yang sudah ditagih) dan `billing.PaymentFeed` (semua pembayaran tagihan, **apa pun metodenya**: transfer, tunai, cek, on-chain).
 - Tiap bukti diberi sidik jari SHA-256 dari JSON isinya. Versi baru (isi berubah) menjadi `evidence_record` baru, jadi riwayatnya tidak hilang.
 - `POST /evidence/batches` mengumpulkan semua sidik jari yang belum tercatat menjadi satu akar Merkle (keccak256, daun diurutkan supaya deterministik). Kumpulan yang belum tercatat diganti kalau dibuat ulang.
-- Pengguna mengirim **transaksi 0 ETH ke alamat sendiri dari dompetnya** dengan data `0x424e474e` ("BNGN") + akar. Server tidak memegang kunci privat.
-- `POST /evidence/batches/:id/anchor` memeriksa transaksi di Sepolia: data harus sama persis, receipt sukses, jaringan benar, jumlah konfirmasi cukup. Belum terlihat atau belum terkonfirmasi dijawab `waiting`.
+- Akar dicatat dengan memanggil `anchor(root, jumlahCatatan)` pada kontrak **EvidenceRegistry** di Sepolia (`0x032bEd17beb565676e30eE5a903A17904F70BD4a`, lihat `contracts/README.md`). Kontrak hanya menerima dompet yang diizinkan pemilik, menolak root yang sama dua kali, dan memancarkan event `Anchored`. Tanpa `EVIDENCE_REGISTRY_ADDRESS`, format lama dipakai: transaksi 0 ETH ke alamat sendiri dengan data `0x424e474e` ("BNGN") + akar.
+- Dua jalur pengiriman: lewat **MetaMask** pengguna (`POST /evidence/batches`, lalu dompet memanggil kontrak), atau lewat **dompet server** (`POST /evidence/batches/server-anchor`) yang menandatangani transaksi EIP-1559 sendiri dengan kunci dari `EVIDENCE_SIGNER_KEY`. Dengan `EVIDENCE_AUTO_ANCHOR_INTERVAL` (misalnya `24h`) server mencatat terjadwal, dan hanya bila ada bukti baru. Transaksi yang belum terkonfirmasi tidak dikirim ulang. `GET /evidence/config` memberi tahu frontend alamat kontrak dan apakah dompet server tersedia.
+- `POST /evidence/batches/:id/anchor` memeriksa transaksi di Sepolia: penerima harus kontrak EvidenceRegistry (bila dipasang), data harus sama persis, receipt sukses, jaringan benar, jumlah konfirmasi cukup. Belum terlihat atau belum terkonfirmasi dijawab `waiting`.
 
 ### Status bukti
 

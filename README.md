@@ -197,6 +197,13 @@ model SDLC, Gantt rencana dan realisasi, WBS, dan pembagian kerja di
 | `frontend/arsitektur.md` | Susunan MVC, alur token, larangan penyimpanan |
 | `frontend/aturan-ui.md` | Aturan UI gabungan Shneiderman dan Nielsen, dan bahasa visual |
 
+### Kontrak blockchain
+
+Bukti anti-tamper dicatat ke kontrak **EvidenceRegistry** di Sepolia:
+[`0x032bEd17beb565676e30eE5a903A17904F70BD4a`](https://sepolia.etherscan.io/address/0x032bEd17beb565676e30eE5a903A17904F70BD4a)
+(kode terverifikasi). Kode sumber, ABI, catatan deploy, dan panduan memasang
+dompet server ada di `contracts/`.
+
 ## Keadaan sekarang
 
 Sudah jalan:
