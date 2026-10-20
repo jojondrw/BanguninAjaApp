@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"time"
@@ -71,10 +72,29 @@ type gatewayService struct {
 	settings   config.Gateway
 	now        func() time.Time
 	newToken   func() (string, error)
+	logger     *slog.Logger
 }
 
 func NewGatewayService(repository Repository, gateway PaymentGateway, settings config.Gateway) GatewayService {
-	return &gatewayService{repository: repository, gateway: gateway, settings: settings, now: time.Now, newToken: randomToken}
+	return &gatewayService{repository: repository, gateway: gateway, settings: settings, now: time.Now, newToken: randomToken, logger: slog.Default()}
+}
+
+func (s *gatewayService) log() *slog.Logger {
+	if s.logger == nil {
+		return slog.Default()
+	}
+	return s.logger
+}
+
+func requestAttrs(request GatewayRequest) []any {
+	return []any{
+		slog.String("request_id", request.ID.String()),
+		slog.String("provider", request.Provider),
+		slog.String("provider_id", request.ProviderID),
+		slog.String("target_kind", request.TargetKind),
+		slog.String("target_id", request.TargetID.String()),
+		slog.Int64("amount", request.AmountIDR),
+	}
 }
 
 func (s *gatewayService) enabled() bool {
@@ -130,6 +150,7 @@ func (s *gatewayService) create(ctx context.Context, target onchainTarget, amoun
 	if err != nil {
 		return GatewayRequestResponse{}, apperror.From(err)
 	}
+	s.log().Info("qris request created", requestAttrs(created)...)
 	return s.requestResponse(ctx, created.ID)
 }
 
@@ -172,6 +193,8 @@ func (s *gatewayService) charge(ctx context.Context, target onchainTarget, amoun
 		Description: fmt.Sprintf("BanguninAja %s %s", target.kind, id.String()[:8]),
 	})
 	if err != nil {
+		s.log().Warn("qris gateway call failed", slog.String("operation", "create"), slog.String("target_kind", target.kind),
+			slog.String("target_id", target.id.String()), slog.String("error", err.Error()))
 		return GatewayRequest{}, errGatewayUnavailable.WithCause(err)
 	}
 	request := GatewayRequest{
@@ -252,6 +275,7 @@ func (s *gatewayService) CancelRequest(ctx context.Context, id uuid.UUID) (Gatew
 	if err != nil {
 		return GatewayRequestResponse{}, apperror.From(err)
 	}
+	s.log().Info("qris request cancelled", slog.String("request_id", id.String()))
 	return s.requestResponse(ctx, id)
 }
 
@@ -291,8 +315,11 @@ func (s *gatewayService) SimulatePayment(ctx context.Context, token string) (Gat
 		return GatewayPublicResponse{}, errGatewayNotPending
 	}
 	if err := s.gateway.Simulate(ctx, request.ProviderID, request.AmountIDR); err != nil {
+		s.log().Warn("qris gateway call failed", slog.String("operation", "simulate"),
+			slog.String("request_id", request.ID.String()), slog.String("error", err.Error()))
 		return GatewayPublicResponse{}, errGatewayUnavailable.WithCause(err)
 	}
+	s.log().Info("qris payment simulated", requestAttrs(request)...)
 	return s.RefreshPayment(ctx, token)
 }
 
@@ -302,19 +329,26 @@ func (s *gatewayService) HandleWebhook(ctx context.Context, callbackToken string
 	}
 	expected := s.settings.XenditCallbackToken
 	if expected == "" || subtle.ConstantTimeCompare([]byte(callbackToken), []byte(expected)) != 1 {
+		s.log().Warn("qris webhook rejected", slog.String("reason", "callback token mismatch"),
+			slog.String("event", body.Event), slog.String("provider_id", body.Data.PaymentRequestID))
 		return errGatewayCallbackToken
 	}
 	providerID := body.Data.PaymentRequestID
 	if providerID == "" {
+		s.log().Info("qris webhook ignored", slog.String("reason", "no payment request id"), slog.String("event", body.Event))
 		return nil
 	}
 	request, err := s.repository.FindGatewayRequestByProviderID(ctx, providerID)
 	if errors.Is(err, database.ErrNotFound) {
+		s.log().Info("qris webhook ignored", slog.String("reason", "unknown payment request"),
+			slog.String("event", body.Event), slog.String("provider_id", providerID))
 		return nil
 	}
 	if err != nil {
 		return apperror.Internal(err)
 	}
+	s.log().Info("qris webhook received", slog.String("event", body.Event), slog.String("provider_id", providerID),
+		slog.String("request_id", request.ID.String()))
 	return s.sync(ctx, request.ID)
 }
 
@@ -331,6 +365,8 @@ func (s *gatewayService) sync(ctx context.Context, id uuid.UUID) error {
 	case errors.Is(err, errGatewayUnknownRequest):
 		return s.closeRequest(ctx, id, onchainFailed, gatewayUnknownReason)
 	case err != nil:
+		s.log().Warn("qris gateway call failed", slog.String("operation", "status"),
+			slog.String("request_id", id.String()), slog.String("error", err.Error()))
 		return errGatewayUnavailable.WithCause(err)
 	}
 	switch status.State {
@@ -381,6 +417,8 @@ func (s *gatewayService) settle(ctx context.Context, id uuid.UUID, status Gatewa
 		return gatewayWriteErrors.Resolve(repository.SaveGatewayRequest(ctx, &request))
 	})
 	if err == nil {
+		s.log().Info("qris payment confirmed", slog.String("request_id", id.String()), slog.Int64("amount", status.Amount),
+			slog.String("paid_at", now.Format(time.RFC3339)))
 		return nil
 	}
 	appError := apperror.From(err)
@@ -392,15 +430,21 @@ func (s *gatewayService) settle(ctx context.Context, id uuid.UUID, status Gatewa
 }
 
 func (s *gatewayService) closeRequest(ctx context.Context, id uuid.UUID, status, reason string) error {
-	return s.repository.Transaction(ctx, func(repository Repository) error {
+	closed := false
+	err := s.repository.Transaction(ctx, func(repository Repository) error {
 		request, err := repository.LockGatewayRequest(ctx, id)
 		if err != nil || request.Status != onchainPending {
 			return err
 		}
 		request.Status = status
 		request.FailureReason = truncateRunes(reason, failureReasonLimit)
+		closed = true
 		return repository.SaveGatewayRequest(ctx, &request)
 	})
+	if err == nil && closed {
+		s.log().Info("qris request closed", slog.String("request_id", id.String()), slog.String("status", status), slog.String("reason", reason))
+	}
+	return err
 }
 
 func (s *gatewayService) requestResponse(ctx context.Context, id uuid.UUID) (GatewayRequestResponse, error) {

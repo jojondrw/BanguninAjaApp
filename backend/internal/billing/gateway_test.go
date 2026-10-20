@@ -1,10 +1,13 @@
 package billing
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"maps"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -383,5 +386,29 @@ func TestGatewayPaymentNoteNamesTheProvider(t *testing.T) {
 	}
 	if providerName(config.GatewayXendit) != "Xendit" {
 		t.Fatal("xendit must be named")
+	}
+}
+
+func TestGatewayLogsEveryStepWithoutSecrets(t *testing.T) {
+	var output bytes.Buffer
+	harness := newGatewayHarness(testGatewaySettings())
+	harness.service.logger = slog.New(slog.NewTextHandler(&output, nil))
+	invoice := harness.customerInvoice(1_000_000, 0)
+	created := harness.request(t, invoice)
+
+	_ = harness.service.HandleWebhook(context.Background(), "palsu", GatewayWebhook{Event: "payment.capture"})
+	if _, err := harness.service.SimulatePayment(context.Background(), testToken); err != nil {
+		t.Fatal(err)
+	}
+	logs := output.String()
+	for _, want := range []string{"qris request created", "qris webhook rejected", "qris payment simulated", "qris payment confirmed", created.ProviderID} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("logs are missing %q:\n%s", want, logs)
+		}
+	}
+	for _, secret := range []string{testCallbackToken, testToken, "palsu"} {
+		if strings.Contains(logs, secret) {
+			t.Errorf("logs must not contain %q", secret)
+		}
 	}
 }
