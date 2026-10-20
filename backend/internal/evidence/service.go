@@ -43,6 +43,7 @@ var (
 	errTxWrongData     = apperror.Unprocessable("evidence_tx_wrong_data", "Data transaksi ini bukan sidik jari kumpulan bukti yang diminta")
 	errTxWrongChain    = apperror.Unprocessable("evidence_tx_wrong_chain", "Transaksi ini dari jaringan lain")
 	errTxReverted      = apperror.Unprocessable("evidence_tx_reverted", "Transaksi ini gagal di jaringan (reverted)")
+	errTxWrongTarget   = apperror.Unprocessable("evidence_tx_wrong_target", "Transaksi ini tidak dikirim ke kontrak EvidenceRegistry BanguninAja")
 	errChainDown       = apperror.New(http.StatusBadGateway, "chain_unavailable", "Node jaringan blockchain tidak bisa dihubungi. Coba lagi sebentar")
 	errApproverAddress = apperror.Unprocessable("evidence_approver_address", "Alamat dompet harus 0x diikuti 40 karakter heksadesimal, salin langsung dari dompet")
 	errClaimNotFound   = apperror.NotFound("evidence_claim_not_found", "Tautan verifikasi tidak ditemukan. Periksa lagi tautannya")
@@ -95,6 +96,11 @@ type Service struct {
 	chain      ChainReader
 	config     config.Onchain
 	now        func() time.Time
+	server     *serverAnchor
+}
+
+func (s *Service) UseServerSigner(writer ChainWriter, signer *ethereum.Signer) {
+	s.server = &serverAnchor{writer: writer, signer: signer}
 }
 
 func NewService(repository Repository, sources Sources, chain ChainReader, onchain config.Onchain) *Service {
@@ -140,6 +146,7 @@ type BatchResponse struct {
 	ID          uuid.UUID  `json:"id"`
 	Root        string     `json:"root"`
 	Calldata    string     `json:"calldata"`
+	AnchorTo    string     `json:"anchorTo"`
 	RecordCount int        `json:"recordCount"`
 	ChainID     int64      `json:"chainId"`
 	TxHash      string     `json:"txHash"`
@@ -332,9 +339,17 @@ func claimStatus(claim ClaimLink, currentRoot string) ClaimStatus {
 }
 
 func (s *Service) CreateBatch(ctx context.Context, actorID uuid.UUID) (BatchResponse, error) {
-	facts, err := s.facts(ctx, nil)
+	batch, err := s.createBatch(ctx, &actorID)
 	if err != nil {
 		return BatchResponse{}, err
+	}
+	return s.batchResponse(batch), nil
+}
+
+func (s *Service) createBatch(ctx context.Context, actorID *uuid.UUID) (Batch, error) {
+	facts, err := s.facts(ctx, nil)
+	if err != nil {
+		return Batch{}, err
 	}
 	var created Batch
 	err = s.repository.Transaction(ctx, func(repository Repository) error {
@@ -370,18 +385,19 @@ func (s *Service) CreateBatch(ctx context.Context, actorID uuid.UUID) (BatchResp
 		for index, record := range records {
 			leaves[index] = leaf{kind: record.Kind, subject: record.SubjectID.String(), digest: record.Digest}
 		}
-		created = Batch{Root: MerkleRoot(leaves), RecordCount: len(records), ChainID: s.config.ChainID, CreatedBy: &actorID}
+		created = Batch{Root: MerkleRoot(leaves), RecordCount: len(records), ChainID: s.config.ChainID, CreatedBy: actorID}
 		return repository.CreateBatch(ctx, &created, records)
 	})
 	if err != nil {
-		return BatchResponse{}, apperror.From(err)
+		return Batch{}, apperror.From(err)
 	}
-	return s.batchResponse(created), nil
+	return created, nil
 }
 
 func (s *Service) batchResponse(batch Batch) BatchResponse {
+	target := s.target(batch)
 	response := BatchResponse{
-		ID: batch.ID, Root: batch.Root, Calldata: Calldata(batch.Root), RecordCount: batch.RecordCount,
+		ID: batch.ID, Root: batch.Root, Calldata: target.calldata, AnchorTo: target.to, RecordCount: batch.RecordCount,
 		ChainID: batch.ChainID, AnchoredAt: batch.AnchoredAt, CreatedAt: batch.CreatedAt,
 	}
 	if batch.TxHash != nil {
@@ -429,8 +445,12 @@ func (s *Service) Anchor(ctx context.Context, batchID uuid.UUID, txHash string) 
 	if transaction.ChainID != nil && transaction.ChainID.Cmp(big.NewInt(batch.ChainID)) != 0 {
 		return AnchorResult{}, errTxWrongChain
 	}
-	if transaction.Input != Calldata(batch.Root) {
+	target := s.target(batch)
+	if transaction.Input != target.calldata {
 		return AnchorResult{}, errTxWrongData
+	}
+	if target.to != "" && !ethereum.SameAddress(transaction.To, target.to) {
+		return AnchorResult{}, errTxWrongTarget
 	}
 	receipt, found, err := s.chain.TransactionReceipt(ctx, hash)
 	if err != nil {

@@ -61,6 +61,16 @@ describe('jejak bukti blockchain', () => {
     expect(calls.some((call) => call.method === 'wallet_switchEthereumChain')).toBe(true)
   })
 
+  it('memanggil kontrak EvidenceRegistry bila alamatnya diberikan', async () => {
+    const registry = '0x2c7536E3605D9C16a7a3D7b1898e529396a65c23'
+    const { wallet, calls } = fakeWallet({ eth_requestAccounts: [ACCOUNT], eth_sendTransaction: '0xhash' })
+
+    await sendCalldata(wallet, 11155111, '0xabcdef01', registry)
+
+    const send = calls.find((call) => call.method === 'eth_sendTransaction')
+    expect(send?.params).toEqual([{ from: ACCOUNT, to: registry, value: '0x0', data: '0xabcdef01' }])
+  })
+
   it('meminta tanda tangan EIP-712 dari akun yang terhubung', async () => {
     const { wallet, calls } = fakeWallet({ eth_requestAccounts: [ACCOUNT], eth_signTypedData_v4: '0xsig' })
 

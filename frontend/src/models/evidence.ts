@@ -44,12 +44,31 @@ export interface EvidenceBatch {
   id: string
   root: string
   calldata: string
+  // Alamat kontrak EvidenceRegistry. Kosong berarti transaksi dikirim ke
+  // alamat dompet itu sendiri dengan sidik jari di data transaksi.
+  anchorTo: string
   recordCount: number
   chainId: number
   txHash: string
   txUrl: string
   anchoredAt: string | null
   createdAt: string
+}
+
+export interface EvidenceConfig {
+  chainId: number
+  explorerUrl: string
+  registryAddress: string
+  registryUrl: string
+  serverSigner: boolean
+  signerAddress: string
+  autoAnchorHours: number
+}
+
+export interface ServerAnchorResult {
+  batch: EvidenceBatch
+  txHash: string
+  txUrl: string
 }
 
 export interface AnchorResult {

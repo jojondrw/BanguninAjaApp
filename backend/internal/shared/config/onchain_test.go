@@ -9,6 +9,7 @@ import (
 var onchainKeys = []string{
 	"ONCHAIN_RECEIVER_ADDRESS", "ONCHAIN_RPC_URL", "ONCHAIN_CHAIN_ID", "ONCHAIN_IDR_PER_ETH",
 	"ONCHAIN_MIN_CONFIRMATIONS", "ONCHAIN_REQUEST_TTL", "ONCHAIN_EXPLORER_URL",
+	"EVIDENCE_REGISTRY_ADDRESS", "EVIDENCE_SIGNER_KEY", "EVIDENCE_AUTO_ANCHOR_INTERVAL",
 }
 
 func clearOnchainEnv(t *testing.T) {
@@ -70,5 +71,38 @@ func TestOnchainRejectsInvalidSettings(t *testing.T) {
 				t.Fatalf("got %v", err)
 			}
 		})
+	}
+}
+
+func TestEvidenceRegistryAndSignerSettings(t *testing.T) {
+	clearOnchainEnv(t)
+	t.Setenv("EVIDENCE_REGISTRY_ADDRESS", "0x05788638f4e23932884765f666d85654547aecb4")
+	t.Setenv("EVIDENCE_SIGNER_KEY", "0x0000000000000000000000000000000000000000000000000000000000000001")
+	t.Setenv("EVIDENCE_AUTO_ANCHOR_INTERVAL", "24h")
+
+	onchain, err := loadOnchain()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if onchain.RegistryAddress != "0x05788638f4e23932884765f666D85654547AecB4" || !onchain.HasSigner() || onchain.AutoAnchorInterval != 24*time.Hour {
+		t.Fatalf("got registry %s, signer %v, interval %s", onchain.RegistryAddress, onchain.HasSigner(), onchain.AutoAnchorInterval)
+	}
+}
+
+func TestEvidenceSettingsRejectBadCombinations(t *testing.T) {
+	cases := map[string]map[string]string{
+		"bad key":              {"EVIDENCE_SIGNER_KEY": "0x1234"},
+		"interval without key": {"EVIDENCE_AUTO_ANCHOR_INTERVAL": "24h"},
+		"interval too short":   {"EVIDENCE_SIGNER_KEY": "0x" + strings.Repeat("0", 63) + "1", "EVIDENCE_AUTO_ANCHOR_INTERVAL": "1m"},
+		"bad registry address": {"EVIDENCE_REGISTRY_ADDRESS": "0x1234"},
+	}
+	for name, values := range cases {
+		clearOnchainEnv(t)
+		for key, value := range values {
+			t.Setenv(key, value)
+		}
+		if _, err := loadOnchain(); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
 	}
 }

@@ -23,6 +23,14 @@ export function useCreateEvidenceBatch() {
   return useMutation({ mutationFn: evidenceApi.createBatch })
 }
 
+export function useEvidenceConfig() {
+  return useQuery({ queryKey: [EVIDENCE_KEY, 'config'], queryFn: evidenceApi.config, staleTime: 5 * 60_000, retry: 0 })
+}
+
+export function useServerAnchor() {
+  return useMutation({ mutationFn: evidenceApi.serverAnchor })
+}
+
 export function useAnchorBatch() {
   const invalidate = useInvalidateEvidence()
   return useMutation({

@@ -103,6 +103,7 @@ perangkat lunak, dan menambah kategori penanganan kondisi luar biasa.
 | Sistem pendukung keputusan, bukan pengambil keputusan | Skor tidak mencakup faktor sosial, politik, dan legal penuh | Laporan dan UI menyebut skor sebagai bahan pertimbangan; regulasi ditampilkan terpisah sebagai syarat |
 | Pembayaran on-chain | Risiko kehilangan dana nyata | Hanya jaringan uji Sepolia dengan kurs tetap simulasi; backend tidak memegang kunci privat |
 | Pembayaran QRIS lewat gerbang pembayaran | Kunci rahasia gerbang pembayaran bisa dipakai menarik atau mengembalikan dana | Kunci hanya di env backend, tidak pernah dikirim ke frontend; demo memakai kunci mode uji Xendit atau simulator lokal; batas Rp 10 juta per transaksi mengikuti aturan QRIS |
+| Dompet server untuk mencatat bukti | Kunci privat di server bisa dicuri bila server diretas | Dompet khusus server, terpisah dari dompet pribadi, hanya di Sepolia dengan saldo faucet; kunci hanya di env dan tidak pernah dicatat di log; kontrak `EvidenceRegistry` hanya menerima pencatatan dari dompet yang diizinkan pemilik, dan pemilik bisa mencabutnya lewat `setAnchorer`. Untuk mainnet, kunci semestinya disimpan di layanan pengelola kunci (KMS) |
 
 ## 4. Perbaikan selama siklus ini
 

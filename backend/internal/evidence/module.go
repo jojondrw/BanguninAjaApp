@@ -28,7 +28,13 @@ type FactSource interface {
 
 func NewModule(db *gorm.DB, tokens *token.Manager, onchain config.Onchain, extra ...FactSource) *Module {
 	sources := feedSources{projects: project.NewEvidenceFeed(db), payments: billing.NewPaymentFeed(db), extra: extra}
-	service := NewService(NewRepository(db), sources, ethereum.NewClient(onchain.RPCURL), onchain)
+	client := ethereum.NewClient(onchain.RPCURL)
+	service := NewService(NewRepository(db), sources, client, onchain)
+	if onchain.HasSigner() {
+		if signer, err := ethereum.NewSigner(onchain.SignerKey); err == nil {
+			service.UseServerSigner(client, signer)
+		}
+	}
 	return &Module{
 		service:    service,
 		controller: NewController(service),
@@ -93,13 +99,19 @@ func (s feedSources) OwnerClaim(ctx context.Context, projectID, termID uuid.UUID
 	}, nil
 }
 
+func (m *Module) StartAutoAnchor(ctx context.Context) {
+	go m.service.RunAutoAnchor(ctx)
+}
+
 func (m *Module) Service() *Service {
 	return m.service
 }
 
 func (m *Module) RegisterRoutes(router gin.IRouter) {
 	routes := router.Group("/evidence", middleware.Authentication(m.tokens))
+	routes.GET("/config", m.controller.Config)
 	routes.GET("/batches", m.controller.ListBatches)
+	routes.POST("/batches/server-anchor", m.controller.AnchorWithServer)
 	routes.POST("/batches", m.controller.CreateBatch)
 	routes.POST("/batches/:id/anchor", m.controller.Anchor)
 

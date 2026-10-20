@@ -1,5 +1,13 @@
 import { request } from '../shared/apiClient'
-import type { AnchorResult, ClaimApproval, EvidenceBatch, ProjectEvidence, PublicClaim } from './evidence'
+import type {
+  AnchorResult,
+  ClaimApproval,
+  EvidenceBatch,
+  EvidenceConfig,
+  ProjectEvidence,
+  PublicClaim,
+  ServerAnchorResult,
+} from './evidence'
 import { publicCall } from './onchainApi'
 
 export const evidenceApi = {
@@ -8,6 +16,12 @@ export const evidenceApi = {
   batches: () => request<EvidenceBatch[]>('/evidence/batches'),
 
   createBatch: () => request<EvidenceBatch>('/evidence/batches', { method: 'POST' }),
+
+  config: () => request<EvidenceConfig>('/evidence/config'),
+
+  // Server membuat kumpulan bukti lalu menandatangani dan mengirim transaksinya
+  // sendiri dengan dompet server.
+  serverAnchor: () => request<ServerAnchorResult>('/evidence/batches/server-anchor', { method: 'POST' }),
 
   anchor: (batchId: string, txHash: string) =>
     request<AnchorResult>(`/evidence/batches/${batchId}/anchor`, { method: 'POST', body: { txHash } }),
