@@ -15,6 +15,24 @@ dompet pengirimnya. Isi laporan, foto, dan pembayaran tetap di server.
 Setiap pencatatan memancarkan event `Anchored(root, recordCount, anchorer, anchoredAt)`
 sehingga riwayatnya terbaca di tab Events Etherscan.
 
+## Deployment Sepolia
+
+| | |
+|---|---|
+| Alamat kontrak | [`0x032bEd17beb565676e30eE5a903A17904F70BD4a`](https://sepolia.etherscan.io/address/0x032bEd17beb565676e30eE5a903A17904F70BD4a) |
+| Jaringan | Sepolia (chain id 11155111) |
+| Pemilik dan dompet pencatat | [`0xdF48CCA5EBbA1DEdA2B22aD5c4EE4Ba56Edb4Cf8`](https://sepolia.etherscan.io/address/0xdF48CCA5EBbA1DEdA2B22aD5c4EE4Ba56Edb4Cf8) (juga dompet server backend) |
+| Transaksi deploy | [`0x60056d67…5573d3f7`](https://sepolia.etherscan.io/tx/0x60056d673a7c09b1da3f9fc85e52c4308adace0122cda79ad4b37eeb5573d3f7), blok 11.952.723, 20 Oktober 2026 |
+| Compiler | solc 0.8.34, tanpa optimizer, argumen `initialAnchorers = []` |
+| Verifikasi kode | Sourcify exact match dan [Blockscout](https://eth-sepolia.blockscout.com/address/0x032bEd17beb565676e30eE5a903A17904F70BD4a?tab=contract) |
+| ABI | [`EvidenceRegistry.abi.json`](EvidenceRegistry.abi.json), diambil dari kode yang terverifikasi |
+| Catatan mesin | [`deployments/sepolia.json`](deployments/sepolia.json) |
+
+Cara memeriksa sebuah kumpulan bukti tanpa aplikasi: buka tab Read Contract di
+Etherscan, isi akar Merkle kumpulan itu ke `anchoredAt`, dan lihat waktunya.
+Nilai 0 berarti akar itu belum pernah dicatat. Riwayat semua pencatatan ada di
+tab Events (`Anchored`).
+
 ## Menyiapkan dompet server
 
 1. Di MetaMask, tambah akun baru khusus server (jangan pakai akun pribadi).

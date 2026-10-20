@@ -1,0 +1,24 @@
+{
+  "contract": "EvidenceRegistry",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "address": "0x032bEd17beb565676e30eE5a903A17904F70BD4a",
+  "owner": "0xdF48CCA5EBbA1DEdA2B22aD5c4EE4Ba56Edb4Cf8",
+  "anchorers": ["0xdF48CCA5EBbA1DEdA2B22aD5c4EE4Ba56Edb4Cf8"],
+  "constructorArgs": { "initialAnchorers": [] },
+  "deploymentTx": "0x60056d673a7c09b1da3f9fc85e52c4308adace0122cda79ad4b37eeb5573d3f7",
+  "blockNumber": 11952723,
+  "deployedAt": "2026-10-20T03:50:24Z",
+  "compiler": { "solc": "0.8.34+commit.80d5c536", "optimizer": false, "evmVersion": "default" },
+  "verification": {
+    "sourcify": "exact_match",
+    "blockscout": "verified",
+    "verifiedAt": "2026-10-20T03:50:42Z"
+  },
+  "links": {
+    "etherscan": "https://sepolia.etherscan.io/address/0x032bEd17beb565676e30eE5a903A17904F70BD4a",
+    "blockscout": "https://eth-sepolia.blockscout.com/address/0x032bEd17beb565676e30eE5a903A17904F70BD4a",
+    "sourcify": "https://repo.sourcify.dev/11155111/0x032bEd17beb565676e30eE5a903A17904F70BD4a",
+    "deploymentTx": "https://sepolia.etherscan.io/tx/0x60056d673a7c09b1da3f9fc85e52c4308adace0122cda79ad4b37eeb5573d3f7"
+  }
+}
