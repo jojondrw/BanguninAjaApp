@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useCustomers, useDeleteCustomer } from '../../controllers/useSales'
 import { CUSTOMER_NAME_MAX_LENGTH, type Customer } from '../../models/sales'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { ErrorNote, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -114,7 +114,7 @@ export function CustomersSection() {
         </div>
       ) : null}
 
-      {customers.isPending ? <Loading /> : null}
+      {customers.isPending ? <TableSkeleton /> : null}
       {customers.isError ? <LoadFailed onRetry={() => customers.refetch()} /> : null}
       {customers.data ? (
         <>

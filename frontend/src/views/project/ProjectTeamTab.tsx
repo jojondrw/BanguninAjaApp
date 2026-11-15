@@ -23,7 +23,7 @@ import { memberCandidateOptions } from '../../models/projectMemberApi'
 import { ROLE_OPTIONS, type RoleCode } from '../../models/user'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table, type Column } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton, type Column } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle } from '../components/RecordControls'
@@ -117,7 +117,7 @@ export function ProjectTeamTab({ project }: { project: Project }) {
         </div>
       ) : null}
 
-      {members.isPending ? <Loading label="Mengambil anggota tim..." /> : null}
+      {members.isPending ? <TableSkeleton /> : null}
       {members.isError ? <LoadFailed onRetry={() => members.refetch()} /> : null}
       {members.data ? (
         <Table

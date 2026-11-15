@@ -17,7 +17,7 @@ import {
 } from '../../models/inventory'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
@@ -330,7 +330,7 @@ export function AssetsCard() {
         error={deleteAsset.isError ? refusalText(`Aset ${deleteAsset.variables.name} tidak bisa dihapus.`, deleteAsset.error) : null}
       />
 
-      {assets.isPending ? <Loading /> : null}
+      {assets.isPending ? <TableSkeleton /> : null}
       {assets.isError ? <LoadFailed onRetry={() => assets.refetch()} /> : null}
       {assets.data ? (
         <>

@@ -13,7 +13,7 @@ import {
 } from '../../models/billing'
 import { projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -144,7 +144,7 @@ export function InvoicesSection({ today, onRecordReceivable }: {
           </div>
         ) : null}
 
-        {invoices.isPending ? <Loading /> : null}
+        {invoices.isPending ? <TableSkeleton /> : null}
         {invoices.isError ? <LoadFailed onRetry={() => invoices.refetch()} /> : null}
         {invoices.data ? (
           <>

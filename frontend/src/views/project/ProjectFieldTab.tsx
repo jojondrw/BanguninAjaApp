@@ -26,7 +26,7 @@ import { isProjectClosed, type Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
-import { Card, LoadFailed, Loading, Table, type Column } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton, type Column } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle, Pager } from '../components/RecordControls'
@@ -130,7 +130,7 @@ export function ProjectFieldTab({ project }: { project: Project }) {
           </div>
         ) : null}
 
-        {reports.isPending ? <Loading /> : null}
+        {reports.isPending ? <TableSkeleton /> : null}
         {reports.isError ? <LoadFailed onRetry={() => reports.refetch()} /> : null}
         {reports.data ? (
           <>

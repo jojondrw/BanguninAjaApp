@@ -10,7 +10,7 @@ import {
 } from '../../models/billing'
 import { customerOptions, projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -135,7 +135,7 @@ export function ReceivablesSection({ today, draftInvoice, initialStatus = '' }: 
           </div>
         ) : null}
 
-        {receivables.isPending ? <Loading /> : null}
+        {receivables.isPending ? <TableSkeleton /> : null}
         {receivables.isError ? <LoadFailed onRetry={() => receivables.refetch()} /> : null}
         {receivables.data ? (
           <>

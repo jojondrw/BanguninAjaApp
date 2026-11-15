@@ -65,6 +65,33 @@ export function Loading({ label = 'Mengambil data...' }: { label?: string }) {
   return <BaniLoop label={label} />
 }
 
+// Blok abu berkedip untuk mengisi tempat data sebelum datang.
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <div aria-hidden="true" className={`animate-pulse rounded bg-slate-200/70 ${className}`} />
+}
+
+// Rangka tabel: dipakai menggantikan <Loading/> pada pemuatan awal supaya tata
+// letak tidak lompat dan halaman tidak terasa membeku. Jumlah kolom disamakan
+// dengan <Table/> agar transisi ke data asli mulus.
+export function TableSkeleton({ columns = 4, rows = 6 }: { columns?: number; rows?: number }) {
+  return (
+    <div className="-mx-5 overflow-hidden sm:-mx-6" role="status" aria-label="Memuat tabel">
+      <div className="flex gap-3 border-y border-slate-100 bg-slate-50/70 px-5 py-2.5 first:pl-5 sm:px-6">
+        {Array.from({ length: columns }).map((_, index) => (
+          <Skeleton key={index} className="h-3 flex-1" />
+        ))}
+      </div>
+      {Array.from({ length: rows }).map((_, row) => (
+        <div key={row} className="flex gap-3 border-b border-slate-100 px-5 py-3.5 last:border-0 sm:px-6">
+          {Array.from({ length: columns }).map((_, column) => (
+            <Skeleton key={column} className={`h-3.5 flex-1 ${column % 2 === 0 ? 'opacity-90' : 'opacity-60'}`} />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function LoadFailed({ onRetry }: { onRetry: () => void }) {
   return (
     <div>

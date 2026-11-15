@@ -18,7 +18,7 @@ import {
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiahShort } from '../../shared/format'
 import { PHOTOS } from '../../shared/photos'
-import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, Empty, LoadFailed, Loading, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
@@ -317,7 +317,7 @@ export function UnitsSection({ initialProjectId = '' }: { initialProjectId?: str
           Semua proyek
         </button>
       )}
-      {projectId !== '' && units.isPending ? <Loading /> : null}
+      {projectId !== '' && units.isPending ? <TableSkeleton /> : null}
       {projectId !== '' && units.isError ? <LoadFailed onRetry={() => units.refetch()} /> : null}
       {projectId !== '' && units.data ? (
         <>

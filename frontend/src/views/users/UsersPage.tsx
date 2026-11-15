@@ -15,7 +15,7 @@ import {
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate, shortDateTime } from '../../shared/format'
 import { AppShell } from '../components/AppShell'
-import { Card, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, Empty, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { BUTTON_BASE, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterSelect, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction } from '../hr/RowActions'
@@ -148,7 +148,7 @@ export function UsersPage() {
           </div>
         ) : null}
 
-        {users.isPending ? <Loading /> : null}
+        {users.isPending ? <TableSkeleton /> : null}
         {users.isError ? <LoadFailed onRetry={() => users.refetch()} /> : null}
         {users.data ? (
           <>
@@ -240,7 +240,7 @@ function AuditCard() {
 
   return (
     <Card title="Riwayat perubahan akses" description="20 perubahan peran dan status akun terbaru, tercatat bersama perubahannya">
-      {audit.isPending ? <Loading /> : null}
+      {audit.isPending ? <TableSkeleton /> : null}
       {audit.isError ? <LoadFailed onRetry={() => audit.refetch()} /> : null}
       {audit.data && audit.data.length === 0 ? <Empty message="Belum ada perubahan peran atau status akun." /> : null}
       {audit.data && audit.data.length > 0 ? (

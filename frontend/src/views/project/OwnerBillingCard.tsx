@@ -35,7 +35,7 @@ import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { AccessScope } from '../access/AccessScope'
-import { Card, type Column, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, type Column, Empty, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Money, MoneyText } from '../components/Money'
 import { SearchSelect } from '../components/SearchSelect'
@@ -67,7 +67,7 @@ function OwnerBillingContent({ project }: { project: Project }) {
 
   return (
     <Card title="Termin pemberi kerja" description={scheduleDescription(data)}>
-      {schedule.isPending ? <Loading /> : null}
+      {schedule.isPending ? <TableSkeleton /> : null}
       {schedule.isError ? <LoadFailed onRetry={() => schedule.refetch()} /> : null}
       {data && !data.contract ? (
         <Empty message="Belum ada kontrak dengan pemberi kerja. Atur kontraknya dulu, lalu susun termin penagihan berdasarkan progres." />

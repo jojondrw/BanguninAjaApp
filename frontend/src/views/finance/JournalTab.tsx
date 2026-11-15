@@ -15,7 +15,7 @@ import {
 import { accountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table, TableSkeleton } from '../components/Data'
 import { ErrorNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -208,7 +208,7 @@ export function JournalTab() {
         ) : null}
 
         {!isRangeValid ? <ErrorNote message="Tanggal sampai tidak boleh lebih awal dari tanggal dari." /> : null}
-        {isRangeValid && entries.isPending ? <Loading /> : null}
+        {isRangeValid && entries.isPending ? <TableSkeleton /> : null}
         {isRangeValid && entries.isError ? <LoadFailed onRetry={() => entries.refetch()} /> : null}
         {isRangeValid && entries.data ? (
           <>

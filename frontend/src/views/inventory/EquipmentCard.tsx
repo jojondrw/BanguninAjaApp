@@ -21,7 +21,7 @@ import {
 import { assetOptions, parentAssetOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
@@ -341,7 +341,7 @@ export function EquipmentCard({ today }: { today: string }) {
         }
       />
 
-      {equipment.isPending ? <Loading /> : null}
+      {equipment.isPending ? <TableSkeleton /> : null}
       {equipment.isError ? <LoadFailed onRetry={() => equipment.refetch()} /> : null}
       {equipment.data ? (
         <>

@@ -11,7 +11,7 @@ import { EMPTY_PAYROLL_FORM, payrollFormValues, type Payroll, type PayrollFormVa
 import { activeEmployeeOptions, projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { monthLabel, rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
@@ -377,7 +377,7 @@ export function PayrollSection({ period, onPeriodChange }: {
 
       <RowNotice success={notice} error={rowError} />
 
-      {payrolls.isPending ? <Loading /> : null}
+      {payrolls.isPending ? <TableSkeleton /> : null}
       {payrolls.isError ? <LoadFailed onRetry={() => payrolls.refetch()} /> : null}
       {payrolls.data ? (
         <>

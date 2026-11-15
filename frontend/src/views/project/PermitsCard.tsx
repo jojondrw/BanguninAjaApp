@@ -25,7 +25,7 @@ import {
 } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FormSection, InlineConfirm } from './parts'
@@ -60,7 +60,7 @@ export function PermitsCard({ project }: { project: Project }) {
 
   return (
     <Card title="Perizinan" description="Izin yang diajukan dan yang sudah terbit untuk proyek ini">
-      {permits.isPending ? <Loading /> : null}
+      {permits.isPending ? <TableSkeleton /> : null}
       {permits.isError ? <LoadFailed onRetry={() => permits.refetch()} /> : null}
       {permits.data ? (
         <Table

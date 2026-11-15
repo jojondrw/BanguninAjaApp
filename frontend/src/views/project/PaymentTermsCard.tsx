@@ -33,7 +33,7 @@ import type { Project } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, rupiahShort, shortDate } from '../../shared/format'
 import { AccessScope } from '../access/AccessScope'
-import { Card, type Column, Empty, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, type Column, Empty, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { SearchSelect } from '../components/SearchSelect'
 import { Chip, FormSection, InlineConfirm } from './parts'
@@ -64,7 +64,7 @@ function PaymentTermsContent({ project }: { project: Project }) {
 
   return (
     <Card title="Termin kontraktor" description={scheduleDescription(data)}>
-      {schedule.isPending ? <Loading /> : null}
+      {schedule.isPending ? <TableSkeleton /> : null}
       {schedule.isError ? <LoadFailed onRetry={() => schedule.refetch()} /> : null}
       {data && !data.contract ? (
         <Empty message="Belum ada kontrak kontraktor. Atur kontraknya dulu, lalu susun termin pembayaran berdasarkan progres." />

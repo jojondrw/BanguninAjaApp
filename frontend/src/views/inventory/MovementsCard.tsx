@@ -16,7 +16,7 @@ import {
 } from '../../models/inventory'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import {
   Chip,
@@ -227,7 +227,7 @@ export function MovementsCard({ today }: { today: string }) {
 
       {isFormOpen ? <NewMovementForm today={today} /> : null}
 
-      {movements.isPending ? <Loading /> : null}
+      {movements.isPending ? <TableSkeleton /> : null}
       {movements.isError ? <LoadFailed onRetry={() => movements.refetch()} /> : null}
       {movements.data ? (
         <>

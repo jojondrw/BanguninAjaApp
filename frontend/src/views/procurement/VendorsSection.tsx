@@ -24,7 +24,7 @@ import {
 import { ApiError } from '../../shared/apiClient'
 import { errorMessage } from '../../shared/errorMessage'
 import { number } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction, SelectField } from '../components/ListTools'
 import { ToolbarInput } from '../components/RecordControls'
@@ -290,7 +290,7 @@ export function VendorsSection() {
           {notice ? <SuccessNote message={notice} /> : null}
         </div>
 
-        {vendors.isPending ? <Loading /> : null}
+        {vendors.isPending ? <TableSkeleton /> : null}
         {vendors.isError ? <LoadFailed onRetry={() => vendors.refetch()} /> : null}
         {vendors.data ? (
           <>

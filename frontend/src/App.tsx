@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { keepPreviousData, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { lazy, type ReactNode, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
@@ -34,7 +34,10 @@ const UsersPage = lazy(() => import('./views/users/UsersPage').then((module) => 
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
+    // keepPreviousData: saat filter, pencarian, atau halaman tabel berubah,
+    // data lama tetap ditampilkan sampai yang baru datang, jadi tabel tidak
+    // berkedip kosong (terlihat "nge-freeze") di setiap fetch ulang.
+    queries: { retry: 1, refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   },
 })
 
@@ -82,9 +85,34 @@ function RouteBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
 }
 
+// Skeleton netral (bukan berbentuk shell) karena boundary ini juga membungkus
+// halaman publik tanpa AppShell (bayar, verifikasi). Mengganti animasi layar
+// penuh dengan blok redup supaya perpindahan halaman tidak terasa membeku.
 function PageFallback() {
   return (
-    <BaniScreen label="Memuat halaman..." />
+    <div className="min-h-screen bg-slate-100 px-5 py-10 lg:px-10" role="status" aria-label="Memuat halaman">
+      <div className="mx-auto max-w-[1280px] motion-safe:animate-[fade_200ms_ease-out_120ms_both]">
+        <div className="h-7 w-56 animate-pulse rounded-lg bg-slate-200/70" />
+        <div className="mt-2 h-4 w-80 max-w-full animate-pulse rounded bg-slate-200/60" />
+        <div className="mt-6 grid gap-px overflow-hidden rounded-2xl bg-slate-200/70 grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="bg-white px-6 py-5">
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-200/70" />
+              <div className="mt-3 h-6 w-28 animate-pulse rounded bg-slate-200/60" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 rounded-2xl bg-white p-6 shadow-hairline">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="flex gap-3 border-b border-slate-100 py-3.5 last:border-0">
+              <div className="h-3.5 flex-1 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-3.5 flex-1 animate-pulse rounded bg-slate-200/50" />
+              <div className="h-3.5 flex-1 animate-pulse rounded bg-slate-200/60" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 

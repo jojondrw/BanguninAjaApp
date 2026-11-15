@@ -10,7 +10,7 @@ import {
   receiptStockNotice,
 } from '../../models/procurement'
 import { number, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { Chip, Pager, RowAction } from '../components/ListTools'
 import { FormToggle, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -175,7 +175,7 @@ export function ReceiptsSection() {
           </div>
         ) : null}
 
-        {receipts.isPending ? <Loading /> : null}
+        {receipts.isPending ? <TableSkeleton /> : null}
         {receipts.isError ? <LoadFailed onRetry={() => receipts.refetch()} /> : null}
         {receipts.data ? (
           <>

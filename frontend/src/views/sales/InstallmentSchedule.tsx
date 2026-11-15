@@ -20,7 +20,7 @@ import {
 } from '../../models/sales'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiah, shortDate } from '../../shared/format'
-import { LoadFailed, Loading, Table } from '../components/Data'
+import { LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, Pager, ToolbarInput } from '../components/RecordControls'
@@ -286,7 +286,7 @@ export function InstallmentSchedule({ contract, summary, enabled }: {
         </div>
       ) : null}
 
-      {installments.isPending ? <Loading /> : null}
+      {installments.isPending ? <TableSkeleton /> : null}
       {installments.isError ? <LoadFailed onRetry={() => installments.refetch()} /> : null}
       {installments.data ? (
         <>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { useLowStockMaterials, useStocks } from '../../controllers/useInventory'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { materialOptions, warehouseOptions } from '../../models/lookupApi'
 import { Pager, Toolbar } from '../components/RecordControls'
 import { SearchSelect } from '../components/SearchSelect'
@@ -63,7 +63,7 @@ export function StockCard() {
         />
       </Toolbar>
 
-      {stocks.isPending ? <Loading /> : null}
+      {stocks.isPending ? <TableSkeleton /> : null}
       {stocks.isError ? <LoadFailed onRetry={() => stocks.refetch()} /> : null}
       {stocks.data ? (
         <>
@@ -104,7 +104,7 @@ export function LowStockCard() {
 
   return (
     <Card title="Stok menipis" description="Total stok semua gudang di bawah stok minimum">
-      {lowStock.isPending ? <Loading /> : null}
+      {lowStock.isPending ? <TableSkeleton /> : null}
       {lowStock.isError ? <LoadFailed onRetry={() => lowStock.refetch()} /> : null}
       {lowStock.data ? (
         <>

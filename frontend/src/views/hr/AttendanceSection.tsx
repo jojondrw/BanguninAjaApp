@@ -19,7 +19,7 @@ import {
 import { activeEmployeeOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
@@ -294,7 +294,7 @@ export function AttendanceSection({ today }: { today: string }) {
         }
       />
 
-      {attendances.isPending ? <Loading /> : null}
+      {attendances.isPending ? <TableSkeleton /> : null}
       {attendances.isError ? <LoadFailed onRetry={() => attendances.refetch()} /> : null}
       {attendances.data ? (
         <>

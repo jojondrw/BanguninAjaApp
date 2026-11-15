@@ -11,7 +11,7 @@ import {
 } from '../../models/inventory'
 import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
@@ -238,7 +238,7 @@ export function WarehousesCard() {
         }
       />
 
-      {warehouses.isPending ? <Loading /> : null}
+      {warehouses.isPending ? <TableSkeleton /> : null}
       {warehouses.isError ? <LoadFailed onRetry={() => warehouses.refetch()} /> : null}
       {warehouses.data ? (
         <>

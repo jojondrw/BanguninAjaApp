@@ -26,7 +26,7 @@ import {
 } from '../../models/project'
 import { errorMessage } from '../../shared/errorMessage'
 import { kpiValue, number, rupiah } from '../../shared/format'
-import { Bar, Card, LoadFailed, Loading, Table, type Column } from '../components/Data'
+import { Bar, Card, LoadFailed, Table, TableSkeleton, type Column } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
@@ -185,7 +185,7 @@ export function BudgetItemsCard({ project }: { project: Project }) {
         </div>
       ) : null}
 
-      {items.isPending ? <Loading /> : null}
+      {items.isPending ? <TableSkeleton /> : null}
       {items.isError ? <LoadFailed onRetry={() => items.refetch()} /> : null}
       {data ? (
         <>

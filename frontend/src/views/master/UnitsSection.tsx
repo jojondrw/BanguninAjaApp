@@ -17,7 +17,7 @@ import {
   type UnitOfMeasureFormValues,
 } from '../../models/master'
 import { errorMessage } from '../../shared/errorMessage'
-import { type Column, Card, LoadFailed, Loading, Table } from '../components/Data'
+import { type Column, Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -261,7 +261,7 @@ export function UnitsSection() {
         }
       />
 
-      {units.isPending ? <Loading /> : null}
+      {units.isPending ? <TableSkeleton columns={columns.length} /> : null}
       {units.isError ? <LoadFailed onRetry={() => units.refetch()} /> : null}
       {units.data ? (
         <>

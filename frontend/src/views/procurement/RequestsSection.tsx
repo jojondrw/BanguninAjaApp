@@ -26,7 +26,7 @@ import {
 import { materialOptions, projectOptions, unitOfMeasureOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
@@ -465,7 +465,7 @@ export function RequestsSection({ onCreateOrder, initialStatus = '' }: {
           </div>
         ) : null}
 
-        {requests.isPending ? <Loading /> : null}
+        {requests.isPending ? <TableSkeleton /> : null}
         {requests.isError ? <LoadFailed onRetry={() => requests.refetch()} /> : null}
         {requests.data ? (
           <>

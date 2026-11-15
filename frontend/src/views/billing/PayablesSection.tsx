@@ -9,7 +9,7 @@ import {
 } from '../../models/billing'
 import { projectOptions } from '../../models/lookupApi'
 import { rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -113,7 +113,7 @@ export function PayablesSection({ today, initialStatus = '' }: { today: string; 
           </div>
         ) : null}
 
-        {payables.isPending ? <Loading /> : null}
+        {payables.isPending ? <TableSkeleton /> : null}
         {payables.isError ? <LoadFailed onRetry={() => payables.refetch()} /> : null}
         {payables.data ? (
           <>

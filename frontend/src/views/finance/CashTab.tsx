@@ -27,7 +27,7 @@ import { accountOptions, postableAccountOptions, projectOptions } from '../../mo
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
 import { todayDate } from '../../shared/localDate'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { FilterChips, RowAction } from '../components/ListTools'
 import { Chip, FormPanel, FormToggle, Pager, SelectField, Toolbar } from '../components/RecordControls'
@@ -301,7 +301,7 @@ export function CashTab() {
       ) : null}
 
       {!isRangeValid ? <ErrorNote message="Tanggal sampai tidak boleh lebih awal dari tanggal dari." /> : null}
-      {isRangeValid && transactions.isPending ? <Loading /> : null}
+      {isRangeValid && transactions.isPending ? <TableSkeleton /> : null}
       {isRangeValid && transactions.isError ? <LoadFailed onRetry={() => transactions.refetch()} /> : null}
       {isRangeValid && transactions.data ? (
         <>

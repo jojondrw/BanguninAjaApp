@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ChevronDown, X } from 'lucide-react'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 import type { SearchOption } from '../../models/lookup'
 import { SEARCH_LIMIT } from '../../models/lookupApi'
@@ -55,6 +56,7 @@ export function SearchSelect<O extends SearchOption = SearchOption>({
   const [isTyping, setTyping] = useState(false)
   const [active, setActive] = useState(-1)
   const [picked, setPicked] = useState<O | null>(null)
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null)
 
   const listId = `${id}-listbox`
   const hintId = hint ? `${id}-hint` : undefined
@@ -92,6 +94,29 @@ export function SearchSelect<O extends SearchOption = SearchOption>({
   useEffect(() => {
     if (activeId) document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' })
   }, [activeId])
+
+  // Daftar dirender lewat portal ke body dengan posisi fixed yang dihitung dari
+  // kotak input, jadi tidak terpotong overflow atau tertimpa stacking context
+  // kartu, tabel, atau panel di belakangnya.
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setMenuRect(null)
+      return
+    }
+    const place = () => {
+      const input = inputRef.current
+      if (!input) return
+      const rect = input.getBoundingClientRect()
+      setMenuRect({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    place()
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => {
+      window.removeEventListener('scroll', place, true)
+      window.removeEventListener('resize', place)
+    }
+  }, [isOpen])
 
   function open() {
     if (disabled) return
@@ -198,34 +223,41 @@ export function SearchSelect<O extends SearchOption = SearchOption>({
           ) : null}
           <ChevronDown aria-hidden="true" className="pointer-events-none size-4 text-slate-400" strokeWidth={1.8} />
         </div>
-        {isOpen ? (
-          <div className="absolute z-40 mt-1 w-full min-w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-            <ul id={listId} role="listbox" aria-label={label} className="max-h-64 overflow-y-auto py-1">
-              {options.map((option, index) => (
-                <li
-                  key={option.value || 'empty'}
-                  id={optionDomId(listId, index)}
-                  role="option"
-                  aria-selected={option.value === value}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => choose(option)}
-                  onMouseEnter={() => setActive(index)}
-                  className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-1.5 text-[13px] ${
-                    index === activeIndex ? 'bg-slate-100' : ''
-                  } ${option.value === value ? 'font-medium text-navy-700' : 'text-slate-800'}`}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {option.hint ? <span className="shrink-0 text-xs text-slate-500"><MoneyText>{option.hint}</MoneyText></span> : null}
-                </li>
-              ))}
-            </ul>
-            {status ? (
-              <p role="status" className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">
-                {status}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        {isOpen && menuRect
+          ? createPortal(
+              <div
+                onMouseDown={(event) => event.preventDefault()}
+                style={{ position: 'fixed', top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+                className="z-50 min-w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <ul id={listId} role="listbox" aria-label={label} className="max-h-64 overflow-y-auto py-1">
+                  {options.map((option, index) => (
+                    <li
+                      key={option.value || 'empty'}
+                      id={optionDomId(listId, index)}
+                      role="option"
+                      aria-selected={option.value === value}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => choose(option)}
+                      onMouseEnter={() => setActive(index)}
+                      className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-1.5 text-[13px] ${
+                        index === activeIndex ? 'bg-slate-100' : ''
+                      } ${option.value === value ? 'font-medium text-navy-700' : 'text-slate-800'}`}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {option.hint ? <span className="shrink-0 text-xs text-slate-500"><MoneyText>{option.hint}</MoneyText></span> : null}
+                    </li>
+                  ))}
+                </ul>
+                {status ? (
+                  <p role="status" className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">
+                    {status}
+                  </p>
+                ) : null}
+              </div>,
+              document.body,
+            )
+          : null}
       </div>
       {hint ? (
         <p id={hintId} className="text-xs text-slate-500">

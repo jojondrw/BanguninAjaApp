@@ -13,7 +13,7 @@ import { ACCOUNT_TYPE_LABEL, type Account } from '../../models/master'
 import { accountOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah, shortDate } from '../../shared/format'
-import { Card, Empty, Loading, Table } from '../components/Data'
+import { Card, Empty, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote } from '../components/Form'
 import { MoneyText } from '../components/Money'
 import { Pager, Toolbar } from '../components/RecordControls'
@@ -146,7 +146,7 @@ export function LedgerTab() {
       {accountId !== '' && !isRangeValid ? (
         <ErrorNote message="Tanggal sampai tidak boleh lebih awal dari tanggal dari." />
       ) : null}
-      {accountId !== '' && isRangeValid && ledger.isPending ? <Loading /> : null}
+      {accountId !== '' && isRangeValid && ledger.isPending ? <TableSkeleton /> : null}
       {accountId !== '' && isRangeValid && ledger.isError ? (
         <div className="space-y-3">
           <ErrorNote message={errorMessage(ledger.error)} />

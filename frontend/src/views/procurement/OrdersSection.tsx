@@ -22,7 +22,7 @@ import {
 } from '../../models/procurement'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, rupiah, rupiahShort, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Loading, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, SuccessNote } from '../components/Form'
 import { Chip, FilterChips, Pager, RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
@@ -259,7 +259,7 @@ function PurchaseOrderDetailCard({ id, onDeleted }: {
         {detail.status !== 'draft' ? (
           <div className="mt-5 border-t border-slate-100 pt-4">
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Riwayat penerimaan</h3>
-            {receipts.isPending ? <Loading /> : null}
+            {receipts.isPending ? <TableSkeleton /> : null}
             {receipts.isError ? <LoadFailed onRetry={() => receipts.refetch()} /> : null}
             {receipts.data ? (
               <Table
@@ -397,7 +397,7 @@ export function OrdersSection({ prefill, initialStatus = '' }: {
           </div>
         ) : null}
 
-        {orders.isPending ? <Loading /> : null}
+        {orders.isPending ? <TableSkeleton /> : null}
         {orders.isError ? <LoadFailed onRetry={() => orders.refetch()} /> : null}
         {orders.data ? (
           <>

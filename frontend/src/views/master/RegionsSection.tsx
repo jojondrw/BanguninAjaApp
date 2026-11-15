@@ -22,7 +22,7 @@ import {
 } from '../../models/master'
 import { regionOptions } from '../../models/masterApi'
 import { errorMessage } from '../../shared/errorMessage'
-import { type Column, Card, LoadFailed, Loading, Table } from '../components/Data'
+import { type Column, Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -349,7 +349,7 @@ export function RegionsSection() {
         }
       />
 
-      {regions.isPending ? <Loading /> : null}
+      {regions.isPending ? <TableSkeleton /> : null}
       {regions.isError ? <LoadFailed onRetry={() => regions.refetch()} /> : null}
       {regions.data ? (
         <>

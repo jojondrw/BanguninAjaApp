@@ -22,7 +22,7 @@ import {
   type PostableFilter,
 } from '../../models/master'
 import { errorMessage } from '../../shared/errorMessage'
-import { type Column, Card, LoadFailed, Loading, Table } from '../components/Data'
+import { type Column, Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SelectField, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FilterSelect, FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -370,7 +370,7 @@ export function AccountsSection() {
         }
       />
 
-      {accounts.isPending ? <Loading /> : null}
+      {accounts.isPending ? <TableSkeleton /> : null}
       {accounts.isError ? <LoadFailed onRetry={() => accounts.refetch()} /> : null}
       {accounts.data ? (
         <>

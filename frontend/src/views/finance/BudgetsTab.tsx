@@ -16,7 +16,7 @@ import type { Budget } from '../../models/finance'
 import { projectOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
-import { Bar, Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Bar, Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { FormPanel, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -269,7 +269,7 @@ export function BudgetsTab() {
         </Notice>
       ) : null}
 
-      {budgets.isPending ? <Loading /> : null}
+      {budgets.isPending ? <TableSkeleton /> : null}
       {budgets.isError ? <LoadFailed onRetry={() => budgets.refetch()} /> : null}
       {budgets.data ? (
         <>

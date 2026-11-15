@@ -11,7 +11,7 @@ import {
   type ReportTypeInfo,
 } from '../../models/report'
 import { errorMessage } from '../../shared/errorMessage'
-import { Card, type Column, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, type Column, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Chip, FilterSelect, Pager } from '../components/RecordControls'
 import { ActionGroup, ConfirmAction, RowNotice, TextAction } from '../hr/RowActions'
 
@@ -124,7 +124,7 @@ export function ReportHistory({ types }: { types: ReportTypeInfo[] }) {
     >
       <RowNotice success={notice} error={failure ? errorMessage(failure) : null} />
       {reports.isPending ? (
-        <Loading />
+        <TableSkeleton />
       ) : reports.isError ? (
         <LoadFailed onRetry={() => void reports.refetch()} />
       ) : (

@@ -10,7 +10,7 @@ import {
 } from '../../models/hr'
 import { projectOptions } from '../../models/lookupApi'
 import { rupiah, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { CONTROL_CLASS } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FilterSelect, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -222,7 +222,7 @@ export function EmployeesSection({ today }: {
 
       <RowNotice success={notice} error={rowError} />
 
-      {employees.isPending ? <Loading /> : null}
+      {employees.isPending ? <TableSkeleton /> : null}
       {employees.isError ? <LoadFailed onRetry={() => employees.refetch()} /> : null}
       {employees.data ? (
         <>

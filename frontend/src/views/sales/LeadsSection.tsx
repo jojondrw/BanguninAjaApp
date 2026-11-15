@@ -29,7 +29,7 @@ import {
 } from '../../models/sales'
 import { errorMessage } from '../../shared/errorMessage'
 import { number, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import {
@@ -400,7 +400,7 @@ export function LeadsSection({ initialStage = '' }: { initialStage?: StageFilter
         </div>
       ) : null}
 
-      {leads.isPending ? <Loading /> : null}
+      {leads.isPending ? <TableSkeleton /> : null}
       {leads.isError ? <LoadFailed onRetry={() => leads.refetch()} /> : null}
       {leads.data ? (
         <>

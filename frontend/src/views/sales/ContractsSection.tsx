@@ -10,7 +10,7 @@ import {
   type ContractStatus,
 } from '../../models/sales'
 import { rupiahShort, shortDate } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { Chip, FilterSelect, FormToggle, Pager, Toolbar, ToolbarInput } from '../components/RecordControls'
@@ -97,7 +97,7 @@ export function ContractsSection({ initialStatus = '' }: { initialStatus?: Contr
           </div>
         ) : null}
 
-        {contracts.isPending ? <Loading /> : null}
+        {contracts.isPending ? <TableSkeleton /> : null}
         {contracts.isError ? <LoadFailed onRetry={() => contracts.refetch()} /> : null}
         {contracts.data ? (
           <>

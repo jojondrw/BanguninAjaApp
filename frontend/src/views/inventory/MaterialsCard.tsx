@@ -14,7 +14,7 @@ import {
 import { unitOfMeasureOptions } from '../../models/lookupApi'
 import { errorMessage } from '../../shared/errorMessage'
 import { rupiah } from '../../shared/format'
-import { Card, LoadFailed, Loading, Table } from '../components/Data'
+import { Card, LoadFailed, Table, TableSkeleton } from '../components/Data'
 import { Button, ErrorNote, Field, SuccessNote } from '../components/Form'
 import { RowAction } from '../components/ListTools'
 import { LookupName } from '../components/LookupName'
@@ -286,7 +286,7 @@ export function MaterialsCard() {
         }
       />
 
-      {materials.isPending ? <Loading /> : null}
+      {materials.isPending ? <TableSkeleton /> : null}
       {materials.isError ? <LoadFailed onRetry={() => materials.refetch()} /> : null}
       {materials.data ? (
         <>
